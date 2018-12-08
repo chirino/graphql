@@ -2,8 +2,8 @@ package graphql_test
 
 import (
 	"fmt"
-	"github.com/graph-gophers/graphql-go"
-	"github.com/graph-gophers/graphql-go/trace"
+	"github.com/chirino/graphql"
+	"github.com/chirino/graphql/trace"
 	"github.com/opentracing/opentracing-go"
 	"github.com/segmentio/ksuid"
 	"github.com/stretchr/testify/require"

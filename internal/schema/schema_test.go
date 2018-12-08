@@ -3,7 +3,7 @@ package schema_test
 import (
 	"testing"
 
-	"github.com/graph-gophers/graphql-go/internal/schema"
+	"github.com/chirino/graphql/internal/schema"
 )
 
 type parseTestCase struct {

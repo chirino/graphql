@@ -2,11 +2,11 @@ package query
 
 import (
 	"fmt"
-	"github.com/graph-gophers/graphql-go/internal/schema"
+	"github.com/chirino/graphql/internal/schema"
 	"text/scanner"
 
-	"github.com/graph-gophers/graphql-go/errors"
-	"github.com/graph-gophers/graphql-go/internal/common"
+	"github.com/chirino/graphql/errors"
+	"github.com/chirino/graphql/internal/common"
 )
 
 type Document struct {

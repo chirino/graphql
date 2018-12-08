@@ -6,11 +6,11 @@ import (
 
 	"encoding/json"
 
-	"github.com/graph-gophers/graphql-go/errors"
-	"github.com/graph-gophers/graphql-go/internal/query"
-	"github.com/graph-gophers/graphql-go/internal/validation"
-	"github.com/graph-gophers/graphql-go/log"
-	"github.com/graph-gophers/graphql-go/trace"
+	"github.com/chirino/graphql/errors"
+	"github.com/chirino/graphql/internal/query"
+	"github.com/chirino/graphql/internal/validation"
+	"github.com/chirino/graphql/log"
+	"github.com/chirino/graphql/trace"
 )
 
 // ParseSchema parses a GraphQL schema and attaches the given root resolver. It returns an error if

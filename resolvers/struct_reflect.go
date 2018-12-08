@@ -7,7 +7,7 @@
 package resolvers
 
 import (
-	"github.com/graph-gophers/graphql-go/internal/common"
+	"github.com/chirino/graphql/internal/common"
 	"reflect"
 	"sort"
 	"strings"

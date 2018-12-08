@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/graph-gophers/graphql-go/introspection"
+	"github.com/chirino/graphql/introspection"
 )
 
 // Inspect allows inspection of the given schema.

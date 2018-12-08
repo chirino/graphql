@@ -2,13 +2,13 @@ package graphql_test
 
 import (
 	"context"
-	"github.com/graph-gophers/graphql-go/errors"
+	"github.com/chirino/graphql/errors"
 	"testing"
 	"time"
 
-	"github.com/graph-gophers/graphql-go"
-	"github.com/graph-gophers/graphql-go/example/starwars"
-	"github.com/graph-gophers/graphql-go/gqltesting"
+	"github.com/chirino/graphql"
+	"github.com/chirino/graphql/example/starwars"
+	"github.com/chirino/graphql/gqltesting"
 )
 
 type helloWorldResolver1 struct{}

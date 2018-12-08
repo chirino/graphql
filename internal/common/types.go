@@ -1,7 +1,7 @@
 package common
 
 import (
-	"github.com/graph-gophers/graphql-go/errors"
+	"github.com/chirino/graphql/errors"
 )
 
 type Type interface {

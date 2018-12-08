@@ -8,7 +8,7 @@ package resolvers
 
 import (
 	"context"
-	"github.com/graph-gophers/graphql-go/internal/common"
+	"github.com/chirino/graphql/internal/common"
 	"reflect"
 	"strings"
 )

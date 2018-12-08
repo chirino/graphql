@@ -5,7 +5,7 @@ import (
 	"strings"
 	"text/scanner"
 
-	"github.com/graph-gophers/graphql-go/errors"
+	"github.com/chirino/graphql/errors"
 )
 
 type syntaxError string
