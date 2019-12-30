@@ -30,11 +30,11 @@ Feedback is welcome and appreciated.
 package main
 
 import (
-        "log"
-        "net/http"
+	"log"
+	"net/http"
 
-        graphql "github.com/chirino/graphql"
-        "github.com/chirino/graphql/relay"
+	graphql "github.com/chirino/graphql"
+    "github.com/chirino/graphql/relay"
 )
 
 type query struct{}
@@ -42,7 +42,7 @@ type query struct{}
 func (_ *query) Hello() string { return "Hello, world!" }
 
 func main() {
-        s := `
+	s := `
                 schema {
                         query: Query
                 }
@@ -51,14 +51,14 @@ func main() {
                 }
         `
 
-        engine, err := graphql.CreateEngine(starwars.Schema)
-        if err != nil {
-            log.Fatal((err)
-        }
+	engine, err := graphql.CreateEngine(s)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-        engine.Root = &query{}
-        http.Handle("/query", &relay.Handler{Engine: engine})
-        log.Fatal(http.ListenAndServe(":8080", nil))
+	engine.Root = &query{}
+	http.Handle("/query", &relay.Handler{Engine: engine})
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 ```
 

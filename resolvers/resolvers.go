@@ -7,7 +7,7 @@ import (
 	"github.com/chirino/graphql/internal/common"
 	"github.com/chirino/graphql/internal/exec/packer"
 	"github.com/chirino/graphql/internal/query"
-	"github.com/chirino/graphql/internal/schema"
+	"github.com/chirino/graphql/schema"
 	"github.com/chirino/graphql/introspection"
 	"reflect"
 	"strings"

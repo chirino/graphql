@@ -9,7 +9,7 @@ import (
 
 // Inspect allows inspection of the given schema.
 func (s *Schema) Inspect() *introspection.Schema {
-	return introspection.WrapSchema(s.engine.schema)
+	return introspection.WrapSchema(s.engine.Schema)
 }
 
 // ToJSON encodes the schema in a JSON format used by tools like Relay.

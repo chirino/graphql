@@ -69,14 +69,14 @@ type DogStruct struct {
 }
 
 func (this *PersonStruct) RelativeAge() int {
-	return this.Age;
+	return this.Age
 }
 
 func (this *DogStruct) RelativeAge() int {
-	return this.Age * 7;
+	return this.Age * 7
 }
 func (this *DogStruct) DogYears() int {
-	return this.Age * 7;
+	return this.Age * 7
 }
 
 func createQueryData() *QueryStruct {
@@ -117,7 +117,9 @@ func p(s string) *string {
 }
 
 func TestStructResolver(t *testing.T) {
-	engine, err := graphql.CreateEngine(schemaText)
+
+	engine := graphql.New()
+	err := engine.Schema.Parse(schemaText)
 	assert.NoError(t, err)
 
 	assertGraphQL(t, engine,
@@ -126,7 +128,8 @@ func TestStructResolver(t *testing.T) {
 }
 
 func TestInterfaceResolver(t *testing.T) {
-	engine, err := graphql.CreateEngine(schemaText)
+	engine := graphql.New()
+	err := engine.Schema.Parse(schemaText)
 	assert.NoError(t, err)
 
 	assertGraphQL(t, engine,
@@ -140,7 +143,8 @@ func TestInterfaceResolver(t *testing.T) {
 	//	`{"data":{"animal":{"relativeAge":37}}}`)
 }
 func TestMapResolver(t *testing.T) {
-	engine, err := graphql.CreateEngine(schemaText)
+	engine := graphql.New()
+	err := engine.Schema.Parse(schemaText)
 	assert.NoError(t, err)
 
 	assertGraphQL(t, engine,
@@ -154,7 +158,9 @@ func TestMapResolver(t *testing.T) {
 }
 
 func TestCustomTypeResolver(t *testing.T) {
-	engine, err := graphql.CreateEngine(schemaText)
+	engine := graphql.New()
+	err := engine.Schema.Parse(schemaText)
+
 	require.NoError(t, err)
 
 	engine.ResolverFactory = &resolvers.ResolverFactoryList{
@@ -194,11 +200,13 @@ func TestCustomAsyncResolvers(t *testing.T) {
 			f4 : String
 		}
 	`
-	engine, err := graphql.CreateEngine(schema)
+
+	engine := graphql.New()
+	err := engine.Schema.Parse(schema)
 	require.NoError(t, err)
 	engine.ResolverFactory = &resolvers.ResolverFactoryList{
 		// First try out custom resolver...
-		&resolvers.FuncResolverFactory {
+		&resolvers.FuncResolverFactory{
 			func(request *resolvers.ResolveRequest) resolvers.Resolver {
 				return func() (reflect.Value, error) {
 					time.Sleep(1 * time.Second)
@@ -210,18 +218,19 @@ func TestCustomAsyncResolvers(t *testing.T) {
 	}
 
 	benchmark := testing.Benchmark(func(b *testing.B) {
-		response := engine.Execute(context.TODO(), &graphql.EngineRequest{Query:"{f1,f2,f3,f4}"}, nil)
+		response := engine.Execute(context.TODO(), &graphql.EngineRequest{Query: "{f1,f2,f3,f4}"}, nil)
 		assert.Equal(t, 0, len(response.Errors))
 	})
 	assert.True(t, benchmark.T.Seconds() > 3)
 	assert.True(t, benchmark.T.Seconds() < 5)
 
-	fmt.Println();
-	engine, err = graphql.CreateEngine(schema)
+	fmt.Println()
+	engine = graphql.New()
+	err = engine.Schema.Parse(schema)
 	require.NoError(t, err)
 	engine.ResolverFactory = &resolvers.ResolverFactoryList{
 		// First try out custom resolver...
-		&resolvers.FuncResolverFactory {
+		&resolvers.FuncResolverFactory{
 			func(request *resolvers.ResolveRequest) resolvers.Resolver {
 				// Use request.RunAsync to signal that the resolution will run async:
 				return request.RunAsync(func() (reflect.Value, error) {
@@ -233,7 +242,7 @@ func TestCustomAsyncResolvers(t *testing.T) {
 		engine.ResolverFactory,
 	}
 	benchmark = testing.Benchmark(func(b *testing.B) {
-		response := engine.Execute(context.TODO(), &graphql.EngineRequest{Query:"{f1,f2,f3,f4}"}, nil)
+		response := engine.Execute(context.TODO(), &graphql.EngineRequest{Query: "{f1,f2,f3,f4}"}, nil)
 		assert.Equal(t, 0, len(response.Errors))
 	})
 	assert.True(t, benchmark.T.Seconds() > 0)

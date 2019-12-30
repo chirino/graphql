@@ -18,7 +18,9 @@ import (
 // resolver, then the schema can not be executed, but it may be inspected (e.g. with ToJSON).
 func ParseSchema(schemaString string, resolver interface{}, opts ...SchemaOpt) (*Schema, error) {
 
-	engine,err := CreateEngine(schemaString)
+	engine := New()
+	err := engine.Schema.Parse(schemaString)
+
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +139,7 @@ func (s *Schema) Validate(queryString string) []*errors.QueryError {
 		return []*errors.QueryError{qErr}
 	}
 
-	return validation.Validate(s.engine.schema, doc, s.engine.MaxDepth)
+	return validation.Validate(s.engine.Schema, doc, s.engine.MaxDepth)
 }
 
 // Exec executes the given query with the schema's resolver. It panics if the schema was created

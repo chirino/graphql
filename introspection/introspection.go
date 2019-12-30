@@ -4,7 +4,7 @@ import (
 	"sort"
 
 	"github.com/chirino/graphql/internal/common"
-	"github.com/chirino/graphql/internal/schema"
+	"github.com/chirino/graphql/schema"
 )
 
 type Schema struct {

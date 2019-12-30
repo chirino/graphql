@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/chirino/graphql/internal/query"
-	"github.com/chirino/graphql/internal/schema"
+	"github.com/chirino/graphql/schema"
 )
 
 const (

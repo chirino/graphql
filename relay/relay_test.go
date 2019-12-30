@@ -41,7 +41,9 @@ func TestEngineAPIServeHTTP(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/some/path/here", strings.NewReader(`{"query":"{ hero { name } }", "operationName":"", "variables": null}`))
 
-	starwarsEngine, err := graphql.CreateEngine(starwars.Schema)
+	starwarsEngine := graphql.New()
+	err := starwarsEngine.Schema.Parse(starwars.Schema)
+
 	require.NoError(t, err)
 	starwarsEngine.Root = &starwars.Resolver{}
 	h := relay.Handler{Engine: starwarsEngine}

@@ -9,7 +9,7 @@ import (
 	"github.com/chirino/graphql/internal/common"
 	"github.com/chirino/graphql/internal/exec"
 	"github.com/chirino/graphql/internal/query"
-	"github.com/chirino/graphql/internal/schema"
+	"github.com/chirino/graphql/schema"
 	"github.com/chirino/graphql/internal/validation"
 	"github.com/chirino/graphql/introspection"
 	"github.com/chirino/graphql/log"
@@ -18,7 +18,7 @@ import (
 )
 
 type Engine struct {
-	schema           *schema.Schema
+	Schema           *schema.Schema
 	MaxDepth         int
 	MaxParallelism   int
 	Tracer           trace.Tracer
@@ -40,24 +40,22 @@ type EngineResponse struct {
 	Extensions map[string]interface{} `json:"extensions,omitempty"`
 }
 
-func CreateEngine(schemaText string) (*Engine, error) {
+func CreateEngine(schema string) (*Engine, error) {
+	engine := New()
+	err := engine.Schema.Parse(schema)
+	return engine, err
+}
 
-	engine := Engine{
-		schema:           schema.New(),
+func New() *Engine {
+	return &Engine{
+		Schema:           schema.New(),
 		Tracer:           trace.NoopTracer{},
-		MaxParallelism:	  10,
+		MaxParallelism:   10,
 		MaxDepth:         50,
 		ValidationTracer: trace.NoopValidationTracer{},
 		Logger:           &log.DefaultLogger{},
 		ResolverFactory:  resolvers.DynamicResolverFactory(),
 	}
-
-	err := engine.schema.Parse(schemaText)
-	if err != nil {
-		return nil, err
-	}
-
-	return &engine, nil
 }
 
 // Execute the given request.
@@ -69,7 +67,7 @@ func (engine *Engine) Execute(ctx context.Context, request *EngineRequest, root 
 	}
 
 	validationFinish := engine.ValidationTracer.TraceValidation()
-	errs := validation.Validate(engine.schema, doc, engine.MaxDepth)
+	errs := validation.Validate(engine.Schema, doc, engine.MaxDepth)
 	validationFinish(errs)
 
 	if len(errs) != 0 {
@@ -83,7 +81,7 @@ func (engine *Engine) Execute(ctx context.Context, request *EngineRequest, root 
 
 	varTypes := make(map[string]*introspection.Type)
 	for _, v := range op.Vars {
-		t, err := common.ResolveType(v.Type, engine.schema.Resolve)
+		t, err := common.ResolveType(v.Type, engine.Schema.Resolve)
 		if err != nil {
 			return &Response{Errors: []*errors.QueryError{err}}
 		}
@@ -98,7 +96,7 @@ func (engine *Engine) Execute(ctx context.Context, request *EngineRequest, root 
 	out := bytes.Buffer{}
 
 	r := exec.Execution{
-		Schema:          engine.schema,
+		Schema:          engine.Schema,
 		Tracer:          engine.Tracer,
 		Logger:          engine.Logger,
 		ResolverFactory: engine.ResolverFactory,
@@ -115,13 +113,13 @@ func (engine *Engine) Execute(ctx context.Context, request *EngineRequest, root 
 	errs = r.Execute()
 	finish(errs)
 
-	if(len(errs) > 0 ) {
+	if len(errs) > 0 {
 		return &Response{
 			Errors: errs,
 		}
 	}
 
 	return &Response{
-		Data:   out.Bytes(),
+		Data: out.Bytes(),
 	}
 }

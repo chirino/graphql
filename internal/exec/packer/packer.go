@@ -8,7 +8,7 @@ import (
 
 	"github.com/chirino/graphql/errors"
 	"github.com/chirino/graphql/internal/common"
-	"github.com/chirino/graphql/internal/schema"
+	"github.com/chirino/graphql/schema"
 )
 
 type packer interface {

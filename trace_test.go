@@ -53,7 +53,8 @@ func TestJaegerTracing(t *testing.T) {
 	defer closer.Close()
 	opentracing.SetGlobalTracer(tracer)
 
-	engine, err := graphql.CreateEngine(`
+	engine := graphql.New()
+	err = engine.Schema.Parse(`
 		schema {
 			query: Query
 		}
