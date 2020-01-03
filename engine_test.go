@@ -63,9 +63,11 @@ type PersonStruct struct {
 	Age    int           `json:"age"`
 }
 type DogStruct struct {
-	Name *string    `json:"name"`
-	Mate *DogStruct `json:"mate"`
-	Age  int        `json:"age"`
+	Name *string       `json:"name"`
+	Mate *DogStruct    `json:"mate"`
+	Age  int           `json:"age"`
+	Tag  string        `json:"tag"`
+	Hero *PersonStruct `json:"hero"`
 }
 
 func (this *PersonStruct) RelativeAge() int {
@@ -77,6 +79,16 @@ func (this *DogStruct) RelativeAge() int {
 }
 func (this *DogStruct) DogYears() int {
 	return this.Age * 7
+}
+
+func (this *DogStruct) SetTag(args *struct{ Value *string }) string {
+	this.Tag = *args.Value
+	return "ok"
+}
+
+func (this *DogStruct) SetHero(args *struct{ Value *PersonStruct }) string {
+	this.Hero = args.Value
+	return "ok"
 }
 
 func createQueryData() *QueryStruct {
@@ -122,8 +134,11 @@ func TestStructResolver(t *testing.T) {
 	err := engine.Schema.Parse(schemaText)
 	assert.NoError(t, err)
 
-	assertGraphQL(t, engine,
-		`{"query":"{ person { name } }"}`,
+	assertQuery(t, engine, `{ person { name } }`,
+		`{"data":{"person":{"name":"Hiram"}}}`)
+
+	assertQuery(t, engine,
+		`{ person { name } }`,
 		`{"data":{"person":{"name":"Hiram"}}}`)
 }
 
@@ -132,9 +147,11 @@ func TestInterfaceResolver(t *testing.T) {
 	err := engine.Schema.Parse(schemaText)
 	assert.NoError(t, err)
 
-	assertGraphQL(t, engine,
+	data := createQueryData()
+	assertRequestString(t, engine,
 		`{"query":"{ dog { dogYears } }"}`,
-		`{"data":{"dog":{"dogYears":28}}}`)
+		`{"data":{"dog":{"dogYears":28}}}`, data)
+
 	//assertGraphQL(t, engine,
 	//	`{"query":"{ dog { relativeAge } }"}`,
 	//	`{"data":{"dog":{"relativeAge":28}}}`)
@@ -142,16 +159,85 @@ func TestInterfaceResolver(t *testing.T) {
 	//	`{"query":"{ animal { relativeAge } }"}`,
 	//	`{"data":{"animal":{"relativeAge":37}}}`)
 }
+
+func TestInputArgs(t *testing.T) {
+	engine := graphql.New()
+	err := engine.Schema.Parse(`
+schema {
+	query: Query
+}
+type Query {
+	dog: Dog
+}
+type Dog {
+	tag: String
+	setTag(value: String): String
+}
+`)
+	assert.NoError(t, err)
+
+	data := createQueryData()
+	assertQuery(t, engine,
+		`{ dog { setTag(value: "test") } }`,
+		`{"data":{"dog":{"setTag":"ok"}}}`, data)
+
+	assertQuery(t, engine,
+		`{ dog { tag } }`,
+		`{"data":{"dog":{"tag":"test"}}}`, data)
+
+	assertQuery(t, engine,
+		`{ dog { setTag(value: "test2") } }`,
+		`{"data":{"dog":{"setTag":"ok"}}}`, data)
+
+	assertQuery(t, engine,
+		`{ dog { tag } }`,
+		`{"data":{"dog":{"tag":"test2"}}}`, data)
+}
+
+func TestObjectInputArgs(t *testing.T) {
+	engine := graphql.New()
+	err := engine.Schema.Parse(`
+schema {
+	query: Query
+}
+type Query {
+	dog: Dog
+}
+type Person {
+	name: String
+	age: Int
+}
+input PersonInput {
+	name: String
+	age: Int!
+}
+type Dog {
+	hero: Person
+	setHero(value: PersonInput): String
+}
+`)
+	assert.NoError(t, err)
+
+	data := createQueryData()
+	assertQuery(t, engine,
+		`{ dog { setHero(value: { name: "Hiram", age: 21 } ) } }`,
+		`{"data":{"dog":{"setHero":"ok"}}}`, data)
+	assertQuery(t, engine,
+		`{ dog { hero { name }} }`,
+		`{"data":{"dog":{"hero":{"name":"Hiram"}}}}`, data)
+
+}
+
 func TestMapResolver(t *testing.T) {
 	engine := graphql.New()
 	err := engine.Schema.Parse(schemaText)
 	assert.NoError(t, err)
 
-	assertGraphQL(t, engine,
+	assertRequestString(t, engine,
 		`{"query":"{ alien { shape } }"}`,
 		`{"data":{"alien":{"shape":"weird"}}}`)
 
-	assertGraphQL(t, engine,
+	assertRequestString(t, engine,
 		`{"query":"{ alien { pet { name } } }"}`,
 		`{"data":{"alien":{"pet":{"name":"Alf"}}}}`)
 
@@ -182,7 +268,7 @@ func TestCustomTypeResolver(t *testing.T) {
 		engine.ResolverFactory,
 	}
 
-	assertGraphQL(t, engine,
+	assertRequestString(t, engine,
 		`{"query":"{ alien { shape, composition } }"}`,
 		`{"data":{"alien":{"shape":"changed","composition":"carbon \u0026 silicon"}}}`)
 
@@ -250,17 +336,25 @@ func TestCustomAsyncResolvers(t *testing.T) {
 
 }
 
-func assertGraphQL(t *testing.T, engine *graphql.Engine, req string, expected string, roots ...interface{}) {
+func assertQuery(t *testing.T, engine *graphql.Engine, query string, expected string, roots ...interface{}) {
+	request := graphql.EngineRequest{}
+	request.Query = query
+	assertRequest(t, engine, request, expected, roots...)
+}
+
+func assertRequestString(t *testing.T, engine *graphql.Engine, req string, expected string, roots ...interface{}) {
 	request := graphql.EngineRequest{}
 	jsonUnmarshal(t, req, &request)
+	assertRequest(t, engine, request, expected, roots...)
+}
 
+func assertRequest(t *testing.T, engine *graphql.Engine, request graphql.EngineRequest, expected string, roots ...interface{}) {
 	var root interface{}
 	if len(roots) > 0 {
 		root = roots[0]
 	} else {
 		root = createQueryData()
 	}
-
 	response := engine.Execute(context.TODO(), &request, root)
 	actual := jsonMarshal(t, response)
 	assert.Equal(t, expected, actual)

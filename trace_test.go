@@ -69,7 +69,7 @@ func TestJaegerTracing(t *testing.T) {
 	// No traces should be in the system yet..
 	assertTraceCount(t, queryURL, 0)
 
-	assertGraphQL(t, engine,
+	assertRequestString(t, engine,
 		`{"query":"{ hello }"}`,
 		`{"data":{"hello":"World"}}`,
 		map[string]interface{}{
