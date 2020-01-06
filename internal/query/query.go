@@ -6,7 +6,7 @@ import (
 	"text/scanner"
 
 	"github.com/chirino/graphql/errors"
-	"github.com/chirino/graphql/internal/common"
+	"github.com/chirino/graphql/common"
 )
 
 type Document struct {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/chirino/graphql/internal/common"
+	"github.com/chirino/graphql/common"
 	"github.com/chirino/graphql/internal/exec/packer"
 	"github.com/chirino/graphql/internal/query"
 	"github.com/chirino/graphql/schema"
@@ -249,11 +249,18 @@ func (this *MapResolverFactory) CreateResolver(request *ResolveRequest) Resolver
 		return nil
 	}
 
+	value = reflect.ValueOf(value.Interface())
+
 	return func() (reflect.Value, error) {
 		return value, nil
 	}
 }
 
+///////////////////////////////////////////////////////////////////////
+//
+// MetadataResolverFactory resolves fields using schema metadata
+//
+///////////////////////////////////////////////////////////////////////
 type MetadataResolverFactory struct{}
 
 func (this *MetadataResolverFactory) CreateResolver(request *ResolveRequest) Resolver {

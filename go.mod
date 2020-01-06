@@ -3,6 +3,8 @@ module github.com/chirino/graphql
 require (
 	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/ghodss/yaml v1.0.0
+	github.com/hashicorp/go-multierror v1.0.0
 	github.com/opentracing/opentracing-go v1.0.2
 	github.com/pkg/errors v0.8.0
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -13,6 +15,7 @@ require (
 	github.com/uber/jaeger-lib v1.5.0 // indirect
 	go.uber.org/atomic v1.3.2 // indirect
 	golang.org/x/net v0.0.0-20180208041118-f5dfe339be1d // indirect
+	gopkg.in/yaml.v2 v2.2.7 // indirect
 )
 
 go 1.13

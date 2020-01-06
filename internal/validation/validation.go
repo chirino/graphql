@@ -9,7 +9,7 @@ import (
 	"text/scanner"
 
 	"github.com/chirino/graphql/errors"
-	"github.com/chirino/graphql/internal/common"
+	"github.com/chirino/graphql/common"
 	"github.com/chirino/graphql/internal/query"
 	"github.com/chirino/graphql/schema"
 )

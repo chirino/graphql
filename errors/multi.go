@@ -51,4 +51,3 @@ func (es multi) Format(s fmt.State, verb rune) {
 
 	io.WriteString(s, msg)
 }
-

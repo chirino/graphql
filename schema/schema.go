@@ -2,10 +2,10 @@ package schema
 
 import (
 	"fmt"
+	"github.com/chirino/graphql/common"
 	"text/scanner"
 
 	"github.com/chirino/graphql/errors"
-	"github.com/chirino/graphql/internal/common"
 )
 
 // Schema represents a GraphQL service's collective type system capabilities.
@@ -83,10 +83,10 @@ type Scalar struct {
 // http://facebook.github.io/graphql/draft/#sec-Objects
 type Object struct {
 	Name       string
-	Interfaces []*Interface
+	Interfaces InterfaceList
 	Fields     FieldList `json:"fields"`
 	Desc       string
-	// TODO: Add a list of directives?
+	Directives common.DirectiveList
 
 	interfaceNames []string
 }
@@ -103,6 +103,46 @@ type Interface struct {
 	Fields        FieldList // NOTE: the spec refers to this as `FieldsDefinition`.
 	Desc          string
 	// TODO: Add a list of directives?
+}
+
+type InterfaceList []*Interface
+
+func (l InterfaceList) Get(name string) *Interface {
+	for _, d := range l {
+		if d.Name == name {
+			return d
+		}
+	}
+	return nil
+
+}
+func (l InterfaceList) Select(keep func(d *Interface) bool) InterfaceList {
+	rc := InterfaceList{}
+	for _, d := range l {
+		if keep(d) {
+			rc = append(rc, d)
+		}
+	}
+	return rc
+}
+
+func StringListGet(l []string, name string) *string {
+	for _, d := range l {
+		if d == name {
+			return &d
+		}
+	}
+	return nil
+}
+
+func StringListSelect(l []string, keep func(d string) bool) []string {
+	rc := []string{}
+	for _, d := range l {
+		if keep(d) {
+			rc = append(rc, d)
+		}
+	}
+	return rc
 }
 
 // Union types represent objects that could be one of a list of GraphQL object types, but provides no
@@ -183,6 +223,16 @@ func (l FieldList) Names() []string {
 	return names
 }
 
+func (l FieldList) Select(keep func(d *Field) bool) FieldList {
+	rc := FieldList{}
+	for _, d := range l {
+		if keep(d) {
+			rc = append(rc, d)
+		}
+	}
+	return rc
+}
+
 // http://facebook.github.io/graphql/draft/#sec-Type-System.Directives
 type DirectiveDecl struct {
 	Name string
@@ -222,7 +272,7 @@ func (t *InputObject) Description() string { return t.Desc }
 // Field is a conceptual function which yields values.
 // http://facebook.github.io/graphql/draft/#FieldDefinition
 type Field struct {
-	Name       string `json:"name"`
+	Name       string                `json:"name"`
 	Args       common.InputValueList `json:"args"` // NOTE: the spec refers to this as `ArgumentsDefinition`.
 	Type       common.Type
 	Directives common.DirectiveList
@@ -408,8 +458,68 @@ func parseSchema(s *Schema, l *common.Lexer) {
 		case "type":
 			obj := parseObjectDef(l)
 			obj.Desc = desc
-			s.Types[obj.Name] = obj
-			s.objects = append(s.objects, obj)
+
+			d := obj.Directives.Get("graphql")
+			if d != nil {
+				if mode,ok := d.Args.Get("alter"); ok  {
+					switch mode.Value(nil) {
+					case "add":
+						existing := s.Types[obj.Name]
+						if existing == nil {
+							s.Types[obj.Name] = obj
+							s.objects = append(s.objects, obj)
+						} else {
+							existing, ok := existing.(*Object)
+							if !ok {
+								l.SyntaxError(fmt.Sprintf("Cannot update %s, it was a %s", obj.Name, existing.Kind()))
+							}
+							existing.Directives = append(existing.Directives, obj.Directives...)
+							existing.Fields = append(existing.Fields, obj.Fields...)
+							existing.Desc = existing.Desc + "\n" + obj.Desc
+							existing.interfaceNames = append(existing.interfaceNames, obj.interfaceNames...)
+							existing.Interfaces = append(existing.Interfaces, obj.Interfaces...)
+						}
+					case "drop":
+						existing := s.Types[obj.Name]
+						if existing != nil {
+							existing, ok := existing.(*Object)
+							if !ok {
+								l.SyntaxError(fmt.Sprintf("Cannot update %s, it was a %s", obj.Name, existing.Kind()))
+							}
+							existing.Directives = existing.Directives.Select(func(d *common.Directive) bool {
+								return obj.Directives.Get(d.Name.Name) == nil
+							})
+							existing.Fields = existing.Fields.Select(func(d *Field) bool {
+								return obj.Fields.Get(d.Name) == nil
+							})
+							existing.Interfaces = existing.Interfaces.Select(func(d *Interface) bool {
+								return obj.Interfaces.Get(d.Name) == nil
+							})
+							existing.interfaceNames = StringListSelect(existing.interfaceNames, func(d string) bool {
+								return StringListGet(obj.interfaceNames, d) == nil
+							})
+						}
+					default:
+						panic(`@graphql alter value must be one of: "add" or "drop"`)
+					}
+				} else if mode,ok := d.Args.Get("if"); ok  {
+					switch mode.Value(nil) {
+					case "missing":
+						existing := s.Types[obj.Name]
+						if existing == nil {
+							s.Types[obj.Name] = obj
+							s.objects = append(s.objects, obj)
+						}
+					default:
+						panic(`@graphql if value must be: "missing"`)
+					}
+				} else {
+					panic(`@graphql alter or if arguments must be provided`)
+				}
+			} else {
+				s.Types[obj.Name] = obj
+				s.objects = append(s.objects, obj)
+			}
 
 		case "interface":
 			iface := parseInterfaceDef(l)
@@ -452,17 +562,22 @@ func parseSchema(s *Schema, l *common.Lexer) {
 func parseObjectDef(l *common.Lexer) *Object {
 	object := &Object{Name: l.ConsumeIdent()}
 
-	if l.Peek() == scanner.Ident {
-		l.ConsumeKeyword("implements")
-
-		for l.Peek() != '{' {
+	if l.PeekKeyword("implements") {
+		l.Consume()
+		if l.Peek() == '&' {
+			l.ConsumeToken('&')
+		}
+		for {
+			object.interfaceNames = append(object.interfaceNames, l.ConsumeIdent())
 			if l.Peek() == '&' {
 				l.ConsumeToken('&')
+			} else if l.Peek() == '@' || l.Peek() == '{'  {
+				break
 			}
-
-			object.interfaceNames = append(object.interfaceNames, l.ConsumeIdent())
 		}
 	}
+
+	object.Directives = common.ParseDirectives(l)
 
 	l.ConsumeToken('{')
 	object.Fields = parseFieldsDef(l)

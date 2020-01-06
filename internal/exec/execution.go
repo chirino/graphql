@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/chirino/graphql/errors"
-	"github.com/chirino/graphql/internal/common"
+	"github.com/chirino/graphql/common"
 	"github.com/chirino/graphql/internal/exec/packer"
 	"github.com/chirino/graphql/internal/query"
 	"github.com/chirino/graphql/schema"
@@ -253,11 +253,11 @@ func (this *Execution) recursiveExecute(parentSelection *selectionResolver, pare
 
 			childValue, err := resolver()
 			if err != nil {
-				this.AddError(&errors.QueryError{
+				this.AddError((&errors.QueryError{
 					Message:       err.Error(),
 					Path:          selected.Path(),
 					ResolverError: err,
-				})
+				}).WithStack())
 				continue
 			}
 

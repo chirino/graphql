@@ -132,6 +132,14 @@ type Response struct {
 	Extensions map[string]interface{} `json:"extensions,omitempty"`
 }
 
+func (r *Response) Error() error {
+	errs := []error{}
+	for _, err := range r.Errors {
+		errs = append(errs, err)
+	}
+	return errors.Multi(errs)
+}
+
 // Validate validates the given query with the schema.
 func (s *Schema) Validate(queryString string) []*errors.QueryError {
 	doc, qErr := query.Parse(queryString)

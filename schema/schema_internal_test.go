@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/chirino/graphql/errors"
-	"github.com/chirino/graphql/internal/common"
+	"github.com/chirino/graphql/common"
 )
 
 func TestParseInterfaceDef(t *testing.T) {

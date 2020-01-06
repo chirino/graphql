@@ -30,3 +30,13 @@ func (l DirectiveList) Get(name string) *Directive {
 	}
 	return nil
 }
+
+func (l DirectiveList) Select(keep func(d *Directive) bool) DirectiveList {
+	rc := DirectiveList{}
+	for _, d := range l {
+		if keep(d) {
+			rc = append(rc, d)
+		}
+	}
+	return rc
+}

@@ -7,7 +7,7 @@
 package resolvers
 
 import (
-	"github.com/chirino/graphql/internal/common"
+	"github.com/chirino/graphql/common"
 	"reflect"
 	"sort"
 	"strings"

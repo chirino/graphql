@@ -3,7 +3,7 @@ package common_test
 import (
 	"testing"
 
-	"github.com/chirino/graphql/internal/common"
+	"github.com/chirino/graphql/common"
 )
 
 type consumeTestCase struct {

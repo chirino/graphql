@@ -8,7 +8,7 @@ package resolvers
 
 import (
 	"context"
-	"github.com/chirino/graphql/internal/common"
+	"github.com/chirino/graphql/common"
 	"reflect"
 	"strings"
 )
@@ -29,6 +29,7 @@ func getChildMethod(parent *reflect.Value, fieldName string) *methodInfo {
 		parentType reflect.Type
 		fieldName string
 	}
+
 	key.parentType = parent.Type()
 	key.fieldName = fieldName
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/chirino/graphql"
 	"github.com/chirino/graphql/resolvers"
+	"github.com/chirino/graphql/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"reflect"
@@ -369,4 +370,68 @@ func jsonMarshal(t *testing.T, value interface{}) string {
 func jsonUnmarshal(t *testing.T, from string, target interface{}) {
 	err := json.Unmarshal([]byte(from), target)
 	assert.NoError(t, err)
+}
+
+func TestTypeDirectives(t *testing.T) {
+
+	engine := graphql.New()
+	err := engine.Schema.Parse(`
+type Test @test(foo:"bar") {
+	name: String
+}
+`)
+	assert.NoError(t, err)
+	object := engine.Schema.Types[`Test`].(*schema.Object)
+	assert.Equal(t, len(object.Directives), 1)
+}
+
+
+func TestTypeRedeclaration(t *testing.T) {
+	engine := graphql.New()
+	err := engine.Schema.Parse(`
+type Test {
+	firstName: String
+}
+type Test {
+	lastName: String
+}
+`)
+	assert.NoError(t, err)
+	object := engine.Schema.Types[`Test`].(*schema.Object)
+	assert.Equal(t, 1, len(object.Fields), 1)
+	assert.Equal(t, "lastName", object.Fields[0].Name )
+}
+
+func TestGraphqlAddDirective(t *testing.T) {
+	engine := graphql.New()
+	err := engine.Schema.Parse(`
+type Test {
+	firstName: String
+}
+type Test @graphql(alter:"add") {
+	lastName: String
+}
+`)
+	assert.NoError(t, err)
+	object := engine.Schema.Types[`Test`].(*schema.Object)
+	assert.Equal(t, 2, len(object.Fields))
+	assert.Equal(t, "firstName", object.Fields[0].Name )
+	assert.Equal(t, "lastName", object.Fields[1].Name )
+}
+
+func TestGraphqlDropDirective(t *testing.T) {
+	engine := graphql.New()
+	err := engine.Schema.Parse(`
+type Test {
+	firstName: String
+	lastName: String
+}
+type Test @graphql(alter:"drop") {
+	lastName: String
+}
+`)
+	assert.NoError(t, err)
+	object := engine.Schema.Types[`Test`].(*schema.Object)
+	assert.Equal(t, 1, len(object.Fields))
+	assert.Equal(t, "firstName", object.Fields[0].Name )
 }

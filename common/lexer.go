@@ -97,6 +97,10 @@ func (l *Lexer) ConsumeIdentWithLoc() Ident {
 	return Ident{name, loc}
 }
 
+func (l *Lexer) PeekKeyword(keyword string) bool {
+	return l.next == scanner.Ident && l.sc.TokenText() == keyword
+}
+
 func (l *Lexer) ConsumeKeyword(keyword string) {
 	if l.next != scanner.Ident || l.sc.TokenText() != keyword {
 		l.SyntaxError(fmt.Sprintf("unexpected %q, expecting %q", l.sc.TokenText(), keyword))
