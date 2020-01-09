@@ -46,12 +46,13 @@ var metaSrc = `
 		reason: String = "No longer supported"
 	) on FIELD_DEFINITION | ENUM_VALUE
 
-
 	## Used to control how a type gets updated if it is redefined.
 	#directive @graphql(
 	#	alter: String
 	#	if: String
-	#) on OBJECT | INPUT_OBJECT
+	#	map: String
+	#	encode: String
+	#) on OBJECT | INPUT_OBJECT | FIELD_DEFINITION
 
 	# A Directive provides a way to describe alternate runtime execution and type validation behavior in a GraphQL document.
 	#

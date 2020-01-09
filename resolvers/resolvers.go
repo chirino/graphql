@@ -23,7 +23,7 @@ type ExecutionContext interface {
 type ResolveRequest struct {
 	Context       ExecutionContext
 	ParentResolve *ResolveRequest
-	SelectionPath func()[]string
+	SelectionPath func() []string
 	ParentType    common.Type
 	Parent        reflect.Value
 	Field         *schema.Field
@@ -143,7 +143,7 @@ func (this *ResolverFactoryList) Add(factory ResolverFactory) {
 func (this *ResolverFactoryList) CreateResolver(request *ResolveRequest) Resolver {
 	for _, f := range *this {
 		resolver := f.CreateResolver(request)
-		if (resolver != nil) {
+		if resolver != nil {
 			return resolver
 		}
 	}
@@ -160,7 +160,7 @@ type FieldResolverFactory struct{}
 
 func (this *FieldResolverFactory) CreateResolver(request *ResolveRequest) Resolver {
 	parentValue := dereference(request.Parent)
-	if (parentValue.Kind() != reflect.Struct) {
+	if parentValue.Kind() != reflect.Struct {
 		return nil
 	}
 	childValue, found := getChildField(&parentValue, request.Field.Name)
@@ -173,7 +173,7 @@ func (this *FieldResolverFactory) CreateResolver(request *ResolveRequest) Resolv
 }
 
 func dereference(value reflect.Value) reflect.Value {
-	for ; value.Kind() == reflect.Ptr || value.Kind() == reflect.Interface ; {
+	for ; value.Kind() == reflect.Ptr || value.Kind() == reflect.Interface; {
 		value = value.Elem()
 	}
 	return value
@@ -201,7 +201,7 @@ func (this *MethodResolverFactory) CreateResolver(request *ResolveRequest) Resol
 		if err != nil {
 			return nil
 		}
-		structPacker = sp;
+		structPacker = sp
 	}
 
 	return func() (reflect.Value, error) {
@@ -240,18 +240,19 @@ type MapResolverFactory struct{}
 
 func (this *MapResolverFactory) CreateResolver(request *ResolveRequest) Resolver {
 	parentValue := dereference(request.Parent)
-	if (parentValue.Kind() != reflect.Map || parentValue.Type().Key().Kind() != reflect.String) {
+	if parentValue.Kind() != reflect.Map || parentValue.Type().Key().Kind() != reflect.String {
 		return nil
 	}
-
-	value := parentValue.MapIndex(reflect.ValueOf(request.Field.Name))
-	if (!value.IsValid()) {
-		return nil
-	}
-
-	value = reflect.ValueOf(value.Interface())
+	field := reflect.ValueOf(request.Field.Name)
 
 	return func() (reflect.Value, error) {
+		value := parentValue.MapIndex(field)
+		if !value.IsValid() {
+			var v *interface{} = nil
+			return reflect.ValueOf(v), nil
+		}
+
+		value = reflect.ValueOf(value.Interface())
 		return value, nil
 	}
 }
@@ -265,7 +266,7 @@ type MetadataResolverFactory struct{}
 
 func (this *MetadataResolverFactory) CreateResolver(request *ResolveRequest) Resolver {
 	s := request.Context.GetSchema()
-	switch (request.Field.Name) {
+	switch request.Field.Name {
 	case "__typename":
 		return func() (reflect.Value, error) {
 
@@ -306,9 +307,9 @@ func (this *MetadataResolverFactory) CreateResolver(request *ResolveRequest) Res
 }
 
 func normalizeMethodName(method string) string {
-	method = strings.Replace(method, "_", "", -1)
+	//method = strings.Replace(method, "_", "", -1)
 	method = strings.ToLower(method)
-	return method;
+	return method
 }
 
 var castMethodCache common.Cache
@@ -324,16 +325,16 @@ func TryCastFunction(parentValue reflect.Value, toType string) (reflect.Value, b
 	methodIndex := childMethodTypeCache.GetOrElseUpdate(key, func() interface{} {
 		needle := normalizeMethodName("To" + toType)
 		for methodIndex := 0; methodIndex < key.fromType.NumMethod(); methodIndex++ {
-			method := normalizeMethodName(key.fromType.Method(methodIndex).Name);
+			method := normalizeMethodName(key.fromType.Method(methodIndex).Name)
 			if needle == method {
 				if key.fromType.Method(methodIndex).Type.NumIn() != 1 {
-					continue;
+					continue
 				}
 				if key.fromType.Method(methodIndex).Type.NumOut() != 2 {
 					continue
 				}
 				if key.fromType.Method(methodIndex).Type.Out(1) != reflect.TypeOf(true) {
-					continue;
+					continue
 				}
 				return methodIndex
 			}

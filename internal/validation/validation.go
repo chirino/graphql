@@ -39,11 +39,11 @@ func (c *context) addErr(loc errors.Location, rule string, format string, a ...i
 }
 
 func (c *context) addErrMultiLoc(locs []errors.Location, rule string, format string, a ...interface{}) {
-	c.errs = append(c.errs, &errors.QueryError{
+	c.errs = append(c.errs, (&errors.QueryError{
 		Message:   fmt.Sprintf(format, a...),
 		Locations: locs,
 		Rule:      rule,
-	})
+	}).WithStack())
 }
 
 type opContext struct {
@@ -684,11 +684,11 @@ func validateLiteral(c *opContext, l common.Literal) {
 				if op.Name.Name != "" {
 					byOp = fmt.Sprintf(" by operation %q", op.Name.Name)
 				}
-				c.opErrs[op] = append(c.opErrs[op], &errors.QueryError{
+				c.opErrs[op] = append(c.opErrs[op], (&errors.QueryError{
 					Message:   fmt.Sprintf("Variable %q is not defined%s.", "$"+l.Name, byOp),
 					Locations: []errors.Location{l.Loc, op.Loc},
 					Rule:      "NoUndefinedVariables",
-				})
+				}).WithStack())
 				continue
 			}
 			c.usedVars[op][v] = struct{}{}

@@ -174,10 +174,10 @@ func (this *Execution) CreateSelectionResolvers(parentSelectionResolver *selecti
 				})
 
 				if resolver == nil {
-					this.AddError(&errors.QueryError{
+					this.AddError((&errors.QueryError{
 						Message: "No resolver found",
 						Path:    append(parentSelectionResolver.Path(), field.Alias.Name),
-					})
+					}).WithStack())
 				} else {
 					sr.resolver = resolver
 					selectionResolvers.Set(field.Alias.Name, sr)
@@ -265,10 +265,10 @@ func (this *Execution) recursiveExecute(parentSelection *selectionResolver, pare
 			if ((childValue.Kind() == reflect.Ptr || childValue.Kind() == reflect.Interface) &&
 				childValue.IsNil()) {
 				if (nonNullType) {
-					this.AddError(&errors.QueryError{
+					this.AddError((&errors.QueryError{
 						Message: "ResolverFactory produced a nil value for a Non Null type",
 						Path:    selected.Path(),
-					})
+					}).WithStack())
 				} else {
 					this.Out.WriteString("null")
 				}
@@ -349,10 +349,10 @@ func (this *Execution) writeList(listType common.List, childValue reflect.Value,
 		}
 		this.Out.WriteByte(']')
 	default:
-		this.AddError(&errors.QueryError{
+		this.AddError((&errors.QueryError{
 			Message: fmt.Sprintf("Resolved object was not an array, it was a: %v", childValue.Kind()),
 			Path:    selectionResolver.Path(),
-		});
+		}).WithStack());
 	}
 }
 

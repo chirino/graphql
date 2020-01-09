@@ -93,7 +93,7 @@ func checkErrors(t *testing.T, expected, actual []*errors.QueryError) {
 	if expectedCount > 0 {
 		for i, want := range expected {
 			got := actual[i]
-
+			got.ClearStack()
 			if !reflect.DeepEqual(got, want) {
 				t.Fatalf("unexpected error: got %+v, want %+v", got, want)
 			}

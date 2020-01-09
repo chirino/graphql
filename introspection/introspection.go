@@ -77,6 +77,10 @@ func WrapType(typ common.Type) *Type {
 	return &Type{typ}
 }
 
+func (t *Type) To__Type() (*Type, bool) {
+	return t, true
+}
+
 func (r *Type) Kind() string {
 	return r.typ.Kind()
 }
@@ -232,6 +236,10 @@ func (r *Field) DeprecationReason() *string {
 
 type InputValue struct {
 	value *common.InputValue
+}
+
+func (r *InputValue) To__InputValue() (*InputValue, bool) {
+	return r, true
 }
 
 func (r *InputValue) Name() string {
