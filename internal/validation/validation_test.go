@@ -55,6 +55,7 @@ func TestValidate(t *testing.T) {
 			for _, err := range errs {
 				if err.Rule == test.Rule {
 					err.Rule = ""
+					err.ClearStack()
 					got = append(got, err)
 				}
 			}
