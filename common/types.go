@@ -29,6 +29,28 @@ func (t *List) String() string    { return "[" + t.OfType.String() + "]" }
 func (t *NonNull) String() string { return t.OfType.String() + "!" }
 func (*TypeName) String() string  { panic("TypeName needs to be resolved to actual type") }
 
+
+func DeepestType(t Type) Type {
+	switch t := (t).(type) {
+	case *NonNull:
+		return DeepestType(t.OfType)
+	case *List:
+		return DeepestType(t.OfType)
+	}
+	return t
+}
+
+func OfType(t Type) Type {
+	switch t := (t).(type) {
+	case *NonNull:
+		return t.OfType
+	case *List:
+		return t.OfType
+	default:
+		return nil
+	}
+}
+
 func ParseType(l *Lexer) Type {
 	t := parseNullType(l)
 	if l.Peek() == '!' {
