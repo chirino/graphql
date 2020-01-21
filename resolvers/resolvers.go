@@ -243,15 +243,16 @@ func (this *MapResolverFactory) CreateResolver(request *ResolveRequest) Resolver
 	if parentValue.Kind() != reflect.Map || parentValue.Type().Key().Kind() != reflect.String {
 		return nil
 	}
-	field := reflect.ValueOf(request.Field.Name)
 
 	return func() (reflect.Value, error) {
+		field := reflect.ValueOf(request.Field.Name)
 		value := parentValue.MapIndex(field)
 		if !value.IsValid() {
-			var v *interface{} = nil
-			return reflect.ValueOf(v), nil
+			return reflect.Zero(parentValue.Type().Elem()), nil
 		}
-
+		if value.Interface() == nil {
+			return value, nil
+		}
 		value = reflect.ValueOf(value.Interface())
 		return value, nil
 	}
