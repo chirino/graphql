@@ -1,4 +1,4 @@
-package common
+package schema
 
 type Directive struct {
 	Name Ident

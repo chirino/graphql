@@ -1,19 +1,9 @@
 package graphql
 
 import (
-	"bufio"
-	"bytes"
-	"context"
-	"encoding/json"
-	"github.com/chirino/graphql/errors"
-	"github.com/chirino/graphql/common"
-	"github.com/chirino/graphql/internal/exec"
-	"github.com/chirino/graphql/internal/query"
-	"github.com/chirino/graphql/schema"
-	"github.com/chirino/graphql/internal/validation"
-	"github.com/chirino/graphql/introspection"
 	"github.com/chirino/graphql/log"
 	"github.com/chirino/graphql/resolvers"
+	"github.com/chirino/graphql/schema"
 	"github.com/chirino/graphql/trace"
 )
 
@@ -26,18 +16,6 @@ type Engine struct {
 	Logger           log.Logger
 	ResolverFactory  resolvers.ResolverFactory
 	Root             interface{}
-}
-
-type EngineRequest struct {
-	Query         string                 `json:"query"`
-	OperationName string                 `json:"operationName"`
-	Variables     map[string]interface{} `json:"variables"`
-}
-
-type EngineResponse struct {
-	Data       json.RawMessage        `json:"data,omitempty"`
-	Errors     []*errors.QueryError   `json:"errors,omitempty"`
-	Extensions map[string]interface{} `json:"extensions,omitempty"`
 }
 
 func CreateEngine(schema string) (*Engine, error) {
@@ -58,68 +36,4 @@ func New() *Engine {
 	}
 }
 
-// Execute the given request.
-func (engine *Engine) Execute(ctx context.Context, request *EngineRequest, root interface{}) *Response {
 
-	doc, qErr := query.Parse(request.Query)
-	if qErr != nil {
-		return &Response{Errors: []*errors.QueryError{qErr}}
-	}
-
-	validationFinish := engine.ValidationTracer.TraceValidation()
-	errs := validation.Validate(engine.Schema, doc, engine.MaxDepth)
-	validationFinish(errs)
-
-	if len(errs) != 0 {
-		return &Response{Errors: errs}
-	}
-
-	op, err := getOperation(doc, request.OperationName)
-	if err != nil {
-		return &Response{Errors: []*errors.QueryError{errors.Errorf("%s", err)}}
-	}
-
-	varTypes := make(map[string]*introspection.Type)
-	for _, v := range op.Vars {
-		t, err := common.ResolveType(v.Type, engine.Schema.Resolve)
-		if err != nil {
-			return &Response{Errors: []*errors.QueryError{err}}
-		}
-		varTypes[v.Name.Name] = introspection.WrapType(t)
-	}
-
-	if root == nil {
-		root = engine.Root
-	}
-
-	traceContext, finish := engine.Tracer.TraceQuery(ctx, request.Query, request.OperationName, request.Variables, varTypes)
-	out := bytes.Buffer{}
-
-	r := exec.Execution{
-		Schema:          engine.Schema,
-		Tracer:          engine.Tracer,
-		Logger:          engine.Logger,
-		ResolverFactory: engine.ResolverFactory,
-		Doc:             doc,
-		Operation:       op,
-		Vars:            request.Variables,
-		VarTypes:        varTypes,
-		Limiter:         make(chan byte, engine.MaxParallelism),
-		Context:         traceContext,
-		Root:            root,
-		Out:             bufio.NewWriter(&out),
-	}
-
-	errs = r.Execute()
-	finish(errs)
-
-	if len(errs) > 0 {
-		return &Response{
-			Errors: errs,
-		}
-	}
-
-	return &Response{
-		Data: out.Bytes(),
-	}
-}

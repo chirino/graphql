@@ -6,13 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/chirino/graphql/errors"
-	"github.com/chirino/graphql/common"
 	"github.com/chirino/graphql/internal/exec/packer"
+	"github.com/chirino/graphql/internal/introspection"
 	"github.com/chirino/graphql/internal/query"
-	"github.com/chirino/graphql/schema"
-	"github.com/chirino/graphql/introspection"
 	"github.com/chirino/graphql/log"
 	"github.com/chirino/graphql/resolvers"
+	"github.com/chirino/graphql/schema"
 	"github.com/chirino/graphql/trace"
 	"reflect"
 	"sync"
@@ -134,7 +133,7 @@ func (this *linkedMap) Set(key interface{}, value interface{}) interface{} {
 	return nil;
 }
 
-func (this *Execution) CreateSelectionResolvers(parentSelectionResolver *selectionResolver, selectionResolvers *linkedMap, parentValue reflect.Value, parentType common.Type, selections []query.Selection) {
+func (this *Execution) CreateSelectionResolvers(parentSelectionResolver *selectionResolver, selectionResolvers *linkedMap, parentValue reflect.Value, parentType schema.Type, selections []query.Selection) {
 	for _, selection := range selections {
 		switch field := selection.(type) {
 		case *query.Field:
@@ -205,7 +204,7 @@ func (this *Execution) CreateSelectionResolvers(parentSelectionResolver *selecti
 	}
 }
 
-func (this *Execution) CreateSelectionResolversForFragment(parentSelectionResolver *selectionResolver, fragment *query.Fragment, parentType common.Type, parentValue reflect.Value, selectionResolvers *linkedMap) {
+func (this *Execution) CreateSelectionResolversForFragment(parentSelectionResolver *selectionResolver, fragment *query.Fragment, parentType schema.Type, parentValue reflect.Value, selectionResolvers *linkedMap) {
 	if fragment.On.Name != "" && fragment.On.Name != parentType.String() {
 		castType := this.Schema.Types[fragment.On.Name]
 		if casted, ok := resolvers.TryCastFunction(parentValue, fragment.On.Name); ok {
@@ -216,7 +215,7 @@ func (this *Execution) CreateSelectionResolversForFragment(parentSelectionResolv
 	}
 }
 
-func (this *Execution) recursiveExecute(parentSelection *selectionResolver, parentValue reflect.Value, parentType common.Type, selections []query.Selection) []*errors.QueryError {
+func (this *Execution) recursiveExecute(parentSelection *selectionResolver, parentValue reflect.Value, parentType schema.Type, selections []query.Selection) []*errors.QueryError {
 	{
 		defer func() {
 			if value := recover(); value != nil {
@@ -280,8 +279,8 @@ func (this *Execution) recursiveExecute(parentSelection *selectionResolver, pare
 				this.writeLeaf(childValue, selected, childType)
 			} else {
 				switch childType := childType.(type) {
-				case *common.List:
-					this.writeList(*childType, childValue, selected, func(elementType common.Type, element reflect.Value) {
+				case *schema.List:
+					this.writeList(*childType, childValue, selected, func(elementType schema.Type, element reflect.Value) {
 						this.recursiveExecute(selected, element, elementType, selected.selections)
 					})
 				case *schema.Object, *schema.Interface, *schema.Union:
@@ -299,7 +298,7 @@ func (this *Execution) recursiveExecute(parentSelection *selectionResolver, pare
 	return this.Errs
 }
 
-func (this *Execution) skipByDirective(directives common.DirectiveList) bool {
+func (this *Execution) skipByDirective(directives schema.DirectiveList) bool {
 	if d := directives.Get("skip"); d != nil {
 		p := packer.ValuePacker{ValueType: reflect.TypeOf(false)}
 		v, err := p.Pack(d.Args.MustGet("if").Value(this.Vars))
@@ -324,7 +323,7 @@ func (this *Execution) skipByDirective(directives common.DirectiveList) bool {
 	return false
 }
 
-func (this *Execution) writeList(listType common.List, childValue reflect.Value, selectionResolver *selectionResolver, writeElement func(elementType common.Type, element reflect.Value)) {
+func (this *Execution) writeList(listType schema.List, childValue reflect.Value, selectionResolver *selectionResolver, writeElement func(elementType schema.Type, element reflect.Value)) {
 
 	// Dereference pointers..
 	for ; childValue.Kind() == reflect.Ptr; {
@@ -341,7 +340,7 @@ func (this *Execution) writeList(listType common.List, childValue reflect.Value,
 			}
 			element := childValue.Index(i)
 			switch elementType := listType.OfType.(type) {
-			case *common.List:
+			case *schema.List:
 				this.writeList(*elementType, element, selectionResolver, writeElement)
 			default:
 				writeElement(elementType, element)
@@ -356,9 +355,9 @@ func (this *Execution) writeList(listType common.List, childValue reflect.Value,
 	}
 }
 
-func (this *Execution) writeLeaf(childValue reflect.Value, selectionResolver *selectionResolver, childType common.Type) {
+func (this *Execution) writeLeaf(childValue reflect.Value, selectionResolver *selectionResolver, childType schema.Type) {
 	switch childType := childType.(type) {
-	case *common.NonNull:
+	case *schema.NonNull:
 		if (childValue.Kind() == reflect.Ptr && childValue.Elem().IsNil()) {
 			panic(errors.Errorf("got nil for non-null %q", childType))
 		} else {
@@ -383,8 +382,8 @@ func (this *Execution) writeLeaf(childValue reflect.Value, selectionResolver *se
 		this.Out.WriteString(childValue.String())
 		this.Out.WriteByte('"')
 
-	case *common.List:
-		this.writeList(*childType, childValue, selectionResolver, func(elementType common.Type, element reflect.Value) {
+	case *schema.List:
+		this.writeList(*childType, childValue, selectionResolver, func(elementType schema.Type, element reflect.Value) {
 			this.writeLeaf(element, selectionResolver, childType.OfType)
 		})
 
@@ -401,8 +400,8 @@ func (r *Execution) AddError(err *errors.QueryError) {
 	}
 }
 
-func unwrapNonNull(t common.Type) (common.Type, bool) {
-	if nn, ok := t.(*common.NonNull); ok {
+func unwrapNonNull(t schema.Type) (schema.Type, bool) {
+	if nn, ok := t.(*schema.NonNull); ok {
 		return nn.OfType, true
 	}
 	return t, false

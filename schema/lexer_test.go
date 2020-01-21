@@ -1,9 +1,8 @@
-package common_test
+package schema_test
 
 import (
-	"testing"
-
-	"github.com/chirino/graphql/common"
+    "github.com/chirino/graphql/schema"
+    "testing"
 )
 
 type consumeTestCase struct {
@@ -28,7 +27,7 @@ type Hello {
 func TestConsume(t *testing.T) {
 	for _, test := range consumeTests {
 		t.Run(test.description, func(t *testing.T) {
-			lex := common.NewLexer(test.definition)
+			lex := schema.NewLexer(test.definition)
 
 			err := lex.CatchSyntaxError(lex.Consume)
 			if err != nil {

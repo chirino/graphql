@@ -1,116 +1,109 @@
 package graphql
 
 import (
-	"context"
-	"encoding/json"
-
-	"github.com/chirino/graphql/introspection"
+    "context"
 )
 
-// Inspect allows inspection of the given schema.
-func (s *Schema) Inspect() *introspection.Schema {
-	return introspection.WrapSchema(s.engine.Schema)
+// GetSchemaIntrospectionJSON returns the JSON that describes the Schema
+// in the introspection format expected by GraphiQL
+func (engine *Engine) GetSchemaIntrospectionJSON() ([]byte, error) {
+    r := EngineRequest{
+        Query: introspectionQuery,
+    }
+    result := engine.Execute(context.Background(), &r, engine.Root)
+    if len(result.Errors) != 0 {
+        panic(result.Errors[0])
+    }
+    return result.Data, nil
 }
 
-// ToJSON encodes the schema in a JSON format used by tools like Relay.
-func (s *Schema) ToJSON() ([]byte, error) {
-	r := EngineRequest{
-		Query: introspectionQuery,
-	}
-	result := s.engine.Execute(context.Background(), &r, s.resolver)
-	if len(result.Errors) != 0 {
-		panic(result.Errors[0])
-	}
-	return json.MarshalIndent(result.Data, "", "\t")
-}
-
-var introspectionQuery = `
-  query {
-    __schema {
-      queryType { name }
-      mutationType { name }
-      subscriptionType { name }
-      types {
-        ...FullType
-      }
-      directives {
-        name
-        description
-        locations
-        args {
-          ...InputValue
-        }
-      }
-    }
-  }
-  fragment FullType on __Type {
-    kind
-    name
-    description
-    fields(includeDeprecated: true) {
-      name
-      description
-      args {
-        ...InputValue
-      }
-      type {
-        ...TypeRef
-      }
-      isDeprecated
-      deprecationReason
-    }
-    inputFields {
-      ...InputValue
-    }
-    interfaces {
-      ...TypeRef
-    }
-    enumValues(includeDeprecated: true) {
-      name
-      description
-      isDeprecated
-      deprecationReason
-    }
-    possibleTypes {
-      ...TypeRef
-    }
-  }
-  fragment InputValue on __InputValue {
-    name
-    description
-    type { ...TypeRef }
-    defaultValue
-  }
-  fragment TypeRef on __Type {
-    kind
-    name
-    ofType {
-      kind
-      name
-      ofType {
-        kind
-        name
-        ofType {
-          kind
-          name
-          ofType {
-            kind
-            name
-            ofType {
-              kind
-              name
-              ofType {
-                kind
-                name
-                ofType {
-                  kind
-                  name
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+const introspectionQuery = `
+ query {
+   __schema {
+     queryType { name }
+     mutationType { name }
+     subscriptionType { name }
+     types {
+       ...FullType
+     }
+     directives {
+       name
+       description
+       locations
+       args {
+         ...InputValue
+       }
+     }
+   }
+ }
+ fragment FullType on __Type {
+   kind
+   name
+   description
+   fields(includeDeprecated: true) {
+     name
+     description
+     args {
+       ...InputValue
+     }
+     type {
+       ...TypeRef
+     }
+     isDeprecated
+     deprecationReason
+   }
+   inputFields {
+     ...InputValue
+   }
+   interfaces {
+     ...TypeRef
+   }
+   enumValues(includeDeprecated: true) {
+     name
+     description
+     isDeprecated
+     deprecationReason
+   }
+   possibleTypes {
+     ...TypeRef
+   }
+ }
+ fragment InputValue on __InputValue {
+   name
+   description
+   type { ...TypeRef }
+   defaultValue
+ }
+ fragment TypeRef on __Type {
+   kind
+   name
+   ofType {
+     kind
+     name
+     ofType {
+       kind
+       name
+       ofType {
+         kind
+         name
+         ofType {
+           kind
+           name
+           ofType {
+             kind
+             name
+             ofType {
+               kind
+               name
+               ofType {
+                 kind
+                 name
+               }
+             }
+           }
+         }
+       }
+     }
+   }
+ }
 `

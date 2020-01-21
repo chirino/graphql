@@ -1,7 +1,7 @@
-package common
+package schema
 
 import (
-	"github.com/chirino/graphql/errors"
+    "github.com/chirino/graphql/errors"
 )
 
 // http://facebook.github.io/graphql/draft/#InputValueDefinition

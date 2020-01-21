@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/chirino/graphql/errors"
-	"github.com/chirino/graphql/common"
 )
 
 func TestParseInterfaceDef(t *testing.T) {
@@ -155,10 +154,10 @@ func compareObjects(t *testing.T, expected, actual *Object) {
 	}
 }
 
-func setup(t *testing.T, def string) *common.Lexer {
+func setup(t *testing.T, def string) *Lexer {
 	t.Helper()
 
-	lex := common.NewLexer(def)
+	lex := NewLexer(def)
 	lex.Consume()
 
 	return lex

@@ -1,10 +1,8 @@
-package graphql
+package deprecated
 
 import (
 	"context"
-	"fmt"
-
-	"encoding/json"
+	"github.com/chirino/graphql"
 
 	"github.com/chirino/graphql/errors"
 	"github.com/chirino/graphql/internal/query"
@@ -18,7 +16,7 @@ import (
 // resolver, then the schema can not be executed, but it may be inspected (e.g. with ToJSON).
 func ParseSchema(schemaString string, resolver interface{}, opts ...SchemaOpt) (*Schema, error) {
 
-	engine := New()
+	engine := graphql.New()
 	err := engine.Schema.Parse(schemaString)
 
 	if err != nil {
@@ -81,7 +79,7 @@ type Schema struct {
 	//validationTracer trace.ValidationTracer
 	//logger           log.Logger
 
-	engine           *Engine
+	engine           *graphql.Engine
 	resolver         interface{}
 }
 
@@ -123,23 +121,6 @@ func Logger(logger log.Logger) SchemaOpt {
 	}
 }
 
-// Response represents a typical response of a GraphQL server. It may be encoded to JSON directly or
-// it may be further processed to a custom response type, for example to include custom error data.
-// Errors are intentionally serialized first based on the advice in https://github.com/facebook/graphql/commit/7b40390d48680b15cb93e02d46ac5eb249689876#diff-757cea6edf0288677a9eea4cfc801d87R107
-type Response struct {
-	Errors     []*errors.QueryError   `json:"errors,omitempty"`
-	Data       json.RawMessage        `json:"data,omitempty"`
-	Extensions map[string]interface{} `json:"extensions,omitempty"`
-}
-
-func (r *Response) Error() error {
-	errs := []error{}
-	for _, err := range r.Errors {
-		errs = append(errs, err)
-	}
-	return errors.Multi(errs)
-}
-
 // Validate validates the given query with the schema.
 func (s *Schema) Validate(queryString string) []*errors.QueryError {
 	doc, qErr := query.Parse(queryString)
@@ -153,11 +134,11 @@ func (s *Schema) Validate(queryString string) []*errors.QueryError {
 // Exec executes the given query with the schema's resolver. It panics if the schema was created
 // without a resolver. If the context get cancelled, no further resolvers will be called and a
 // the context error will be returned as soon as possible (not immediately).
-func (s *Schema) Exec(ctx context.Context, queryString string, operationName string, variables map[string]interface{}) *Response {
+func (s *Schema) Exec(ctx context.Context, queryString string, operationName string, variables map[string]interface{}) *graphql.EngineResponse {
 	if s.resolver == nil {
 		panic("schema created without resolver, can not exec")
 	}
-	request := EngineRequest{
+	request := graphql.EngineRequest{
 		Query: queryString,
 		OperationName: operationName,
 		Variables: variables,
@@ -211,23 +192,3 @@ func (s *Schema) Exec(ctx context.Context, queryString string, operationName str
 //	}
 //}
 
-func getOperation(document *query.Document, operationName string) (*query.Operation, error) {
-	if len(document.Operations) == 0 {
-		return nil, fmt.Errorf("no operations in query document")
-	}
-
-	if operationName == "" {
-		if len(document.Operations) > 1 {
-			return nil, fmt.Errorf("more than one operation in query document and no operation name given")
-		}
-		for _, op := range document.Operations {
-			return op, nil // return the one and only operation
-		}
-	}
-
-	op := document.Operations.Get(operationName)
-	if op == nil {
-		return nil, fmt.Errorf("no operation with name %q", operationName)
-	}
-	return op, nil
-}

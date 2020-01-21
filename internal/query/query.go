@@ -6,7 +6,6 @@ import (
 	"text/scanner"
 
 	"github.com/chirino/graphql/errors"
-	"github.com/chirino/graphql/common"
 )
 
 type Document struct {
@@ -38,10 +37,10 @@ func (l FragmentList) Get(name string) *FragmentDecl {
 
 type Operation struct {
 	Type       OperationType
-	Name       common.Ident
-	Vars       common.InputValueList
+	Name       schema.Ident
+	Vars       schema.InputValueList
 	Selections []Selection
-	Directives common.DirectiveList
+	Directives schema.DirectiveList
 	Loc        errors.Location
 }
 
@@ -54,14 +53,14 @@ const (
 )
 
 type Fragment struct {
-	On         common.TypeName
+	On         schema.TypeName
 	Selections []Selection
 }
 
 type FragmentDecl struct {
 	Fragment
-	Name       common.Ident
-	Directives common.DirectiveList
+	Name       schema.Ident
+	Directives schema.DirectiveList
 	Loc        errors.Location
 }
 
@@ -70,13 +69,13 @@ type Selection interface {
 }
 
 type Field struct {
-	Alias           common.Ident
-	Name            common.Ident
-	Arguments       common.ArgumentList
-	Directives      common.DirectiveList
+	Alias           schema.Ident
+	Name            schema.Ident
+	Arguments       schema.ArgumentList
+	Directives      schema.DirectiveList
 	Selections      []Selection
 	SelectionSetLoc errors.Location
-	Schema 			*FieldSchema
+	Schema          *FieldSchema
 }
 
 type FieldSchema struct {
@@ -86,13 +85,13 @@ type FieldSchema struct {
 
 type InlineFragment struct {
 	Fragment
-	Directives common.DirectiveList
+	Directives schema.DirectiveList
 	Loc        errors.Location
 }
 
 type FragmentSpread struct {
-	Name       common.Ident
-	Directives common.DirectiveList
+	Name       schema.Ident
+	Directives schema.DirectiveList
 	Loc        errors.Location
 }
 
@@ -101,7 +100,7 @@ func (InlineFragment) isSelection() {}
 func (FragmentSpread) isSelection() {}
 
 func Parse(queryString string) (*Document, *errors.QueryError) {
-	l := common.NewLexer(queryString)
+	l := schema.NewLexer(queryString)
 
 	var doc *Document
 	err := l.CatchSyntaxError(func() { doc = parseDocument(l) })
@@ -112,7 +111,7 @@ func Parse(queryString string) (*Document, *errors.QueryError) {
 	return doc, nil
 }
 
-func parseDocument(l *common.Lexer) *Document {
+func parseDocument(l *schema.Lexer) *Document {
 	d := &Document{}
 	l.Consume()
 	for l.Peek() != scanner.EOF {
@@ -148,19 +147,19 @@ func parseDocument(l *common.Lexer) *Document {
 	return d
 }
 
-func parseOperation(l *common.Lexer, opType OperationType) *Operation {
+func parseOperation(l *schema.Lexer, opType OperationType) *Operation {
 	op := &Operation{Type: opType}
 	op.Name.Loc = l.Location()
 	if l.Peek() == scanner.Ident {
 		op.Name = l.ConsumeIdentWithLoc()
 	}
-	op.Directives = common.ParseDirectives(l)
+	op.Directives = schema.ParseDirectives(l)
 	if l.Peek() == '(' {
 		l.ConsumeToken('(')
 		for l.Peek() != ')' {
 			loc := l.Location()
 			l.ConsumeToken('$')
-			iv := common.ParseInputValue(l)
+			iv := schema.ParseInputValue(l)
 			iv.Loc = loc
 			op.Vars = append(op.Vars, iv)
 		}
@@ -170,17 +169,17 @@ func parseOperation(l *common.Lexer, opType OperationType) *Operation {
 	return op
 }
 
-func parseFragment(l *common.Lexer) *FragmentDecl {
+func parseFragment(l *schema.Lexer) *FragmentDecl {
 	f := &FragmentDecl{}
 	f.Name = l.ConsumeIdentWithLoc()
 	l.ConsumeKeyword("on")
-	f.On = common.TypeName{Ident: l.ConsumeIdentWithLoc()}
-	f.Directives = common.ParseDirectives(l)
+	f.On = schema.TypeName{Ident: l.ConsumeIdentWithLoc()}
+	f.Directives = schema.ParseDirectives(l)
 	f.Selections = parseSelectionSet(l)
 	return f
 }
 
-func parseSelectionSet(l *common.Lexer) []Selection {
+func parseSelectionSet(l *schema.Lexer) []Selection {
 	var sels []Selection
 	l.ConsumeToken('{')
 	for l.Peek() != '}' {
@@ -190,14 +189,14 @@ func parseSelectionSet(l *common.Lexer) []Selection {
 	return sels
 }
 
-func parseSelection(l *common.Lexer) Selection {
+func parseSelection(l *schema.Lexer) Selection {
 	if l.Peek() == '.' {
 		return parseSpread(l)
 	}
 	return parseField(l)
 }
 
-func parseField(l *common.Lexer) *Field {
+func parseField(l *schema.Lexer) *Field {
 	f := &Field{}
 	f.Alias = l.ConsumeIdentWithLoc()
 	f.Name = f.Alias
@@ -206,9 +205,9 @@ func parseField(l *common.Lexer) *Field {
 		f.Name = l.ConsumeIdentWithLoc()
 	}
 	if l.Peek() == '(' {
-		f.Arguments = common.ParseArguments(l)
+		f.Arguments = schema.ParseArguments(l)
 	}
-	f.Directives = common.ParseDirectives(l)
+	f.Directives = schema.ParseDirectives(l)
 	if l.Peek() == '{' {
 		f.SelectionSetLoc = l.Location()
 		f.Selections = parseSelectionSet(l)
@@ -216,7 +215,7 @@ func parseField(l *common.Lexer) *Field {
 	return f
 }
 
-func parseSpread(l *common.Lexer) Selection {
+func parseSpread(l *schema.Lexer) Selection {
 	loc := l.Location()
 	l.ConsumeToken('.')
 	l.ConsumeToken('.')
@@ -230,12 +229,12 @@ func parseSpread(l *common.Lexer) Selection {
 				Name: ident,
 				Loc:  loc,
 			}
-			fs.Directives = common.ParseDirectives(l)
+			fs.Directives = schema.ParseDirectives(l)
 			return fs
 		}
-		f.On = common.TypeName{Ident: l.ConsumeIdentWithLoc()}
+		f.On = schema.TypeName{Ident: l.ConsumeIdentWithLoc()}
 	}
-	f.Directives = common.ParseDirectives(l)
+	f.Directives = schema.ParseDirectives(l)
 	f.Selections = parseSelectionSet(l)
 	return f
 }

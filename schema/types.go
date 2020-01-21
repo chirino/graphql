@@ -1,7 +1,7 @@
-package common
+package schema
 
 import (
-	"github.com/chirino/graphql/errors"
+    "github.com/chirino/graphql/errors"
 )
 
 type Type interface {
@@ -18,7 +18,7 @@ type NonNull struct {
 }
 
 type TypeName struct {
-	Ident
+    Ident
 }
 
 func (*List) Kind() string     { return "LIST" }

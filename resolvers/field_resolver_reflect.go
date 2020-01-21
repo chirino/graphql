@@ -7,14 +7,13 @@
 package resolvers
 
 import (
-	"github.com/chirino/graphql/common"
-	"reflect"
-	"sort"
-	"strings"
-	"unicode"
+    "reflect"
+    "sort"
+    "strings"
+    "unicode"
 )
 
-var childFieldTypeCache common.Cache
+var childFieldTypeCache Cache
 
 func getChildField(parent *reflect.Value, fieldName string) (*reflect.Value, bool){
 	parentType := parent.Type()

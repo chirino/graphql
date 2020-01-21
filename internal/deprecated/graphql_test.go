@@ -1,14 +1,15 @@
-package graphql_test
+package deprecated_test
 
 import (
 	"context"
+	"github.com/chirino/graphql/customtypes"
 	"github.com/chirino/graphql/errors"
+	"github.com/chirino/graphql/internal/deprecated"
 	"testing"
 	"time"
 
-	"github.com/chirino/graphql"
-	"github.com/chirino/graphql/example/starwars"
-	"github.com/chirino/graphql/gqltesting"
+	"github.com/chirino/graphql/internal/example/starwars"
+    "github.com/chirino/graphql/internal/gqltesting"
 )
 
 type helloWorldResolver1 struct{}
@@ -58,16 +59,16 @@ func (r *theNumberResolver) ChangeTheNumber(args struct{ NewNumber int32 }) *the
 
 type timeResolver struct{}
 
-func (r *timeResolver) AddHour(args struct{ Time graphql.Time }) graphql.Time {
-	return graphql.Time{Time: args.Time.Add(time.Hour)}
+func (r *timeResolver) AddHour(args struct{ Time customtypes.Time }) customtypes.Time {
+	return customtypes.Time{Time: args.Time.Add(time.Hour)}
 }
 
-var starwarsSchema = graphql.MustParseSchema(starwars.Schema, &starwars.Resolver{})
+var starwarsSchema = deprecated.MustParseSchema(starwars.Schema, &starwars.Resolver{})
 
 func TestHelloWorld(t *testing.T) {
 	gqltesting.RunTests(t, []*gqltesting.Test{
 		{
-			Schema: graphql.MustParseSchema(`
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 				}
@@ -89,7 +90,7 @@ func TestHelloWorld(t *testing.T) {
 		},
 
 		{
-			Schema: graphql.MustParseSchema(`
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 				}
@@ -115,7 +116,7 @@ func TestHelloWorld(t *testing.T) {
 func TestHelloSnake(t *testing.T) {
 	gqltesting.RunTests(t, []*gqltesting.Test{
 		{
-			Schema: graphql.MustParseSchema(`
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 				}
@@ -137,7 +138,7 @@ func TestHelloSnake(t *testing.T) {
 		},
 
 		{
-			Schema: graphql.MustParseSchema(`
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 				}
@@ -163,7 +164,7 @@ func TestHelloSnake(t *testing.T) {
 func TestHelloSnakeArguments(t *testing.T) {
 	gqltesting.RunTests(t, []*gqltesting.Test{
 		{
-			Schema: graphql.MustParseSchema(`
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 				}
@@ -185,7 +186,7 @@ func TestHelloSnakeArguments(t *testing.T) {
 		},
 
 		{
-			Schema: graphql.MustParseSchema(`
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 				}
@@ -597,7 +598,7 @@ func (r *testDeprecatedDirectiveResolver) C() int32 {
 func TestDeprecatedDirective(t *testing.T) {
 	gqltesting.RunTests(t, []*gqltesting.Test{
 		{
-			Schema: graphql.MustParseSchema(`
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 				}
@@ -638,7 +639,7 @@ func TestDeprecatedDirective(t *testing.T) {
 			`,
 		},
 		{
-			Schema: graphql.MustParseSchema(`
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 				}
@@ -1429,7 +1430,7 @@ func TestIntrospection(t *testing.T) {
 func TestMutationOrder(t *testing.T) {
 	gqltesting.RunTests(t, []*gqltesting.Test{
 		{
-			Schema: graphql.MustParseSchema(`
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 					mutation: Mutation
@@ -1476,7 +1477,7 @@ func TestMutationOrder(t *testing.T) {
 func TestTime(t *testing.T) {
 	gqltesting.RunTests(t, []*gqltesting.Test{
 		{
-			Schema: graphql.MustParseSchema(`
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 				}
@@ -1515,7 +1516,7 @@ func (r *resolverWithUnexportedMethod) changeTheNumber(args struct{ NewNumber in
 func TestUnexportedMethod(t *testing.T) {
 	gqltesting.RunTests(t, []*gqltesting.Test{
 		{
-			Schema: graphql.MustParseSchema(`
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					mutation: Mutation
 				}
@@ -1545,7 +1546,7 @@ func (r *resolverWithUnexportedField) ChangeTheNumber(args struct{ newNumber int
 func TestUnexportedField(t *testing.T) {
 	gqltesting.RunTests(t, []*gqltesting.Test{
 		{
-			Schema: graphql.MustParseSchema(`
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					mutation: Mutation
 				}
@@ -1646,12 +1647,12 @@ func (r *inputResolver) Recursive(args struct{ Value *recursive }) int32 {
 	return n
 }
 
-func (r *inputResolver) ID(args struct{ Value graphql.ID }) graphql.ID {
+func (r *inputResolver) ID(args struct{ Value customtypes.ID }) customtypes.ID {
 	return args.Value
 }
 
 func TestInput(t *testing.T) {
-	coercionSchema := graphql.MustParseSchema(`
+	coercionSchema := deprecated.MustParseSchema(`
 		schema {
 			query: Query
 		}

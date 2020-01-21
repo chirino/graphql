@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/chirino/graphql/errors"
-	"github.com/chirino/graphql/introspection"
+    "github.com/chirino/graphql/internal/introspection"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/log"

@@ -5,21 +5,23 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
+	"github.com/chirino/graphql/customtypes"
+	"github.com/chirino/graphql/internal/deprecated"
+    "net/http"
 	"strings"
 
 	graphql "github.com/chirino/graphql"
 )
 
-func MarshalID(kind string, spec interface{}) graphql.ID {
+func MarshalID(kind string, spec interface{}) customtypes.ID {
 	d, err := json.Marshal(spec)
 	if err != nil {
 		panic(fmt.Errorf("relay.MarshalID: %s", err))
 	}
-	return graphql.ID(base64.URLEncoding.EncodeToString(append([]byte(kind+":"), d...)))
+	return customtypes.ID(base64.URLEncoding.EncodeToString(append([]byte(kind+":"), d...)))
 }
 
-func UnmarshalKind(id graphql.ID) string {
+func UnmarshalKind(id customtypes.ID) string {
 	s, err := base64.URLEncoding.DecodeString(string(id))
 	if err != nil {
 		return ""
@@ -31,7 +33,7 @@ func UnmarshalKind(id graphql.ID) string {
 	return string(s[:i])
 }
 
-func UnmarshalSpec(id graphql.ID, v interface{}) error {
+func UnmarshalSpec(id customtypes.ID, v interface{}) error {
 	s, err := base64.URLEncoding.DecodeString(string(id))
 	if err != nil {
 		return err
@@ -44,7 +46,7 @@ func UnmarshalSpec(id graphql.ID, v interface{}) error {
 }
 
 type Handler struct {
-	Schema *graphql.Schema
+	Schema *deprecated.Schema
 	Engine *graphql.Engine
 }
 
@@ -55,7 +57,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var response *graphql.Response = nil
+	var response *graphql.EngineResponse = nil
 	if h.Schema!=nil {
 		response = h.Schema.Exec(r.Context(), request.Query, request.OperationName, request.Variables)
 	} else if h.Engine !=nil {

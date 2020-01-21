@@ -1,6 +1,4 @@
-# graphql-go [![Sourcegraph](https://sourcegraph.com/github.com/chirino/graphql/-/badge.svg)](https://sourcegraph.com/github.com/chirino/graphql?badge) [![Build Status](https://semaphoreci.com/api/v1/graph-gophers/graphql-go/branches/master/badge.svg)](https://semaphoreci.com/graph-gophers/graphql-go) [![GoDoc](https://godoc.org/github.com/chirino/graphql?status.svg)](https://godoc.org/github.com/chirino/graphql)
-
-<p align="center"><img src="docs/img/logo.png" width="300"></p>
+# graphql [![Sourcegraph](https://sourcegraph.com/github.com/chirino/graphql/-/badge.svg)](https://sourcegraph.com/github.com/chirino/graphql?badge) [![GoDoc](https://godoc.org/github.com/chirino/graphql?status.svg)](https://godoc.org/github.com/chirino/graphql)
 
 The goal of this project is to provide full support of the [GraphQL draft specification](https://facebook.github.io/graphql/draft) with a set of idiomatic, easy to use Go packages.
 
@@ -249,6 +247,10 @@ func (this *MyHttpResolverFactory) CreateResolver(request *resolvers.ResolveRequ
     })
 }
 ```
+
+### History / Credits
+
+This is a fork of the http://github.com/graph-gophers/graphql-go project.  
 
 ### Community Examples
 

@@ -1,17 +1,18 @@
 package relay_test
 
 import (
-	"github.com/stretchr/testify/require"
+    "github.com/chirino/graphql/internal/deprecated"
+    "github.com/stretchr/testify/require"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/chirino/graphql"
-	"github.com/chirino/graphql/example/starwars"
+    "github.com/chirino/graphql/internal/example/starwars"
 	"github.com/chirino/graphql/relay"
 )
 
-var starwarsSchema = graphql.MustParseSchema(starwars.Schema, &starwars.Resolver{})
+var starwarsSchema = deprecated.MustParseSchema(starwars.Schema, &starwars.Resolver{})
 
 
 func TestSchemaAPIServeHTTP(t *testing.T) {

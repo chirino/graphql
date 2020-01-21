@@ -3,7 +3,6 @@ package introspection
 import (
 	"sort"
 
-	"github.com/chirino/graphql/common"
 	"github.com/chirino/graphql/schema"
 )
 
@@ -69,11 +68,11 @@ func (r *Schema) SubscriptionType() *Type {
 }
 
 type Type struct {
-	typ common.Type
+	typ schema.Type
 }
 
 // WrapType is only used internally.
-func WrapType(typ common.Type) *Type {
+func WrapType(typ schema.Type) *Type {
 	return &Type{typ}
 }
 
@@ -185,9 +184,9 @@ func (r *Type) InputFields() *[]*InputValue {
 
 func (r *Type) OfType() *Type {
 	switch t := r.typ.(type) {
-	case *common.List:
+	case *schema.List:
 		return &Type{t.OfType}
-	case *common.NonNull:
+	case *schema.NonNull:
 		return &Type{t.OfType}
 	default:
 		return nil
@@ -235,7 +234,7 @@ func (r *Field) DeprecationReason() *string {
 }
 
 type InputValue struct {
-	value *common.InputValue
+	value *schema.InputValue
 }
 
 func (r *InputValue) To__InputValue() (*InputValue, bool) {

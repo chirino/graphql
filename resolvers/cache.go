@@ -1,4 +1,4 @@
-package common
+package resolvers
 
 import (
 	"sync"

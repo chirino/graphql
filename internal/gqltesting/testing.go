@@ -2,20 +2,20 @@ package gqltesting
 
 import (
 	"bytes"
-	"context"
-	"encoding/json"
-	"reflect"
-	"strconv"
-	"testing"
+    "context"
+    "encoding/json"
+    "github.com/chirino/graphql/internal/deprecated"
+    "reflect"
+    "strconv"
+    "testing"
 
-	graphql "github.com/chirino/graphql"
-	"github.com/chirino/graphql/errors"
+    "github.com/chirino/graphql/errors"
 )
 
 // Test is a GraphQL test case to be used with RunTest(s).
 type Test struct {
 	Context        context.Context
-	Schema         *graphql.Schema
+	Schema         *deprecated.Schema
 	Query          string
 	OperationName  string
 	Variables      map[string]interface{}

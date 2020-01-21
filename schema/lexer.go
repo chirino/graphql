@@ -1,7 +1,7 @@
-package common
+package schema
 
 import (
-	"fmt"
+    "fmt"
 	"strings"
 	"text/scanner"
 

@@ -2,7 +2,6 @@ package schema
 
 import (
 	"fmt"
-	"github.com/chirino/graphql/common"
 	"text/scanner"
 
 	"github.com/chirino/graphql/errors"
@@ -48,7 +47,7 @@ type Schema struct {
 }
 
 // Resolve a named type in the schema by its name.
-func (s *Schema) Resolve(name string) common.Type {
+func (s *Schema) Resolve(name string) Type {
 	return s.Types[name]
 }
 
@@ -56,7 +55,7 @@ func (s *Schema) Resolve(name string) common.Type {
 //
 // http://facebook.github.io/graphql/draft/#NamedType
 type NamedType interface {
-	common.Type
+	Type
 	TypeName() string
 	Description() string
 }
@@ -86,7 +85,7 @@ type Object struct {
 	Interfaces InterfaceList
 	Fields     FieldList `json:"fields"`
 	Desc       string
-	Directives common.DirectiveList
+	Directives DirectiveList
 
 	interfaceNames []string
 }
@@ -179,7 +178,7 @@ type Enum struct {
 // http://facebook.github.io/graphql/draft/#EnumValueDefinition
 type EnumValue struct {
 	Name       string
-	Directives common.DirectiveList
+	Directives DirectiveList
 	Desc       string
 	// TODO: Add a list of directives?
 }
@@ -193,7 +192,7 @@ type EnumValue struct {
 type InputObject struct {
 	Name   string
 	Desc   string
-	Values common.InputValueList
+	Values InputValueList
 	// TODO: Add a list of directives?
 }
 
@@ -238,7 +237,7 @@ type DirectiveDecl struct {
 	Name string
 	Desc string
 	Locs []string
-	Args common.InputValueList
+	Args InputValueList
 }
 
 func (*Scalar) Kind() string      { return "SCALAR" }
@@ -272,10 +271,10 @@ func (t *InputObject) Description() string { return t.Desc }
 // Field is a conceptual function which yields values.
 // http://facebook.github.io/graphql/draft/#FieldDefinition
 type Field struct {
-	Name       string                `json:"name"`
-	Args       common.InputValueList `json:"args"` // NOTE: the spec refers to this as `ArgumentsDefinition`.
-	Type       common.Type
-	Directives common.DirectiveList
+	Name       string         `json:"name"`
+	Args       InputValueList `json:"args"` // NOTE: the spec refers to this as `ArgumentsDefinition`.
+	Type       Type
+	Directives DirectiveList
 	Desc       string `json:"desc"`
 }
 
@@ -297,7 +296,7 @@ func New() *Schema {
 
 // Parse the schema string.
 func (s *Schema) Parse(schemaString string) error {
-	l := common.NewLexer(schemaString)
+	l := NewLexer(schemaString)
 
 	err := l.CatchSyntaxError(func() { parseSchema(s, l) })
 	if err != nil {
@@ -311,7 +310,7 @@ func (s *Schema) Parse(schemaString string) error {
 	}
 	for _, d := range s.Directives {
 		for _, arg := range d.Args {
-			t, err := common.ResolveType(arg.Type, s.Resolve)
+			t, err := ResolveType(arg.Type, s.Resolve)
 			if err != nil {
 				return err
 			}
@@ -395,7 +394,7 @@ func resolveNamedType(s *Schema, t NamedType) error {
 }
 
 func resolveField(s *Schema, f *Field) error {
-	t, err := common.ResolveType(f.Type, s.Resolve)
+	t, err := ResolveType(f.Type, s.Resolve)
 	if err != nil {
 		return err
 	}
@@ -406,7 +405,7 @@ func resolveField(s *Schema, f *Field) error {
 	return resolveInputObject(s, f.Args)
 }
 
-func resolveDirectives(s *Schema, directives common.DirectiveList) error {
+func resolveDirectives(s *Schema, directives DirectiveList) error {
 	for _, d := range directives {
 		dirName := d.Name.Name
 		dd, ok := s.Directives[dirName]
@@ -420,16 +419,16 @@ func resolveDirectives(s *Schema, directives common.DirectiveList) error {
 		}
 		for _, arg := range dd.Args {
 			if _, ok := d.Args.Get(arg.Name.Name); !ok {
-				d.Args = append(d.Args, common.Argument{Name: arg.Name, Value: arg.Default})
+				d.Args = append(d.Args, Argument{Name: arg.Name, Value: arg.Default})
 			}
 		}
 	}
 	return nil
 }
 
-func resolveInputObject(s *Schema, values common.InputValueList) error {
+func resolveInputObject(s *Schema, values InputValueList) error {
 	for _, v := range values {
-		t, err := common.ResolveType(v.Type, s.Resolve)
+		t, err := ResolveType(v.Type, s.Resolve)
 		if err != nil {
 			return err
 		}
@@ -438,7 +437,7 @@ func resolveInputObject(s *Schema, values common.InputValueList) error {
 	return nil
 }
 
-func parseSchema(s *Schema, l *common.Lexer) {
+func parseSchema(s *Schema, l *Lexer) {
 	l.Consume()
 
 	for l.Peek() != scanner.EOF {
@@ -486,7 +485,7 @@ func parseSchema(s *Schema, l *common.Lexer) {
 							if !ok {
 								l.SyntaxError(fmt.Sprintf("Cannot update %s, it was a %s", obj.Name, existing.Kind()))
 							}
-							existing.Directives = existing.Directives.Select(func(d *common.Directive) bool {
+							existing.Directives = existing.Directives.Select(func(d *Directive) bool {
 								return obj.Directives.Get(d.Name.Name) == nil
 							})
 							existing.Fields = existing.Fields.Select(func(d *Field) bool {
@@ -559,7 +558,7 @@ func parseSchema(s *Schema, l *common.Lexer) {
 	}
 }
 
-func parseObjectDef(l *common.Lexer) *Object {
+func parseObjectDef(l *Lexer) *Object {
 	object := &Object{Name: l.ConsumeIdent()}
 
 	if l.PeekKeyword("implements") {
@@ -577,7 +576,7 @@ func parseObjectDef(l *common.Lexer) *Object {
 		}
 	}
 
-	object.Directives = common.ParseDirectives(l)
+	object.Directives = ParseDirectives(l)
 
 	l.ConsumeToken('{')
 	object.Fields = parseFieldsDef(l)
@@ -586,7 +585,7 @@ func parseObjectDef(l *common.Lexer) *Object {
 	return object
 }
 
-func parseInterfaceDef(l *common.Lexer) *Interface {
+func parseInterfaceDef(l *Lexer) *Interface {
 	i := &Interface{Name: l.ConsumeIdent()}
 
 	l.ConsumeToken('{')
@@ -596,7 +595,7 @@ func parseInterfaceDef(l *common.Lexer) *Interface {
 	return i
 }
 
-func parseUnionDef(l *common.Lexer) *Union {
+func parseUnionDef(l *Lexer) *Union {
 	union := &Union{Name: l.ConsumeIdent()}
 
 	l.ConsumeToken('=')
@@ -609,18 +608,18 @@ func parseUnionDef(l *common.Lexer) *Union {
 	return union
 }
 
-func parseInputDef(l *common.Lexer) *InputObject {
+func parseInputDef(l *Lexer) *InputObject {
 	i := &InputObject{}
 	i.Name = l.ConsumeIdent()
 	l.ConsumeToken('{')
 	for l.Peek() != '}' {
-		i.Values = append(i.Values, common.ParseInputValue(l))
+		i.Values = append(i.Values, ParseInputValue(l))
 	}
 	l.ConsumeToken('}')
 	return i
 }
 
-func parseEnumDef(l *common.Lexer) *Enum {
+func parseEnumDef(l *Lexer) *Enum {
 	enum := &Enum{Name: l.ConsumeIdent()}
 
 	l.ConsumeToken('{')
@@ -628,7 +627,7 @@ func parseEnumDef(l *common.Lexer) *Enum {
 		v := &EnumValue{
 			Desc:       l.DescComment(),
 			Name:       l.ConsumeIdent(),
-			Directives: common.ParseDirectives(l),
+			Directives: ParseDirectives(l),
 		}
 
 		enum.Values = append(enum.Values, v)
@@ -637,14 +636,14 @@ func parseEnumDef(l *common.Lexer) *Enum {
 	return enum
 }
 
-func parseDirectiveDef(l *common.Lexer) *DirectiveDecl {
+func parseDirectiveDef(l *Lexer) *DirectiveDecl {
 	l.ConsumeToken('@')
 	d := &DirectiveDecl{Name: l.ConsumeIdent()}
 
 	if l.Peek() == '(' {
 		l.ConsumeToken('(')
 		for l.Peek() != ')' {
-			v := common.ParseInputValue(l)
+			v := ParseInputValue(l)
 			d.Args = append(d.Args, v)
 		}
 		l.ConsumeToken(')')
@@ -663,7 +662,7 @@ func parseDirectiveDef(l *common.Lexer) *DirectiveDecl {
 	return d
 }
 
-func parseFieldsDef(l *common.Lexer) FieldList {
+func parseFieldsDef(l *Lexer) FieldList {
 	var fields FieldList
 	for l.Peek() != '}' {
 		f := &Field{}
@@ -672,13 +671,13 @@ func parseFieldsDef(l *common.Lexer) FieldList {
 		if l.Peek() == '(' {
 			l.ConsumeToken('(')
 			for l.Peek() != ')' {
-				f.Args = append(f.Args, common.ParseInputValue(l))
+				f.Args = append(f.Args, ParseInputValue(l))
 			}
 			l.ConsumeToken(')')
 		}
 		l.ConsumeToken(':')
-		f.Type = common.ParseType(l)
-		f.Directives = common.ParseDirectives(l)
+		f.Type = ParseType(l)
+		f.Directives = ParseDirectives(l)
 		fields = append(fields, f)
 	}
 	return fields

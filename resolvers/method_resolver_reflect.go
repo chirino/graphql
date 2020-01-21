@@ -7,13 +7,12 @@
 package resolvers
 
 import (
-	"context"
-	"github.com/chirino/graphql/common"
-	"reflect"
-	"strings"
+    "context"
+    "reflect"
+    "strings"
 )
 
-var childMethodTypeCache common.Cache
+var childMethodTypeCache Cache
 
 type methodInfo struct {
 	Index               int

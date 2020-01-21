@@ -1,8 +1,10 @@
-package graphql_test
+package trace_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/chirino/graphql"
+	"github.com/chirino/graphql/internal/gqltesting"
 	"github.com/chirino/graphql/trace"
 	"github.com/opentracing/opentracing-go"
 	"github.com/segmentio/ksuid"
@@ -54,6 +56,10 @@ func TestJaegerTracing(t *testing.T) {
 	opentracing.SetGlobalTracer(tracer)
 
 	engine := graphql.New()
+	engine.Root = map[string]interface{}{
+		"hello": "World",
+	}
+
 	err = engine.Schema.Parse(`
 		schema {
 			query: Query
@@ -69,12 +75,10 @@ func TestJaegerTracing(t *testing.T) {
 	// No traces should be in the system yet..
 	assertTraceCount(t, queryURL, 0)
 
-	assertRequestString(t, engine,
+	gqltesting.AssertRequestString(t, engine,
 		`{"query":"{ hello }"}`,
 		`{"data":{"hello":"World"}}`,
-		map[string]interface{}{
-			"hello": "World",
-		},
+
 	)
 
 	time.Sleep(1 * time.Second)
@@ -101,5 +105,6 @@ func httpGetJson(t *testing.T, url string, target interface{}) {
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	require.NoError(t, err)
 
-	jsonUnmarshal(t, string(bodyBytes), target)
+	err = json.Unmarshal(bodyBytes, target)
+	assert.NoError(t, err)
 }

@@ -1,18 +1,18 @@
 package main
 
 import (
-	"log"
-	"net/http"
+    "github.com/chirino/graphql/internal/deprecated"
+    "log"
+    "net/http"
 
-	"github.com/chirino/graphql"
-	"github.com/chirino/graphql/example/starwars"
-	"github.com/chirino/graphql/relay"
+    "github.com/chirino/graphql/internal/example/starwars"
+    "github.com/chirino/graphql/relay"
 )
 
-var schema *graphql.Schema
+var schema *deprecated.Schema
 
 func init() {
-	schema = graphql.MustParseSchema(starwars.Schema, &starwars.Resolver{})
+	schema = deprecated.MustParseSchema(starwars.Schema, &starwars.Resolver{})
 }
 
 func main() {

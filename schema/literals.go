@@ -1,7 +1,7 @@
-package common
+package schema
 
 import (
-	"strconv"
+    "strconv"
 	"strings"
 	"text/scanner"
 

@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/chirino/graphql/errors"
-	"github.com/chirino/graphql/common"
 	"github.com/chirino/graphql/schema"
 )
 
@@ -21,7 +20,7 @@ type Builder struct {
 }
 
 type typePair struct {
-	graphQLType  common.Type
+	graphQLType  schema.Type
 	resolverType reflect.Type
 }
 
@@ -59,7 +58,7 @@ func (b *Builder) Finish() error {
 	return nil
 }
 
-func (b *Builder) assignPacker(target *packer, schemaType common.Type, reflectType reflect.Type) error {
+func (b *Builder) assignPacker(target *packer, schemaType schema.Type, reflectType reflect.Type) error {
 	k := typePair{schemaType, reflectType}
 	ref, ok := b.packerMap[k]
 	if !ok {
@@ -75,7 +74,7 @@ func (b *Builder) assignPacker(target *packer, schemaType common.Type, reflectTy
 	return nil
 }
 
-func (b *Builder) makePacker(schemaType common.Type, reflectType reflect.Type) (packer, error) {
+func (b *Builder) makePacker(schemaType schema.Type, reflectType reflect.Type) (packer, error) {
 	t, nonNull := unwrapNonNull(schemaType)
 	if !nonNull {
 		if reflectType.Kind() != reflect.Ptr {
@@ -101,7 +100,7 @@ func (b *Builder) makePacker(schemaType common.Type, reflectType reflect.Type) (
 	return b.makeNonNullPacker(t, reflectType)
 }
 
-func (b *Builder) makeNonNullPacker(schemaType common.Type, reflectType reflect.Type) (packer, error) {
+func (b *Builder) makeNonNullPacker(schemaType schema.Type, reflectType reflect.Type) (packer, error) {
 	if u, ok := reflect.New(reflectType).Interface().(Unmarshaler); ok {
 		if !u.ImplementsGraphQLType(schemaType.String()) {
 			return nil, fmt.Errorf("can not unmarshal %s into %s", schemaType, reflectType)
@@ -132,7 +131,7 @@ func (b *Builder) makeNonNullPacker(schemaType common.Type, reflectType reflect.
 		}
 		return e, nil
 
-	case *common.List:
+	case *schema.List:
 		if reflectType.Kind() != reflect.Slice {
 			return nil, fmt.Errorf("expected slice, got %s", reflectType)
 		}
@@ -152,7 +151,7 @@ func (b *Builder) makeNonNullPacker(schemaType common.Type, reflectType reflect.
 	}
 }
 
-func (b *Builder) MakeStructPacker(values common.InputValueList, typ reflect.Type) (*StructPacker, error) {
+func (b *Builder) MakeStructPacker(values schema.InputValueList, typ reflect.Type) (*StructPacker, error) {
 	structType := typ
 	usePtr := false
 	if typ.Kind() == reflect.Ptr {
@@ -182,7 +181,7 @@ func (b *Builder) MakeStructPacker(values common.InputValueList, typ reflect.Typ
 		ft := v.Type
 		if v.Default != nil {
 			ft, _ = unwrapNonNull(ft)
-			ft = &common.NonNull{OfType: ft}
+			ft = &schema.NonNull{OfType: ft}
 		}
 
 		if err := b.assignPacker(&fe.fieldPacker, ft, sf.Type); err != nil {
@@ -209,7 +208,7 @@ type StructPacker struct {
 }
 
 type structPackerField struct {
-	field       *common.InputValue
+	field       *schema.InputValue
 	fieldIndex  []int
 	fieldPacker packer
 }
@@ -370,8 +369,8 @@ func unmarshalInput(typ reflect.Type, input interface{}) (interface{}, error) {
 	return nil, fmt.Errorf("incompatible type")
 }
 
-func unwrapNonNull(t common.Type) (common.Type, bool) {
-	if nn, ok := t.(*common.NonNull); ok {
+func unwrapNonNull(t schema.Type) (schema.Type, bool) {
+	if nn, ok := t.(*schema.NonNull); ok {
 		return nn.OfType, true
 	}
 	return t, false

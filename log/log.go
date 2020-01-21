@@ -6,7 +6,7 @@ import (
 	"runtime"
 )
 
-// Logger is the interface used to log panics that occur during query execution. It is settable via graphql.ParseSchema
+// Logger is the interface used to log panics that occur during query execution. It is settable on the graphql.Engine
 type Logger interface {
 	LogPanic(ctx context.Context, value interface{})
 }
@@ -19,5 +19,5 @@ func (l *DefaultLogger) LogPanic(_ context.Context, value interface{}) {
 	const size = 64 << 10
 	buf := make([]byte, size)
 	buf = buf[:runtime.Stack(buf, false)]
-	log.Printf("graphql: panic occurred: %v\n%s", value, buf)
+	log.Printf("graphql: panic occurred: %+v\n%s", value, buf)
 }
