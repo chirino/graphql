@@ -4,32 +4,6 @@ import (
     "github.com/chirino/graphql/errors"
 )
 
-type Type interface {
-	Kind() string
-	String() string
-}
-
-type List struct {
-	OfType Type
-}
-
-type NonNull struct {
-	OfType Type
-}
-
-type TypeName struct {
-    Ident
-}
-
-func (*List) Kind() string     { return "LIST" }
-func (*NonNull) Kind() string  { return "NON_NULL" }
-func (*TypeName) Kind() string { panic("TypeName needs to be resolved to actual type") }
-
-func (t *List) String() string    { return "[" + t.OfType.String() + "]" }
-func (t *NonNull) String() string { return t.OfType.String() + "!" }
-func (*TypeName) String() string  { panic("TypeName needs to be resolved to actual type") }
-
-
 func DeepestType(t Type) Type {
 	switch t := (t).(type) {
 	case *NonNull:

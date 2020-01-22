@@ -1,7 +1,8 @@
 package schema
 
 import (
-    "strconv"
+	"io"
+	"strconv"
 	"strings"
 	"text/scanner"
 
@@ -12,7 +13,10 @@ type Literal interface {
 	Value(vars map[string]interface{}) interface{}
 	String() string
 	Location() errors.Location
+	WriteSchemaFormat(out io.StringWriter)
 }
+
+
 
 type BasicLit struct {
 	Type rune
