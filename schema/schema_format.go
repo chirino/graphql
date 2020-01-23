@@ -214,12 +214,29 @@ func (t *Argument) WriteSchemaFormat(out io.StringWriter) {
 
 func (t InputValueList) WriteSchemaFormat(out io.StringWriter) {
     if len(t) > 0 {
+        indented := false
         out.WriteString("(")
         for i, v := range t {
             if i != 0 {
                 out.WriteString(", ")
             }
-            v.WriteSchemaFormat(out)
+
+            b := bytes.Buffer{}
+            v.WriteSchemaFormat(&b)
+            arg := b.String()
+
+            if strings.Contains(arg, "\n") {
+                i := &indent{}
+                i.WriteString("\n")
+                i.WriteString(arg)
+                i.Done(out)
+                indented = true
+            } else {
+                out.WriteString(arg)
+            }
+        }
+        if indented {
+            out.WriteString("\n")
         }
         out.WriteString(")")
     }

@@ -34,7 +34,7 @@ func (r *EngineResponse) Error() error {
     for _, err := range r.Errors {
         errs = append(errs, err)
     }
-    return errors.Multi(errs)
+    return errors.Multi(errs...)
 }
 
 // Execute the given request.
@@ -122,4 +122,29 @@ func getOperation(document *query.Document, operationName string) (*query.Operat
         return nil, fmt.Errorf("no operation with name %q", operationName)
     }
     return op, nil
+}
+
+func (engine *Engine) Exec(ctx context.Context, result interface{}, query string, args ...interface{}) error {
+    variables := map[string]interface{}{}
+    for i := 0; i+1 < len(args); i += 2 {
+        variables[args[i].(string)] = args[i+1]
+    }
+
+    request := EngineRequest{Query: query, Variables: variables}
+    response := engine.Execute(ctx, &request, engine.Root)
+
+    if result != nil {
+        switch result := result.(type) {
+        case *[]byte:
+            *result = response.Data
+        case *string:
+            *result = string(response.Data)
+        default:
+            err := json.Unmarshal(response.Data, result)
+            if err != nil {
+                return errors.Multi(err, response.Error())
+            }
+        }
+    }
+    return response.Error()
 }

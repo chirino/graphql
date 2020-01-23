@@ -485,6 +485,12 @@ func parseSchema(s *Schema, l *Lexer) {
 
             d := obj.Directives.Get("graphql")
             if d != nil {
+
+                // Drop this directive.. since we are processing it here.
+                obj.Directives = obj.Directives.Select(func(d2 *Directive) bool {
+                    return d2 !=d
+                })
+
                 if mode, ok := d.Args.Get("alter"); ok {
                     switch mode.Value(nil) {
                     case "add":
@@ -540,6 +546,7 @@ func parseSchema(s *Schema, l *Lexer) {
                 } else {
                     panic(`@graphql alter or if arguments must be provided`)
                 }
+
             } else {
                 s.Types[obj.Name] = obj
                 s.objects = append(s.objects, obj)
