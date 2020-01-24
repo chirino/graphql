@@ -4,7 +4,7 @@ import (
     "github.com/chirino/graphql"
     "github.com/chirino/graphql/resolvers"
     "io"
-    "io/ioutil"
+    "os"
 )
 
 type ApiResolverOptions struct {
@@ -23,7 +23,7 @@ func MountApi(engine *graphql.Engine, docLocation string, options ...ApiResolver
     o := ApiResolverOptions{
         QueryType:    "Query",
         MutationType: "Mutation",
-        Logs:         ioutil.Discard,
+        Logs:         os.Stderr,
     }
     for _, option := range options {
         if option.Logs != nil {

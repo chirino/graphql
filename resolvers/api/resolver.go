@@ -39,7 +39,6 @@ func NewResolverFactory(doc *openapi3.Swagger, options ApiResolverOptions) (reso
     }
     queryMethods := map[string]bool{"GET": true, "HEAD": true}
     for path, v := range doc.Paths {
-        //if m.Match(k) {
         for method, o := range v.Operations() {
             fieldName := sanitizeGraphQLID(path)
             if o.OperationID != "" {
@@ -54,7 +53,7 @@ func NewResolverFactory(doc *openapi3.Swagger, options ApiResolverOptions) (reso
         }
     }
 
-    schema, err := result.Schema()
+    schema, err := result.schema()
     if err != nil {
         return nil, "", err
     }
@@ -80,7 +79,9 @@ func sanitizeGraphQLID(id string) string {
     return string(buf)
 }
 
-func (factory resolverFactory) Schema() (string, error) {
+func (factory resolverFactory) schema() (string, error) {
+
+    // We will be adding types to s
     s := schema.New()
     err := s.Parse(`
         directive @openapi(ref: String) on OBJECT | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT
@@ -89,57 +90,108 @@ func (factory resolverFactory) Schema() (string, error) {
         return "", err
     }
 
-    vars := map[string]interface{}{}
-    vars["Name"] = factory.options.QueryType
-    fields := []string{}
-
     refCache := map[string]interface{}{}
+    err = factory.addToSchema(s, factory.options.QueryType, factory.queryFields, refCache)
+    if err != nil {
+        return "", err
+    }
 
-    path := factory.options.QueryType
+    err = factory.addToSchema(s, factory.options.MutationType, factory.mutationFields, refCache)
+    if err != nil {
+        return "", err
+    }
+
+    // Sort the type fields since we generated them by mutating..
+    // which leads to then being in a random order based on the random order
+    // they are received from the openapi doc.
+    for _, t := range s.Types {
+        if t, ok := t.(*schema.Object); ok {
+            sort.Slice(t.Fields, func(i, j int) bool {
+                return t.Fields[i].Name < t.Fields[j].Name
+            })
+        }
+    }
+
+    // Lets get the graphql schema encoding for it...
+    return s.String(), nil
+}
+
+func (factory resolverFactory) addToSchema(s *schema.Schema, rootType string, operations map[string]*operation, refCache map[string]interface{}) error {
+    fields := []string{}
+    path := rootType
 outer:
-    for _, o := range factory.queryFields {
-        path := path + UpperFirst(o.fieldName)
+    for _, o := range operations {
+        path := path + "/" + UpperFirst(o.fieldName)
 
         field := toDescription(o.definition.Description)
         field += o.fieldName
+        field += "("
+
+        argNames := map[string]bool{}
+        addComma := false
+        if o.definition.RequestBody != nil {
+            content := o.definition.RequestBody.Value.Content.Get("application/json")
+            if content != nil {
+                argName := makeUnique(argNames, sanitizeGraphQLID(strings.ToLower(o.method)))
+                field += argName
+                field += ": "
+                fieldType, err := factory.addGraphQLType(s, content.Schema, path+"/Body", refCache, true)
+                if err != nil {
+                    fmt.Fprintf(factory.options.Logs, "dropping %s.%s field: required parameter '%s' type cannot be converted: %s\n", rootType, o.fieldName, "body", err)
+                    continue outer
+                }
+                field += requiredWrapper(fieldType, true)
+                addComma = true
+            }
+        }
+
         if len(o.definition.Parameters) > 0 {
-            field += "("
             for i, param := range o.definition.Parameters {
-                if i != 0 {
+                if addComma {
                     field += ",\n"
                 } else {
                     field += "\n"
                 }
                 field += toDescription(param.Value.Description)
-                field += sanitizeGraphQLID(param.Value.Name)
+                argName := makeUnique(argNames, sanitizeGraphQLID(param.Value.Name))
+                field += argName
                 field += ": "
-                fieldType, err := factory.addGraphQLType(s, param.Value.Schema, fmt.Sprintf("%s/Arg/%d", path, i), refCache)
+                fieldType, err := factory.addGraphQLType(s, param.Value.Schema, fmt.Sprintf("%s/Arg/%d", path, i), refCache, true)
                 if err != nil {
-                    fmt.Fprintf(factory.options.Logs, "dropping %s.%s field: parameter '%s' type cannot be converted: %s\n", factory.options.QueryType, o.fieldName, param.Value.Name, err)
-                    continue outer
+                    if param.Value.Required {
+                        fmt.Fprintf(factory.options.Logs, "dropping %s.%s field: required parameter '%s' type cannot be converted: %s\n", rootType, o.fieldName, param.Value.Name, err)
+                        continue outer
+                    } else {
+                        fmt.Fprintf(factory.options.Logs, "dropping optional %s.%s field parameter: parameter '%s' type cannot be converted: %s\n", rootType, o.fieldName, param.Value.Name, err)
+                        continue
+                    }
                 }
                 field += requiredWrapper(fieldType, param.Value.Required)
+                addComma = true
             }
-            field += ")"
         }
+
+        field += ")"
         field += ": "
 
         for status, response := range o.definition.Responses {
             content := response.Value.Content.Get("application/json")
-            if strings.HasPrefix(status, "2") && content !=nil {
+            if strings.HasPrefix(status, "2") && content != nil {
                 o.status = status
-                qlType, err := factory.addGraphQLType(s, content.Schema, fmt.Sprintf("%s/DefaultResponse", path), refCache)
+                qlType, err := factory.addGraphQLType(s, content.Schema, fmt.Sprintf("%s/DefaultResponse", path), refCache, false)
                 if err != nil {
-                    fmt.Fprintf(factory.options.Logs, "dropping %s.%s field: result type cannot be converted: %s\n", factory.options.QueryType, o.fieldName, err)
+                    fmt.Fprintf(factory.options.Logs, "dropping %s.%s field: result type cannot be converted: %s\n", rootType, o.fieldName, err)
                     continue outer
                 }
                 field += qlType
                 fields = append(fields, field)
-                break;
+                break
             }
         }
     }
 
+    vars := map[string]interface{}{}
+    vars["Name"] = rootType
     vars["Fields"] = fields
     gql, err := renderTemplate(vars, `
 type {{.Name}} @graphql(alter:"add") {
@@ -151,26 +203,22 @@ type {{.Name}} @graphql(alter:"add") {
 }
 `)
     if err != nil {
-        return "", err
+        return err
     }
     err = s.Parse(gql)
     if err != nil {
-        return "", err
+        return err
     }
+    return nil
+}
 
-    // Sort the type fields since we generated them by mutating..
-    // which leads to then being in a random order based on the random order
-    // they are received from the openapi doc.
-
-    for _, t := range s.Types {
-        if t, ok := t.(*schema.Object); ok {
-            sort.Slice(t.Fields, func(i, j int) bool {
-                return t.Fields[i].Name < t.Fields[j].Name
-            })
-        }
+func makeUnique(existing map[string]bool, name string) string {
+    cur := name
+    for i := 1; existing[cur]; i++ {
+        cur = fmt.Sprintf("%s%d", name, i)
     }
-
-    return s.String(), nil
+    existing[cur] = true
+    return cur
 }
 
 func requiredWrapper(qlType string, required bool) string {
@@ -187,19 +235,22 @@ func UpperFirst(name string) string {
     return strings.ToUpper(name[0:1]) + name[1:]
 }
 
-func (factory resolverFactory) addGraphQLType(s *schema.Schema, sf *openapi3.SchemaRef, path string, refCache map[string]interface{}) (string, error) {
+func (factory resolverFactory) addGraphQLType(s *schema.Schema, sf *openapi3.SchemaRef, path string, refCache map[string]interface{}, inputType bool) (string, error) {
     if sf.Value == nil {
         panic("a schema reference was not resolved.")
     }
 
-    if sf.Ref != "" {
-        path = sf.Ref
+    cacheKey := "o:" + sf.Ref
+    if inputType {
+        cacheKey = "i:" + sf.Ref
     }
-    if v, ok := refCache[path]; ok {
-        if v, ok := v.(string); ok {
-            return v, nil
+    if sf.Ref != "" {
+        if v, ok := refCache[cacheKey]; ok {
+            if v, ok := v.(string); ok {
+                return v, nil
+            }
+            return "", v.(error)
         }
-        return "", v.(error)
     }
 
     switch sf.Value.Type {
@@ -212,47 +263,23 @@ func (factory resolverFactory) addGraphQLType(s *schema.Schema, sf *openapi3.Sch
     case "boolean":
         return "Boolean", nil
     case "array":
-        nestedType, err := factory.addGraphQLType(s, sf.Value.Items, path, refCache)
+        nestedType, err := factory.addGraphQLType(s, sf.Value.Items, path, refCache, inputType)
         if err != nil {
             return "", err
         }
         return fmt.Sprintf("[%s]", nestedType), nil
     case "object":
+
         typeName := path
         if sf.Ref != "" {
-            base := sanitizeGraphQLID(strings.TrimPrefix(sf.Ref, "#/components/schemas/"))
-            for i := 0; ; i++ {
-                name := base
-                if i > 0 {
-                    name = fmt.Sprintf("%s%d", base, i)
-                }
-                o := s.Types[name]
-                if o != nil {
-                    // found one, but is it a conflict?
-                    if o, ok := o.(*schema.Object); ok {
-                        d := o.Directives.Get("openapi")
-                        if d != nil {
-                            ref, _ := d.Args.Get("ref")
-                            value := ref.Value(nil).(string)
-                            if value == sf.Ref {
-
-                                refCache[sf.Ref] = name
-                                // Ding Ding.. it's to the same openapi type..
-                                return name, nil
-                            }
-                        }
-                    }
-                    // looks like a conflict..
-                    continue // to the next name attempt.
-                } else {
-                    // not found.. lets define it...
-                    typeName = name
-                    break
-                }
-            }
-        } else {
-            typeName = sanitizeGraphQLID(typeName)
+            typeName = strings.TrimPrefix(sf.Ref, "#/components/schemas/")
         }
+        if inputType {
+            typeName += "Input"
+        } else {
+            typeName += "Result"
+        }
+        typeName = sanitizeGraphQLID(typeName)
 
         vars := map[string]interface{}{}
         vars["Description"] = toDescription(sf.Value.Description)
@@ -260,10 +287,11 @@ func (factory resolverFactory) addGraphQLType(s *schema.Schema, sf *openapi3.Sch
         fields := []string{}
 
         // In case a type is recursive.. lets stick it in the cache now before we try to resolve it's fields..
-        refCache[path] = typeName
+        refCache[cacheKey] = typeName
+
         for name, ref := range sf.Value.Properties {
             field := toDescription(ref.Value.Description)
-            fieldType, err := factory.addGraphQLType(s, ref, path+"/"+UpperFirst(name), refCache)
+            fieldType, err := factory.addGraphQLType(s, ref, path+"/"+UpperFirst(name), refCache, inputType)
             if err != nil {
                 fmt.Fprintf(factory.options.Logs, "dropping openapi field '%s' from graphql type '%s': %s\n", name, typeName, err)
                 continue
@@ -274,37 +302,41 @@ func (factory resolverFactory) addGraphQLType(s *schema.Schema, sf *openapi3.Sch
 
         if len(fields) == 0 {
             err := errors.New(fmt.Sprintf("graphql type '%s' would have no fields", typeName))
-            refCache[path] = err
+            refCache[cacheKey] = err
             return "", err
         }
 
         vars["Fields"] = fields
         vars["Ref"] = sf.Ref
+        vars["Type"] = "type"
+        if inputType {
+            vars["Type"] = "input"
+        }
         gql, err := renderTemplate(vars,
             `
 {{.Description}}
 
-type {{.Name}} @graphql(alter:"add") @openapi(ref:"{{.Ref}}") {
+{{.Type}} {{.Name}} {
 {{- range $k, $field :=  .Fields }}
 {{$field}}
 {{- end }}
 }
 `, )
         if err != nil {
-            refCache[path] = err
+            refCache[cacheKey] = err
             return "", err
         }
         err = s.Parse(gql)
         if err != nil {
-            refCache[path] = err
+            refCache[cacheKey] = err
             return "", err
         }
 
-        refCache[path] = typeName
+        refCache[cacheKey] = typeName
         return typeName, nil
     default:
         err := errors.New(fmt.Sprintf("cannot convert to a graphql type '%s' ", sf.Value.Type))
-        refCache[path] = err
+        refCache[cacheKey] = err
         return "", err
 
     }

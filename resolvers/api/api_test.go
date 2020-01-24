@@ -12,7 +12,9 @@ import (
 func TestApiResolver(t *testing.T) {
     engine := graphql.New()
 
-    err := api.MountApi(engine, "k8s.json",)
+    err := api.MountApi(engine, "k8s.json", api.ApiResolverOptions{
+        Logs: ioutil.Discard,
+    })
     require.NoError(t, err)
 
     actual := engine.Schema.String()
