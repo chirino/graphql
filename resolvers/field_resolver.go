@@ -8,9 +8,10 @@ import "reflect"
 // value.
 //
 ///////////////////////////////////////////////////////////////////////
-type FieldResolverFactory struct{}
+type fieldResolverFactory byte
+const FieldResolverFactory = fieldResolverFactory(0)
 
-func (this *FieldResolverFactory) CreateResolver(request *ResolveRequest) Resolver {
+func (this fieldResolverFactory) CreateResolver(request *ResolveRequest) Resolver {
     parentValue := dereference(request.Parent)
     if parentValue.Kind() != reflect.Struct {
         return nil

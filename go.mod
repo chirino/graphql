@@ -2,7 +2,9 @@ module github.com/chirino/graphql
 
 require (
 	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
+	github.com/friendsofgo/graphiql v0.2.2
 	github.com/getkin/kin-openapi v0.2.0
+	github.com/ghodss/yaml v1.0.0
 	github.com/gobwas/glob v0.2.3
 	github.com/kr/text v0.1.0
 	github.com/opentracing/opentracing-go v1.0.2

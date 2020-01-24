@@ -1,16 +1,16 @@
 package relay
 
 import (
-	"encoding/base64"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"github.com/chirino/graphql/customtypes"
-	"github.com/chirino/graphql/internal/deprecated"
+    "context"
+    "encoding/base64"
+    "encoding/json"
+    "errors"
+    "fmt"
+    "github.com/chirino/graphql/customtypes"
     "net/http"
-	"strings"
+    "strings"
 
-	graphql "github.com/chirino/graphql"
+    graphql "github.com/chirino/graphql"
 )
 
 func MarshalID(kind string, spec interface{}) customtypes.ID {
@@ -46,7 +46,6 @@ func UnmarshalSpec(id customtypes.ID, v interface{}) error {
 }
 
 type Handler struct {
-	Schema *deprecated.Schema
 	Engine *graphql.Engine
 }
 
@@ -56,19 +55,20 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	var response *graphql.EngineResponse = nil
-	if h.Schema!=nil {
-		response = h.Schema.Exec(r.Context(), request.Query, request.OperationName, request.Variables)
-	} else if h.Engine !=nil {
-		response = h.Engine.Execute(r.Context(), &request, nil)
-	}
+	// Attach the response and request to the context, in case a resolver wants to
+	// work at the the http level.
+	ctx := withValue(withValue(r.Context(), "net/http.ResponseWriter", w), "*net/http.Request", r)
+	response = h.Engine.Execute(ctx, &request, nil)
 	responseJSON, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(responseJSON)
+}
+
+func withValue(ctx context.Context, key string, v interface{}) context.Context {
+	return context.WithValue(ctx, key, v)
 }

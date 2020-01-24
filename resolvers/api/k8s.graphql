@@ -5799,6 +5799,16 @@ type Query {
   # watch individual changes to a list of VolumeAttachment. deprecated: use the 'watch' parameter with a list operation instead.
   watchStorageV1beta1VolumeAttachmentList:io_k8s_apimachinery_pkg_apis_meta_v1_WatchEventResult
 }
+# A property entry
+input StringInputProp {
+  key:String!
+  value:String
+}
+# A property entry
+type StringResultProp {
+  key:String!
+  value:String
+}
 # MutatingWebhookConfiguration describes the configuration of and admission webhook that accept or reject and may change the object.
 input io_k8s_api_admissionregistration_v1_MutatingWebhookConfigurationInput {
   # APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
@@ -9839,6 +9849,8 @@ input io_k8s_api_core_v1_CSIPersistentVolumeSourceInput {
   nodeStageSecretRef:io_k8s_api_core_v1_SecretReferenceInput
   # Optional: The value to pass to ControllerPublishVolumeRequest. Defaults to false (read/write).
   readOnly:Boolean
+  # Attributes of the volume to publish.
+  volumeAttributes:[StringInputProp!]
   # VolumeHandle is the unique volume name returned by the CSI volume plugin’s CreateVolume to refer to the volume on all subsequent calls. Required.
   volumeHandle:String
 }
@@ -9858,6 +9870,8 @@ type io_k8s_api_core_v1_CSIPersistentVolumeSourceResult {
   nodeStageSecretRef:io_k8s_api_core_v1_SecretReferenceResult
   # Optional: The value to pass to ControllerPublishVolumeRequest. Defaults to false (read/write).
   readOnly:Boolean
+  # Attributes of the volume to publish.
+  volumeAttributes:[StringResultProp!]
   # VolumeHandle is the unique volume name returned by the CSI volume plugin’s CreateVolume to refer to the volume on all subsequent calls. Required.
   volumeHandle:String
 }
@@ -9871,6 +9885,8 @@ input io_k8s_api_core_v1_CSIVolumeSourceInput {
   nodePublishSecretRef:io_k8s_api_core_v1_LocalObjectReferenceInput
   # Specifies a read-only configuration for the volume. Defaults to false (read/write).
   readOnly:Boolean
+  # VolumeAttributes stores driver-specific properties that are passed to the CSI driver. Consult your driver's documentation for supported values.
+  volumeAttributes:[StringInputProp!]
 }
 # Represents a source location of a volume to mount, managed by an external CSI driver
 type io_k8s_api_core_v1_CSIVolumeSourceResult {
@@ -9882,6 +9898,8 @@ type io_k8s_api_core_v1_CSIVolumeSourceResult {
   nodePublishSecretRef:io_k8s_api_core_v1_LocalObjectReferenceResult
   # Specifies a read-only configuration for the volume. Defaults to false (read/write).
   readOnly:Boolean
+  # VolumeAttributes stores driver-specific properties that are passed to the CSI driver. Consult your driver's documentation for supported values.
+  volumeAttributes:[StringResultProp!]
 }
 # Adds and removes POSIX capabilities from running containers.
 input io_k8s_api_core_v1_CapabilitiesInput {
@@ -10064,6 +10082,10 @@ type io_k8s_api_core_v1_ConfigMapEnvSourceResult {
 input io_k8s_api_core_v1_ConfigMapInput {
   # APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
   apiVersion:String
+  # BinaryData contains the binary data. Each key must consist of alphanumeric characters, '-', '_' or '.'. BinaryData can contain byte sequences that are not in the UTF-8 range. The keys stored in BinaryData must not overlap with the ones in the Data field, this is enforced during validation process. Using this field will require 1.10+ apiserver and kubelet.
+  binaryData:[StringInputProp!]
+  # Data contains the configuration data. Each key must consist of alphanumeric characters, '-', '_' or '.'. Values with non-UTF-8 byte sequences must use the BinaryData field. The keys stored in Data must not overlap with the keys in the BinaryData field, this is enforced during validation process.
+  data:[StringInputProp!]
   # Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
   kind:String
   # ObjectMeta is metadata that all persisted resources must have, which includes all objects users must create.
@@ -10148,6 +10170,10 @@ type io_k8s_api_core_v1_ConfigMapProjectionResult {
 type io_k8s_api_core_v1_ConfigMapResult {
   # APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
   apiVersion:String
+  # BinaryData contains the binary data. Each key must consist of alphanumeric characters, '-', '_' or '.'. BinaryData can contain byte sequences that are not in the UTF-8 range. The keys stored in BinaryData must not overlap with the ones in the Data field, this is enforced during validation process. Using this field will require 1.10+ apiserver and kubelet.
+  binaryData:[StringResultProp!]
+  # Data contains the configuration data. Each key must consist of alphanumeric characters, '-', '_' or '.'. Values with non-UTF-8 byte sequences must use the BinaryData field. The keys stored in Data must not overlap with the keys in the BinaryData field, this is enforced during validation process.
+  data:[StringResultProp!]
   # Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
   kind:String
   # ObjectMeta is metadata that all persisted resources must have, which includes all objects users must create.
@@ -10215,6 +10241,8 @@ input io_k8s_api_core_v1_ContainerInput {
   ports:[io_k8s_api_core_v1_ContainerPortInput]
   # Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.
   readinessProbe:io_k8s_api_core_v1_ProbeInput
+  # ResourceRequirements describes the compute resource requirements.
+  resources:io_k8s_api_core_v1_ResourceRequirementsInput
   # SecurityContext holds security configuration that will be applied to a container. Some fields are present in both SecurityContext and PodSecurityContext.  When both are set, the values in SecurityContext take precedence.
   securityContext:io_k8s_api_core_v1_SecurityContextInput
   # Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.
@@ -10286,6 +10314,8 @@ type io_k8s_api_core_v1_ContainerResult {
   ports:[io_k8s_api_core_v1_ContainerPortResult]
   # Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.
   readinessProbe:io_k8s_api_core_v1_ProbeResult
+  # ResourceRequirements describes the compute resource requirements.
+  resources:io_k8s_api_core_v1_ResourceRequirementsResult
   # SecurityContext holds security configuration that will be applied to a container. Some fields are present in both SecurityContext and PodSecurityContext.  When both are set, the values in SecurityContext take precedence.
   securityContext:io_k8s_api_core_v1_SecurityContextResult
   # Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.
@@ -10750,6 +10780,8 @@ input io_k8s_api_core_v1_EphemeralContainerInput {
   ports:[io_k8s_api_core_v1_ContainerPortInput]
   # Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.
   readinessProbe:io_k8s_api_core_v1_ProbeInput
+  # ResourceRequirements describes the compute resource requirements.
+  resources:io_k8s_api_core_v1_ResourceRequirementsInput
   # SecurityContext holds security configuration that will be applied to a container. Some fields are present in both SecurityContext and PodSecurityContext.  When both are set, the values in SecurityContext take precedence.
   securityContext:io_k8s_api_core_v1_SecurityContextInput
   # Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.
@@ -10797,6 +10829,8 @@ type io_k8s_api_core_v1_EphemeralContainerResult {
   ports:[io_k8s_api_core_v1_ContainerPortResult]
   # Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.
   readinessProbe:io_k8s_api_core_v1_ProbeResult
+  # ResourceRequirements describes the compute resource requirements.
+  resources:io_k8s_api_core_v1_ResourceRequirementsResult
   # SecurityContext holds security configuration that will be applied to a container. Some fields are present in both SecurityContext and PodSecurityContext.  When both are set, the values in SecurityContext take precedence.
   securityContext:io_k8s_api_core_v1_SecurityContextResult
   # Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.
@@ -10979,6 +11013,8 @@ input io_k8s_api_core_v1_FlexPersistentVolumeSourceInput {
   driver:String
   # Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs". The default filesystem depends on FlexVolume script.
   fsType:String
+  # Optional: Extra command options if any.
+  options:[StringInputProp!]
   # Optional: Defaults to false (read/write). ReadOnly here will force the ReadOnly setting in VolumeMounts.
   readOnly:Boolean
   # SecretReference represents a Secret Reference. It has enough information to retrieve secret in any namespace
@@ -10990,6 +11026,8 @@ type io_k8s_api_core_v1_FlexPersistentVolumeSourceResult {
   driver:String
   # Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs". The default filesystem depends on FlexVolume script.
   fsType:String
+  # Optional: Extra command options if any.
+  options:[StringResultProp!]
   # Optional: Defaults to false (read/write). ReadOnly here will force the ReadOnly setting in VolumeMounts.
   readOnly:Boolean
   # SecretReference represents a Secret Reference. It has enough information to retrieve secret in any namespace
@@ -11001,6 +11039,8 @@ input io_k8s_api_core_v1_FlexVolumeSourceInput {
   driver:String
   # Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs". The default filesystem depends on FlexVolume script.
   fsType:String
+  # Optional: Extra command options if any.
+  options:[StringInputProp!]
   # Optional: Defaults to false (read/write). ReadOnly here will force the ReadOnly setting in VolumeMounts.
   readOnly:Boolean
   # LocalObjectReference contains enough information to let you locate the referenced object inside the same namespace.
@@ -11012,6 +11052,8 @@ type io_k8s_api_core_v1_FlexVolumeSourceResult {
   driver:String
   # Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs". The default filesystem depends on FlexVolume script.
   fsType:String
+  # Optional: Extra command options if any.
+  options:[StringResultProp!]
   # Optional: Defaults to false (read/write). ReadOnly here will force the ReadOnly setting in VolumeMounts.
   readOnly:Boolean
   # LocalObjectReference contains enough information to let you locate the referenced object inside the same namespace.
@@ -11346,11 +11388,31 @@ input io_k8s_api_core_v1_LimitRangeInput {
 }
 # LimitRangeItem defines a min/max usage limit for any resource that matches on kind.
 input io_k8s_api_core_v1_LimitRangeItemInput {
+  # Default resource requirement limit value by resource name if resource limit is omitted.
+  default:[StringInputProp!]
+  # DefaultRequest is the default resource requirement request value by resource name if resource request is omitted.
+  defaultRequest:[StringInputProp!]
+  # Max usage constraints on this kind by resource name.
+  max:[StringInputProp!]
+  # MaxLimitRequestRatio if specified, the named resource must have a request and limit that are both non-zero where limit divided by request is less than or equal to the enumerated value; this represents the max burst for the named resource.
+  maxLimitRequestRatio:[StringInputProp!]
+  # Min usage constraints on this kind by resource name.
+  min:[StringInputProp!]
   # Type of resource that this limit applies to.
   type:String
 }
 # LimitRangeItem defines a min/max usage limit for any resource that matches on kind.
 type io_k8s_api_core_v1_LimitRangeItemResult {
+  # Default resource requirement limit value by resource name if resource limit is omitted.
+  default:[StringResultProp!]
+  # DefaultRequest is the default resource requirement request value by resource name if resource request is omitted.
+  defaultRequest:[StringResultProp!]
+  # Max usage constraints on this kind by resource name.
+  max:[StringResultProp!]
+  # MaxLimitRequestRatio if specified, the named resource must have a request and limit that are both non-zero where limit divided by request is less than or equal to the enumerated value; this represents the max burst for the named resource.
+  maxLimitRequestRatio:[StringResultProp!]
+  # Min usage constraints on this kind by resource name.
+  min:[StringResultProp!]
   # Type of resource that this limit applies to.
   type:String
 }
@@ -11752,6 +11814,10 @@ type io_k8s_api_core_v1_NodeSpecResult {
 input io_k8s_api_core_v1_NodeStatusInput {
   # List of addresses reachable to the node. Queried from cloud provider, if available. More info: https://kubernetes.io/docs/concepts/nodes/node/#addresses Note: This field is declared as mergeable, but the merge key is not sufficiently unique, which can cause data corruption when it is merged. Callers should instead use a full-replacement patch. See http://pr.k8s.io/79391 for an example.
   addresses:[io_k8s_api_core_v1_NodeAddressInput]
+  # Allocatable represents the resources of a node that are available for scheduling. Defaults to Capacity.
+  allocatable:[StringInputProp!]
+  # Capacity represents the total resources of a node. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#capacity
+  capacity:[StringInputProp!]
   # Conditions is an array of current observed node conditions. More info: https://kubernetes.io/docs/concepts/nodes/node/#condition
   conditions:[io_k8s_api_core_v1_NodeConditionInput]
   # NodeConfigStatus describes the status of the config assigned by Node.Spec.ConfigSource.
@@ -11773,6 +11839,10 @@ input io_k8s_api_core_v1_NodeStatusInput {
 type io_k8s_api_core_v1_NodeStatusResult {
   # List of addresses reachable to the node. Queried from cloud provider, if available. More info: https://kubernetes.io/docs/concepts/nodes/node/#addresses Note: This field is declared as mergeable, but the merge key is not sufficiently unique, which can cause data corruption when it is merged. Callers should instead use a full-replacement patch. See http://pr.k8s.io/79391 for an example.
   addresses:[io_k8s_api_core_v1_NodeAddressResult]
+  # Allocatable represents the resources of a node that are available for scheduling. Defaults to Capacity.
+  allocatable:[StringResultProp!]
+  # Capacity represents the total resources of a node. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#capacity
+  capacity:[StringResultProp!]
   # Conditions is an array of current observed node conditions. More info: https://kubernetes.io/docs/concepts/nodes/node/#condition
   conditions:[io_k8s_api_core_v1_NodeConditionResult]
   # NodeConfigStatus describes the status of the config assigned by Node.Spec.ConfigSource.
@@ -11953,6 +12023,8 @@ input io_k8s_api_core_v1_PersistentVolumeClaimSpecInput {
   accessModes:[String]
   # TypedLocalObjectReference contains enough information to let you locate the typed referenced object inside the same namespace.
   dataSource:io_k8s_api_core_v1_TypedLocalObjectReferenceInput
+  # ResourceRequirements describes the compute resource requirements.
+  resources:io_k8s_api_core_v1_ResourceRequirementsInput
   # A label selector is a label query over a set of resources. The result of matchLabels and matchExpressions are ANDed. An empty label selector matches all objects. A null label selector matches no objects.
   selector:io_k8s_apimachinery_pkg_apis_meta_v1_LabelSelectorInput
   # Name of the StorageClass required by the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1
@@ -11968,6 +12040,8 @@ type io_k8s_api_core_v1_PersistentVolumeClaimSpecResult {
   accessModes:[String]
   # TypedLocalObjectReference contains enough information to let you locate the typed referenced object inside the same namespace.
   dataSource:io_k8s_api_core_v1_TypedLocalObjectReferenceResult
+  # ResourceRequirements describes the compute resource requirements.
+  resources:io_k8s_api_core_v1_ResourceRequirementsResult
   # A label selector is a label query over a set of resources. The result of matchLabels and matchExpressions are ANDed. An empty label selector matches all objects. A null label selector matches no objects.
   selector:io_k8s_apimachinery_pkg_apis_meta_v1_LabelSelectorResult
   # Name of the StorageClass required by the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1
@@ -11981,6 +12055,8 @@ type io_k8s_api_core_v1_PersistentVolumeClaimSpecResult {
 input io_k8s_api_core_v1_PersistentVolumeClaimStatusInput {
   # AccessModes contains the actual access modes the volume backing the PVC has. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
   accessModes:[String]
+  # Represents the actual resources of the underlying volume.
+  capacity:[StringInputProp!]
   # Current Condition of persistent volume claim. If underlying persistent volume is being resized then the Condition will be set to 'ResizeStarted'.
   conditions:[io_k8s_api_core_v1_PersistentVolumeClaimConditionInput]
   # Phase represents the current phase of PersistentVolumeClaim.
@@ -11990,6 +12066,8 @@ input io_k8s_api_core_v1_PersistentVolumeClaimStatusInput {
 type io_k8s_api_core_v1_PersistentVolumeClaimStatusResult {
   # AccessModes contains the actual access modes the volume backing the PVC has. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
   accessModes:[String]
+  # Represents the actual resources of the underlying volume.
+  capacity:[StringResultProp!]
   # Current Condition of persistent volume claim. If underlying persistent volume is being resized then the Condition will be set to 'ResizeStarted'.
   conditions:[io_k8s_api_core_v1_PersistentVolumeClaimConditionResult]
   # Phase represents the current phase of PersistentVolumeClaim.
@@ -12057,6 +12135,8 @@ input io_k8s_api_core_v1_PersistentVolumeSpecInput {
   azureDisk:io_k8s_api_core_v1_AzureDiskVolumeSourceInput
   # AzureFile represents an Azure File Service mount on the host and bind mount to the pod.
   azureFile:io_k8s_api_core_v1_AzureFilePersistentVolumeSourceInput
+  # A description of the persistent volume's resources and capacity. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#capacity
+  capacity:[StringInputProp!]
   # Represents a Ceph Filesystem mount that lasts the lifetime of a pod Cephfs volumes do not support ownership management or SELinux relabeling.
   cephfs:io_k8s_api_core_v1_CephFSPersistentVolumeSourceInput
   # Represents a cinder volume resource in Openstack. A Cinder volume must exist before mounting to a container. The volume must also be in the same region as the kubelet. Cinder volumes support ownership management and SELinux relabeling.
@@ -12120,6 +12200,8 @@ type io_k8s_api_core_v1_PersistentVolumeSpecResult {
   azureDisk:io_k8s_api_core_v1_AzureDiskVolumeSourceResult
   # AzureFile represents an Azure File Service mount on the host and bind mount to the pod.
   azureFile:io_k8s_api_core_v1_AzureFilePersistentVolumeSourceResult
+  # A description of the persistent volume's resources and capacity. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#capacity
+  capacity:[StringResultProp!]
   # Represents a Ceph Filesystem mount that lasts the lifetime of a pod Cephfs volumes do not support ownership management or SELinux relabeling.
   cephfs:io_k8s_api_core_v1_CephFSPersistentVolumeSourceResult
   # Represents a cinder volume resource in Openstack. A Cinder volume must exist before mounting to a container. The volume must also be in the same region as the kubelet. Cinder volumes support ownership management and SELinux relabeling.
@@ -12445,6 +12527,10 @@ input io_k8s_api_core_v1_PodSpecInput {
   initContainers:[io_k8s_api_core_v1_ContainerInput]
   # NodeName is a request to schedule this pod onto a specific node. If it is non-empty, the scheduler simply schedules this pod onto that node, assuming that it fits resource requirements.
   nodeName:String
+  # NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
+  nodeSelector:[StringInputProp!]
+  # Overhead represents the resource overhead associated with running a pod for a given RuntimeClass. This field will be autopopulated at admission time by the RuntimeClass admission controller. If the RuntimeClass admission controller is enabled, overhead must not be set in Pod create requests. The RuntimeClass admission controller will reject Pod create requests which have the overhead already set. If RuntimeClass is configured and selected in the PodSpec, Overhead will be set to the value defined in the corresponding RuntimeClass, otherwise it will remain unset and treated as zero. More info: https://git.k8s.io/enhancements/keps/sig-node/20190226-pod-overhead.md This field is alpha-level as of Kubernetes v1.16, and is only honored by servers that enable the PodOverhead feature.
+  overhead:[StringInputProp!]
   # PreemptionPolicy is the Policy for preempting pods with lower priority. One of Never, PreemptLowerPriority. Defaults to PreemptLowerPriority if unset. This field is alpha-level and is only honored by servers that enable the NonPreemptingPriority feature.
   preemptionPolicy:String
   # The priority value. Various system components use this field to find the priority of the pod. When Priority Admission Controller is enabled, it prevents users from setting this field. The admission controller populates this field from PriorityClassName. The higher the value, the higher the priority.
@@ -12512,6 +12598,10 @@ type io_k8s_api_core_v1_PodSpecResult {
   initContainers:[io_k8s_api_core_v1_ContainerResult]
   # NodeName is a request to schedule this pod onto a specific node. If it is non-empty, the scheduler simply schedules this pod onto that node, assuming that it fits resource requirements.
   nodeName:String
+  # NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
+  nodeSelector:[StringResultProp!]
+  # Overhead represents the resource overhead associated with running a pod for a given RuntimeClass. This field will be autopopulated at admission time by the RuntimeClass admission controller. If the RuntimeClass admission controller is enabled, overhead must not be set in Pod create requests. The RuntimeClass admission controller will reject Pod create requests which have the overhead already set. If RuntimeClass is configured and selected in the PodSpec, Overhead will be set to the value defined in the corresponding RuntimeClass, otherwise it will remain unset and treated as zero. More info: https://git.k8s.io/enhancements/keps/sig-node/20190226-pod-overhead.md This field is alpha-level as of Kubernetes v1.16, and is only honored by servers that enable the PodOverhead feature.
+  overhead:[StringResultProp!]
   # PreemptionPolicy is the Policy for preempting pods with lower priority. One of Never, PreemptLowerPriority. Defaults to PreemptLowerPriority if unset. This field is alpha-level and is only honored by servers that enable the NonPreemptingPriority feature.
   preemptionPolicy:String
   # The priority value. Various system components use this field to find the priority of the pod. When Priority Admission Controller is enabled, it prevents users from setting this field. The admission controller populates this field from PriorityClassName. The higher the value, the higher the priority.
@@ -12913,6 +13003,8 @@ input io_k8s_api_core_v1_ReplicationControllerSpecInput {
   minReadySeconds:Int
   # Replicas is the number of desired replicas. This is a pointer to distinguish between explicit zero and unspecified. Defaults to 1. More info: https://kubernetes.io/docs/concepts/workloads/controllers/replicationcontroller#what-is-a-replicationcontroller
   replicas:Int
+  # Selector is a label query over pods that should match the Replicas count. If Selector is empty, it is defaulted to the labels present on the Pod template. Label keys and values that must match in order to be controlled by this replication controller, if empty defaulted to labels on Pod template. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
+  selector:[StringInputProp!]
   # PodTemplateSpec describes the data a pod should have when created from a template
   template:io_k8s_api_core_v1_PodTemplateSpecInput
 }
@@ -12922,6 +13014,8 @@ type io_k8s_api_core_v1_ReplicationControllerSpecResult {
   minReadySeconds:Int
   # Replicas is the number of desired replicas. This is a pointer to distinguish between explicit zero and unspecified. Defaults to 1. More info: https://kubernetes.io/docs/concepts/workloads/controllers/replicationcontroller#what-is-a-replicationcontroller
   replicas:Int
+  # Selector is a label query over pods that should match the Replicas count. If Selector is empty, it is defaulted to the labels present on the Pod template. Label keys and values that must match in order to be controlled by this replication controller, if empty defaulted to labels on Pod template. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
+  selector:[StringResultProp!]
   # PodTemplateSpec describes the data a pod should have when created from a template
   template:io_k8s_api_core_v1_PodTemplateSpecResult
 }
@@ -13025,6 +13119,8 @@ input io_k8s_api_core_v1_ResourceQuotaInput {
   metadata:io_k8s_apimachinery_pkg_apis_meta_v1_ObjectMetaInput
   # ResourceQuotaSpec defines the desired hard limits to enforce for Quota.
   spec:io_k8s_api_core_v1_ResourceQuotaSpecInput
+  # ResourceQuotaStatus defines the enforced hard limits and observed use.
+  status:io_k8s_api_core_v1_ResourceQuotaStatusInput
 }
 # ResourceQuotaList is a list of ResourceQuota items.
 type io_k8s_api_core_v1_ResourceQuotaListResult {
@@ -13047,9 +13143,13 @@ type io_k8s_api_core_v1_ResourceQuotaResult {
   metadata:io_k8s_apimachinery_pkg_apis_meta_v1_ObjectMetaResult
   # ResourceQuotaSpec defines the desired hard limits to enforce for Quota.
   spec:io_k8s_api_core_v1_ResourceQuotaSpecResult
+  # ResourceQuotaStatus defines the enforced hard limits and observed use.
+  status:io_k8s_api_core_v1_ResourceQuotaStatusResult
 }
 # ResourceQuotaSpec defines the desired hard limits to enforce for Quota.
 input io_k8s_api_core_v1_ResourceQuotaSpecInput {
+  # hard is the set of desired hard limits for each named resource. More info: https://kubernetes.io/docs/concepts/policy/resource-quotas/
+  hard:[StringInputProp!]
   # A scope selector represents the AND of the selectors represented by the scoped-resource selector requirements.
   scopeSelector:io_k8s_api_core_v1_ScopeSelectorInput
   # A collection of filters that must match each object tracked by a quota. If not specified, the quota matches all objects.
@@ -13057,10 +13157,40 @@ input io_k8s_api_core_v1_ResourceQuotaSpecInput {
 }
 # ResourceQuotaSpec defines the desired hard limits to enforce for Quota.
 type io_k8s_api_core_v1_ResourceQuotaSpecResult {
+  # hard is the set of desired hard limits for each named resource. More info: https://kubernetes.io/docs/concepts/policy/resource-quotas/
+  hard:[StringResultProp!]
   # A scope selector represents the AND of the selectors represented by the scoped-resource selector requirements.
   scopeSelector:io_k8s_api_core_v1_ScopeSelectorResult
   # A collection of filters that must match each object tracked by a quota. If not specified, the quota matches all objects.
   scopes:[String]
+}
+# ResourceQuotaStatus defines the enforced hard limits and observed use.
+input io_k8s_api_core_v1_ResourceQuotaStatusInput {
+  # Hard is the set of enforced hard limits for each named resource. More info: https://kubernetes.io/docs/concepts/policy/resource-quotas/
+  hard:[StringInputProp!]
+  # Used is the current observed total usage of the resource in the namespace.
+  used:[StringInputProp!]
+}
+# ResourceQuotaStatus defines the enforced hard limits and observed use.
+type io_k8s_api_core_v1_ResourceQuotaStatusResult {
+  # Hard is the set of enforced hard limits for each named resource. More info: https://kubernetes.io/docs/concepts/policy/resource-quotas/
+  hard:[StringResultProp!]
+  # Used is the current observed total usage of the resource in the namespace.
+  used:[StringResultProp!]
+}
+# ResourceRequirements describes the compute resource requirements.
+input io_k8s_api_core_v1_ResourceRequirementsInput {
+  # Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  limits:[StringInputProp!]
+  # Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  requests:[StringInputProp!]
+}
+# ResourceRequirements describes the compute resource requirements.
+type io_k8s_api_core_v1_ResourceRequirementsResult {
+  # Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  limits:[StringResultProp!]
+  # Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  requests:[StringResultProp!]
 }
 # SELinuxOptions are the labels to be applied to the container
 input io_k8s_api_core_v1_SELinuxOptionsInput {
@@ -13224,10 +13354,14 @@ type io_k8s_api_core_v1_SecretEnvSourceResult {
 input io_k8s_api_core_v1_SecretInput {
   # APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
   apiVersion:String
+  # Data contains the secret data. Each key must consist of alphanumeric characters, '-', '_' or '.'. The serialized form of the secret data is a base64 encoded string, representing the arbitrary (possibly non-string) data value here. Described in https://tools.ietf.org/html/rfc4648#section-4
+  data:[StringInputProp!]
   # Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
   kind:String
   # ObjectMeta is metadata that all persisted resources must have, which includes all objects users must create.
   metadata:io_k8s_apimachinery_pkg_apis_meta_v1_ObjectMetaInput
+  # stringData allows specifying non-binary secret data in string form. It is provided as a write-only convenience method. All keys and values are merged into the data field on write, overwriting any existing values. It is never output when reading from the API.
+  stringData:[StringInputProp!]
   # Used to facilitate programmatic handling of secret data.
   type:String
 }
@@ -13298,10 +13432,14 @@ type io_k8s_api_core_v1_SecretReferenceResult {
 type io_k8s_api_core_v1_SecretResult {
   # APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
   apiVersion:String
+  # Data contains the secret data. Each key must consist of alphanumeric characters, '-', '_' or '.'. The serialized form of the secret data is a base64 encoded string, representing the arbitrary (possibly non-string) data value here. Described in https://tools.ietf.org/html/rfc4648#section-4
+  data:[StringResultProp!]
   # Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
   kind:String
   # ObjectMeta is metadata that all persisted resources must have, which includes all objects users must create.
   metadata:io_k8s_apimachinery_pkg_apis_meta_v1_ObjectMetaResult
+  # stringData allows specifying non-binary secret data in string form. It is provided as a write-only convenience method. All keys and values are merged into the data field on write, overwriting any existing values. It is never output when reading from the API.
+  stringData:[StringResultProp!]
   # Used to facilitate programmatic handling of secret data.
   type:String
 }
@@ -13519,6 +13657,8 @@ input io_k8s_api_core_v1_ServiceSpecInput {
   ports:[io_k8s_api_core_v1_ServicePortInput]
   # publishNotReadyAddresses, when set to true, indicates that DNS implementations must publish the notReadyAddresses of subsets for the Endpoints associated with the Service. The default value is false. The primary use case for setting this field is to use a StatefulSet's Headless Service to propagate SRV records for its Pods without respect to their readiness for purpose of peer discovery.
   publishNotReadyAddresses:Boolean
+  # Route service traffic to pods with label keys and values matching this selector. If empty or not present, the service is assumed to have an external process managing its endpoints, which Kubernetes will not modify. Only applies to types ClusterIP, NodePort, and LoadBalancer. Ignored if type is ExternalName. More info: https://kubernetes.io/docs/concepts/services-networking/service/
+  selector:[StringInputProp!]
   # Supports "ClientIP" and "None". Used to maintain session affinity. Enable client IP based session affinity. Must be ClientIP or None. Defaults to None. More info: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies
   sessionAffinity:String
   # SessionAffinityConfig represents the configurations of session affinity.
@@ -13550,6 +13690,8 @@ type io_k8s_api_core_v1_ServiceSpecResult {
   ports:[io_k8s_api_core_v1_ServicePortResult]
   # publishNotReadyAddresses, when set to true, indicates that DNS implementations must publish the notReadyAddresses of subsets for the Endpoints associated with the Service. The default value is false. The primary use case for setting this field is to use a StatefulSet's Headless Service to propagate SRV records for its Pods without respect to their readiness for purpose of peer discovery.
   publishNotReadyAddresses:Boolean
+  # Route service traffic to pods with label keys and values matching this selector. If empty or not present, the service is assumed to have an external process managing its endpoints, which Kubernetes will not modify. Only applies to types ClusterIP, NodePort, and LoadBalancer. Ignored if type is ExternalName. More info: https://kubernetes.io/docs/concepts/services-networking/service/
+  selector:[StringResultProp!]
   # Supports "ClientIP" and "None". Used to maintain session affinity. Enable client IP based session affinity. Must be ClientIP or None. Defaults to None. More info: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies
   sessionAffinity:String
   # SessionAffinityConfig represents the configurations of session affinity.
@@ -14057,6 +14199,14 @@ input io_k8s_api_discovery_v1beta1_EndpointInput {
   hostname:String
   # ObjectReference contains enough information to let you inspect or modify the referred object.
   targetRef:io_k8s_api_core_v1_ObjectReferenceInput
+  # topology contains arbitrary topology information associated with the endpoint. These key/value pairs must conform with the label format. https://kubernetes.io/docs/concepts/overview/working-with-objects/labels Topology may include a maximum of 16 key/value pairs. This includes, but is not limited to the following well known keys: * kubernetes.io/hostname: the value indicates the hostname of the node
+  #   where the endpoint is located. This should match the corresponding
+  #   node label.
+  # * topology.kubernetes.io/zone: the value indicates the zone where the
+  #   endpoint is located. This should match the corresponding node label.
+  # * topology.kubernetes.io/region: the value indicates the region where the
+  #   endpoint is located. This should match the corresponding node label.
+  topology:[StringInputProp!]
 }
 # EndpointPort represents a Port used by an EndpointSlice
 input io_k8s_api_discovery_v1beta1_EndpointPortInput {
@@ -14090,6 +14240,14 @@ type io_k8s_api_discovery_v1beta1_EndpointResult {
   hostname:String
   # ObjectReference contains enough information to let you inspect or modify the referred object.
   targetRef:io_k8s_api_core_v1_ObjectReferenceResult
+  # topology contains arbitrary topology information associated with the endpoint. These key/value pairs must conform with the label format. https://kubernetes.io/docs/concepts/overview/working-with-objects/labels Topology may include a maximum of 16 key/value pairs. This includes, but is not limited to the following well known keys: * kubernetes.io/hostname: the value indicates the hostname of the node
+  #   where the endpoint is located. This should match the corresponding
+  #   node label.
+  # * topology.kubernetes.io/zone: the value indicates the zone where the
+  #   endpoint is located. This should match the corresponding node label.
+  # * topology.kubernetes.io/region: the value indicates the region where the
+  #   endpoint is located. This should match the corresponding node label.
+  topology:[StringResultProp!]
 }
 # EndpointSlice represents a subset of the endpoints that implement a service. For a given service there may be multiple EndpointSlice objects, selected by labels, which must be joined to produce the full set of endpoints.
 input io_k8s_api_discovery_v1beta1_EndpointSliceInput {
@@ -14646,6 +14804,16 @@ type io_k8s_api_networking_v1beta1_IngressTLSResult {
   # SecretName is the name of the secret used to terminate SSL traffic on 443. Field is left optional to allow SSL routing based on SNI hostname alone. If the SNI host in a listener conflicts with the "Host" header field used by an IngressRule, the SNI host is used for termination and value of the Host header is used for routing.
   secretName:String
 }
+# Overhead structure represents the resource overhead associated with running a pod.
+input io_k8s_api_node_v1beta1_OverheadInput {
+  # PodFixed represents the fixed resource overhead associated with running a pod.
+  podFixed:[StringInputProp!]
+}
+# Overhead structure represents the resource overhead associated with running a pod.
+type io_k8s_api_node_v1beta1_OverheadResult {
+  # PodFixed represents the fixed resource overhead associated with running a pod.
+  podFixed:[StringResultProp!]
+}
 # RuntimeClass defines a class of container runtime supported in the cluster. The RuntimeClass is used to determine which container runtime is used to run all containers in a pod. RuntimeClasses are (currently) manually defined by a user or cluster provisioner, and referenced in the PodSpec. The Kubelet is responsible for resolving the RuntimeClassName reference before running the pod.  For more details, see https://git.k8s.io/enhancements/keps/sig-node/runtime-class.md
 input io_k8s_api_node_v1beta1_RuntimeClassInput {
   # APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
@@ -14656,6 +14824,8 @@ input io_k8s_api_node_v1beta1_RuntimeClassInput {
   kind:String
   # ObjectMeta is metadata that all persisted resources must have, which includes all objects users must create.
   metadata:io_k8s_apimachinery_pkg_apis_meta_v1_ObjectMetaInput
+  # Overhead structure represents the resource overhead associated with running a pod.
+  overhead:io_k8s_api_node_v1beta1_OverheadInput
   # Scheduling specifies the scheduling constraints for nodes supporting a RuntimeClass.
   scheduling:io_k8s_api_node_v1beta1_SchedulingInput
 }
@@ -14680,16 +14850,22 @@ type io_k8s_api_node_v1beta1_RuntimeClassResult {
   kind:String
   # ObjectMeta is metadata that all persisted resources must have, which includes all objects users must create.
   metadata:io_k8s_apimachinery_pkg_apis_meta_v1_ObjectMetaResult
+  # Overhead structure represents the resource overhead associated with running a pod.
+  overhead:io_k8s_api_node_v1beta1_OverheadResult
   # Scheduling specifies the scheduling constraints for nodes supporting a RuntimeClass.
   scheduling:io_k8s_api_node_v1beta1_SchedulingResult
 }
 # Scheduling specifies the scheduling constraints for nodes supporting a RuntimeClass.
 input io_k8s_api_node_v1beta1_SchedulingInput {
+  # nodeSelector lists labels that must be present on nodes that support this RuntimeClass. Pods using this RuntimeClass can only be scheduled to a node matched by this selector. The RuntimeClass nodeSelector is merged with a pod's existing nodeSelector. Any conflicts will cause the pod to be rejected in admission.
+  nodeSelector:[StringInputProp!]
   # tolerations are appended (excluding duplicates) to pods running with this RuntimeClass during admission, effectively unioning the set of nodes tolerated by the pod and the RuntimeClass.
   tolerations:[io_k8s_api_core_v1_TolerationInput]
 }
 # Scheduling specifies the scheduling constraints for nodes supporting a RuntimeClass.
 type io_k8s_api_node_v1beta1_SchedulingResult {
+  # nodeSelector lists labels that must be present on nodes that support this RuntimeClass. Pods using this RuntimeClass can only be scheduled to a node matched by this selector. The RuntimeClass nodeSelector is merged with a pod's existing nodeSelector. Any conflicts will cause the pod to be rejected in admission.
+  nodeSelector:[StringResultProp!]
   # tolerations are appended (excluding duplicates) to pods running with this RuntimeClass during admission, effectively unioning the set of nodes tolerated by the pod and the RuntimeClass.
   tolerations:[io_k8s_api_core_v1_TolerationResult]
 }
@@ -14853,6 +15029,8 @@ input io_k8s_api_policy_v1beta1_PodDisruptionBudgetStatusInput {
   currentHealthy:Int
   # minimum desired number of healthy pods
   desiredHealthy:Int
+  # DisruptedPods contains information about pods whose eviction was processed by the API server eviction subresource handler but has not yet been observed by the PodDisruptionBudget controller. A pod will be in this map from the time when the API server processed the eviction request to the time when the pod is seen by PDB controller as having been marked for deletion (or after a timeout). The key in the map is the name of the pod and the value is the time when the API server processed the eviction request. If the deletion didn't occur and a pod is still there it will be removed from the list automatically by PodDisruptionBudget controller after some time. If everything goes smooth this map should be empty for the most of the time. Large number of entries in the map may indicate problems with pod deletions.
+  disruptedPods:[StringInputProp!]
   # Number of pod disruptions that are currently allowed.
   disruptionsAllowed:Int
   # total number of pods counted by this disruption budget
@@ -14866,6 +15044,8 @@ type io_k8s_api_policy_v1beta1_PodDisruptionBudgetStatusResult {
   currentHealthy:Int
   # minimum desired number of healthy pods
   desiredHealthy:Int
+  # DisruptedPods contains information about pods whose eviction was processed by the API server eviction subresource handler but has not yet been observed by the PodDisruptionBudget controller. A pod will be in this map from the time when the API server processed the eviction request to the time when the pod is seen by PDB controller as having been marked for deletion (or after a timeout). The key in the map is the name of the pod and the value is the time when the API server processed the eviction request. If the deletion didn't occur and a pod is still there it will be removed from the list automatically by PodDisruptionBudget controller after some time. If everything goes smooth this map should be empty for the most of the time. Large number of entries in the map may indicate problems with pod deletions.
+  disruptedPods:[StringResultProp!]
   # Number of pod disruptions that are currently allowed.
   disruptionsAllowed:Int
   # total number of pods counted by this disruption budget
@@ -15692,6 +15872,8 @@ input io_k8s_api_storage_v1_StorageClassInput {
   metadata:io_k8s_apimachinery_pkg_apis_meta_v1_ObjectMetaInput
   # Dynamically provisioned PersistentVolumes of this storage class are created with these mountOptions, e.g. ["ro", "soft"]. Not validated - mount of the PVs will simply fail if one is invalid.
   mountOptions:[String]
+  # Parameters holds the parameters for the provisioner that should create volumes of this storage class.
+  parameters:[StringInputProp!]
   # Provisioner indicates the type of the provisioner.
   provisioner:String
   # Dynamically provisioned PersistentVolumes of this storage class are created with this reclaimPolicy. Defaults to Delete.
@@ -15725,6 +15907,8 @@ type io_k8s_api_storage_v1_StorageClassResult {
   metadata:io_k8s_apimachinery_pkg_apis_meta_v1_ObjectMetaResult
   # Dynamically provisioned PersistentVolumes of this storage class are created with these mountOptions, e.g. ["ro", "soft"]. Not validated - mount of the PVs will simply fail if one is invalid.
   mountOptions:[String]
+  # Parameters holds the parameters for the provisioner that should create volumes of this storage class.
+  parameters:[StringResultProp!]
   # Provisioner indicates the type of the provisioner.
   provisioner:String
   # Dynamically provisioned PersistentVolumes of this storage class are created with this reclaimPolicy. Defaults to Delete.
@@ -15809,6 +15993,8 @@ input io_k8s_api_storage_v1_VolumeAttachmentStatusInput {
   attachError:io_k8s_api_storage_v1_VolumeErrorInput
   # Indicates the volume is successfully attached. This field must only be set by the entity completing the attach operation, i.e. the external-attacher.
   attached:Boolean
+  # Upon successful attach, this field is populated with any information returned by the attach operation that must be passed into subsequent WaitForAttach or Mount calls. This field must only be set by the entity completing the attach operation, i.e. the external-attacher.
+  attachmentMetadata:[StringInputProp!]
   # VolumeError captures an error encountered during a volume operation.
   detachError:io_k8s_api_storage_v1_VolumeErrorInput
 }
@@ -15818,6 +16004,8 @@ type io_k8s_api_storage_v1_VolumeAttachmentStatusResult {
   attachError:io_k8s_api_storage_v1_VolumeErrorResult
   # Indicates the volume is successfully attached. This field must only be set by the entity completing the attach operation, i.e. the external-attacher.
   attached:Boolean
+  # Upon successful attach, this field is populated with any information returned by the attach operation that must be passed into subsequent WaitForAttach or Mount calls. This field must only be set by the entity completing the attach operation, i.e. the external-attacher.
+  attachmentMetadata:[StringResultProp!]
   # VolumeError captures an error encountered during a volume operation.
   detachError:io_k8s_api_storage_v1_VolumeErrorResult
 }
@@ -15980,6 +16168,8 @@ input io_k8s_api_storage_v1beta1_StorageClassInput {
   metadata:io_k8s_apimachinery_pkg_apis_meta_v1_ObjectMetaInput
   # Dynamically provisioned PersistentVolumes of this storage class are created with these mountOptions, e.g. ["ro", "soft"]. Not validated - mount of the PVs will simply fail if one is invalid.
   mountOptions:[String]
+  # Parameters holds the parameters for the provisioner that should create volumes of this storage class.
+  parameters:[StringInputProp!]
   # Provisioner indicates the type of the provisioner.
   provisioner:String
   # Dynamically provisioned PersistentVolumes of this storage class are created with this reclaimPolicy. Defaults to Delete.
@@ -16013,6 +16203,8 @@ type io_k8s_api_storage_v1beta1_StorageClassResult {
   metadata:io_k8s_apimachinery_pkg_apis_meta_v1_ObjectMetaResult
   # Dynamically provisioned PersistentVolumes of this storage class are created with these mountOptions, e.g. ["ro", "soft"]. Not validated - mount of the PVs will simply fail if one is invalid.
   mountOptions:[String]
+  # Parameters holds the parameters for the provisioner that should create volumes of this storage class.
+  parameters:[StringResultProp!]
   # Provisioner indicates the type of the provisioner.
   provisioner:String
   # Dynamically provisioned PersistentVolumes of this storage class are created with this reclaimPolicy. Defaults to Delete.
@@ -16097,6 +16289,8 @@ input io_k8s_api_storage_v1beta1_VolumeAttachmentStatusInput {
   attachError:io_k8s_api_storage_v1beta1_VolumeErrorInput
   # Indicates the volume is successfully attached. This field must only be set by the entity completing the attach operation, i.e. the external-attacher.
   attached:Boolean
+  # Upon successful attach, this field is populated with any information returned by the attach operation that must be passed into subsequent WaitForAttach or Mount calls. This field must only be set by the entity completing the attach operation, i.e. the external-attacher.
+  attachmentMetadata:[StringInputProp!]
   # VolumeError captures an error encountered during a volume operation.
   detachError:io_k8s_api_storage_v1beta1_VolumeErrorInput
 }
@@ -16106,6 +16300,8 @@ type io_k8s_api_storage_v1beta1_VolumeAttachmentStatusResult {
   attachError:io_k8s_api_storage_v1beta1_VolumeErrorResult
   # Indicates the volume is successfully attached. This field must only be set by the entity completing the attach operation, i.e. the external-attacher.
   attached:Boolean
+  # Upon successful attach, this field is populated with any information returned by the attach operation that must be passed into subsequent WaitForAttach or Mount calls. This field must only be set by the entity completing the attach operation, i.e. the external-attacher.
+  attachmentMetadata:[StringResultProp!]
   # VolumeError captures an error encountered during a volume operation.
   detachError:io_k8s_api_storage_v1beta1_VolumeErrorResult
 }
@@ -16407,8 +16603,6 @@ input io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1_JSONSchemaPropsIn
   description:String
   exclusiveMaximum:Boolean
   exclusiveMinimum:Boolean
-  # ExternalDocumentation allows referencing an external resource for extended documentation.
-  externalDocs:io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1_ExternalDocumentationInput
   # format is an OpenAPI v3 format string. Unknown formats are ignored. The following formats are validated:
   # - bsonobjectid: a bson object ID, i.e. a 24 characters hex string - uri: an URI as parsed by Golang net/url.ParseRequestURI - email: an email address as parsed by Golang net/mail.ParseAddress - hostname: a valid representation for an Internet host name, as defined by RFC 1034, section 3.1 [RFC1034]. - ipv4: an IPv4 IP as parsed by Golang net.ParseIP - ipv6: an IPv6 IP as parsed by Golang net.ParseIP - cidr: a CIDR as parsed by Golang net.ParseCIDR - mac: a MAC address as parsed by Golang net.ParseMAC - uuid: an UUID that allows uppercase defined by the regex (?i)^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$ - uuid3: an UUID3 that allows uppercase defined by the regex (?i)^[0-9a-f]{8}-?[0-9a-f]{4}-?3[0-9a-f]{3}-?[0-9a-f]{4}-?[0-9a-f]{12}$ - uuid4: an UUID4 that allows uppercase defined by the regex (?i)^[0-9a-f]{8}-?[0-9a-f]{4}-?4[0-9a-f]{3}-?[89ab][0-9a-f]{3}-?[0-9a-f]{12}$ - uuid5: an UUID5 that allows uppercase defined by the regex (?i)^[0-9a-f]{8}-?[0-9a-f]{4}-?5[0-9a-f]{3}-?[89ab][0-9a-f]{3}-?[0-9a-f]{12}$ - isbn: an ISBN10 or ISBN13 number string like "0321751043" or "978-0321751041" - isbn10: an ISBN10 number string like "0321751043" - isbn13: an ISBN13 number string like "978-0321751041" - creditcard: a credit card number defined by the regex ^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$ with any non digit characters mixed in - ssn: a U.S. social security number following the regex ^\d{3}[- ]?\d{2}[- ]?\d{4}$ - hexcolor: an hexadecimal color code like "#FFFFFF: following the regex ^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$ - rgbcolor: an RGB color code like rgb like "rgb(255,255,2559" - byte: base64 encoded binary data - password: any kind of string - date: a date string like "2006-01-02" as defined by full-date in RFC3339 - duration: a duration string like "22 ns" as parsed by Golang time.ParseDuration or compatible with Scala duration format - datetime: a date time string like "2014-12-15T19:30:20.000Z" as defined by date-time in RFC3339.
   format:String
@@ -16471,6 +16665,11 @@ input io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1_JSONSchemaPropsIn
   # x-kubernetes-preserve-unknown-fields stops the API server decoding step from pruning fields which are not specified in the validation schema. This affects fields recursively, but switches back to normal pruning behaviour if nested properties or additionalProperties are specified in the schema. This can either be true or undefined. False is forbidden.
   x_kubernetes_preserve_unknown_fields:Boolean
 }
+# A property entry
+input io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1_JSONSchemaPropsInputInputProp {
+  key:String!
+  value:io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1_JSONSchemaPropsInput
+}
 # JSONSchemaProps is a JSON-Schema following Specification Draft 4 (http://json-schema.org/).
 type io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1_JSONSchemaPropsResult {
   _ref:String
@@ -16480,8 +16679,6 @@ type io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1_JSONSchemaPropsRes
   description:String
   exclusiveMaximum:Boolean
   exclusiveMinimum:Boolean
-  # ExternalDocumentation allows referencing an external resource for extended documentation.
-  externalDocs:io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1_ExternalDocumentationResult
   # format is an OpenAPI v3 format string. Unknown formats are ignored. The following formats are validated:
   # - bsonobjectid: a bson object ID, i.e. a 24 characters hex string - uri: an URI as parsed by Golang net/url.ParseRequestURI - email: an email address as parsed by Golang net/mail.ParseAddress - hostname: a valid representation for an Internet host name, as defined by RFC 1034, section 3.1 [RFC1034]. - ipv4: an IPv4 IP as parsed by Golang net.ParseIP - ipv6: an IPv6 IP as parsed by Golang net.ParseIP - cidr: a CIDR as parsed by Golang net.ParseCIDR - mac: a MAC address as parsed by Golang net.ParseMAC - uuid: an UUID that allows uppercase defined by the regex (?i)^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$ - uuid3: an UUID3 that allows uppercase defined by the regex (?i)^[0-9a-f]{8}-?[0-9a-f]{4}-?3[0-9a-f]{3}-?[0-9a-f]{4}-?[0-9a-f]{12}$ - uuid4: an UUID4 that allows uppercase defined by the regex (?i)^[0-9a-f]{8}-?[0-9a-f]{4}-?4[0-9a-f]{3}-?[89ab][0-9a-f]{3}-?[0-9a-f]{12}$ - uuid5: an UUID5 that allows uppercase defined by the regex (?i)^[0-9a-f]{8}-?[0-9a-f]{4}-?5[0-9a-f]{3}-?[89ab][0-9a-f]{3}-?[0-9a-f]{12}$ - isbn: an ISBN10 or ISBN13 number string like "0321751043" or "978-0321751041" - isbn10: an ISBN10 number string like "0321751043" - isbn13: an ISBN13 number string like "978-0321751041" - creditcard: a credit card number defined by the regex ^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$ with any non digit characters mixed in - ssn: a U.S. social security number following the regex ^\d{3}[- ]?\d{2}[- ]?\d{4}$ - hexcolor: an hexadecimal color code like "#FFFFFF: following the regex ^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$ - rgbcolor: an RGB color code like rgb like "rgb(255,255,2559" - byte: base64 encoded binary data - password: any kind of string - date: a date string like "2006-01-02" as defined by full-date in RFC3339 - duration: a duration string like "22 ns" as parsed by Golang time.ParseDuration or compatible with Scala duration format - datetime: a date time string like "2014-12-15T19:30:20.000Z" as defined by date-time in RFC3339.
   format:String
@@ -16543,6 +16740,11 @@ type io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1_JSONSchemaPropsRes
   x_kubernetes_map_type:String
   # x-kubernetes-preserve-unknown-fields stops the API server decoding step from pruning fields which are not specified in the validation schema. This affects fields recursively, but switches back to normal pruning behaviour if nested properties or additionalProperties are specified in the schema. This can either be true or undefined. False is forbidden.
   x_kubernetes_preserve_unknown_fields:Boolean
+}
+# A property entry
+type io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1_JSONSchemaPropsResultResultProp {
+  key:String!
+  value:io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1_JSONSchemaPropsResult
 }
 # ServiceReference holds a reference to Service.legacy.k8s.io
 input io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1_ServiceReferenceInput {
@@ -16902,8 +17104,6 @@ input io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1beta1_JSONSchemaPr
   description:String
   exclusiveMaximum:Boolean
   exclusiveMinimum:Boolean
-  # ExternalDocumentation allows referencing an external resource for extended documentation.
-  externalDocs:io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1beta1_ExternalDocumentationInput
   # format is an OpenAPI v3 format string. Unknown formats are ignored. The following formats are validated:
   # - bsonobjectid: a bson object ID, i.e. a 24 characters hex string - uri: an URI as parsed by Golang net/url.ParseRequestURI - email: an email address as parsed by Golang net/mail.ParseAddress - hostname: a valid representation for an Internet host name, as defined by RFC 1034, section 3.1 [RFC1034]. - ipv4: an IPv4 IP as parsed by Golang net.ParseIP - ipv6: an IPv6 IP as parsed by Golang net.ParseIP - cidr: a CIDR as parsed by Golang net.ParseCIDR - mac: a MAC address as parsed by Golang net.ParseMAC - uuid: an UUID that allows uppercase defined by the regex (?i)^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$ - uuid3: an UUID3 that allows uppercase defined by the regex (?i)^[0-9a-f]{8}-?[0-9a-f]{4}-?3[0-9a-f]{3}-?[0-9a-f]{4}-?[0-9a-f]{12}$ - uuid4: an UUID4 that allows uppercase defined by the regex (?i)^[0-9a-f]{8}-?[0-9a-f]{4}-?4[0-9a-f]{3}-?[89ab][0-9a-f]{3}-?[0-9a-f]{12}$ - uuid5: an UUID5 that allows uppercase defined by the regex (?i)^[0-9a-f]{8}-?[0-9a-f]{4}-?5[0-9a-f]{3}-?[89ab][0-9a-f]{3}-?[0-9a-f]{12}$ - isbn: an ISBN10 or ISBN13 number string like "0321751043" or "978-0321751041" - isbn10: an ISBN10 number string like "0321751043" - isbn13: an ISBN13 number string like "978-0321751041" - creditcard: a credit card number defined by the regex ^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$ with any non digit characters mixed in - ssn: a U.S. social security number following the regex ^\d{3}[- ]?\d{2}[- ]?\d{4}$ - hexcolor: an hexadecimal color code like "#FFFFFF: following the regex ^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$ - rgbcolor: an RGB color code like rgb like "rgb(255,255,2559" - byte: base64 encoded binary data - password: any kind of string - date: a date string like "2006-01-02" as defined by full-date in RFC3339 - duration: a duration string like "22 ns" as parsed by Golang time.ParseDuration or compatible with Scala duration format - datetime: a date time string like "2014-12-15T19:30:20.000Z" as defined by date-time in RFC3339.
   format:String
@@ -16966,6 +17166,11 @@ input io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1beta1_JSONSchemaPr
   # x-kubernetes-preserve-unknown-fields stops the API server decoding step from pruning fields which are not specified in the validation schema. This affects fields recursively, but switches back to normal pruning behaviour if nested properties or additionalProperties are specified in the schema. This can either be true or undefined. False is forbidden.
   x_kubernetes_preserve_unknown_fields:Boolean
 }
+# A property entry
+input io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1beta1_JSONSchemaPropsInputInputProp {
+  key:String!
+  value:io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1beta1_JSONSchemaPropsInput
+}
 # JSONSchemaProps is a JSON-Schema following Specification Draft 4 (http://json-schema.org/).
 type io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1beta1_JSONSchemaPropsResult {
   _ref:String
@@ -16975,8 +17180,6 @@ type io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1beta1_JSONSchemaPro
   description:String
   exclusiveMaximum:Boolean
   exclusiveMinimum:Boolean
-  # ExternalDocumentation allows referencing an external resource for extended documentation.
-  externalDocs:io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1beta1_ExternalDocumentationResult
   # format is an OpenAPI v3 format string. Unknown formats are ignored. The following formats are validated:
   # - bsonobjectid: a bson object ID, i.e. a 24 characters hex string - uri: an URI as parsed by Golang net/url.ParseRequestURI - email: an email address as parsed by Golang net/mail.ParseAddress - hostname: a valid representation for an Internet host name, as defined by RFC 1034, section 3.1 [RFC1034]. - ipv4: an IPv4 IP as parsed by Golang net.ParseIP - ipv6: an IPv6 IP as parsed by Golang net.ParseIP - cidr: a CIDR as parsed by Golang net.ParseCIDR - mac: a MAC address as parsed by Golang net.ParseMAC - uuid: an UUID that allows uppercase defined by the regex (?i)^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$ - uuid3: an UUID3 that allows uppercase defined by the regex (?i)^[0-9a-f]{8}-?[0-9a-f]{4}-?3[0-9a-f]{3}-?[0-9a-f]{4}-?[0-9a-f]{12}$ - uuid4: an UUID4 that allows uppercase defined by the regex (?i)^[0-9a-f]{8}-?[0-9a-f]{4}-?4[0-9a-f]{3}-?[89ab][0-9a-f]{3}-?[0-9a-f]{12}$ - uuid5: an UUID5 that allows uppercase defined by the regex (?i)^[0-9a-f]{8}-?[0-9a-f]{4}-?5[0-9a-f]{3}-?[89ab][0-9a-f]{3}-?[0-9a-f]{12}$ - isbn: an ISBN10 or ISBN13 number string like "0321751043" or "978-0321751041" - isbn10: an ISBN10 number string like "0321751043" - isbn13: an ISBN13 number string like "978-0321751041" - creditcard: a credit card number defined by the regex ^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$ with any non digit characters mixed in - ssn: a U.S. social security number following the regex ^\d{3}[- ]?\d{2}[- ]?\d{4}$ - hexcolor: an hexadecimal color code like "#FFFFFF: following the regex ^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$ - rgbcolor: an RGB color code like rgb like "rgb(255,255,2559" - byte: base64 encoded binary data - password: any kind of string - date: a date string like "2006-01-02" as defined by full-date in RFC3339 - duration: a duration string like "22 ns" as parsed by Golang time.ParseDuration or compatible with Scala duration format - datetime: a date time string like "2014-12-15T19:30:20.000Z" as defined by date-time in RFC3339.
   format:String
@@ -17038,6 +17241,11 @@ type io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1beta1_JSONSchemaPro
   x_kubernetes_map_type:String
   # x-kubernetes-preserve-unknown-fields stops the API server decoding step from pruning fields which are not specified in the validation schema. This affects fields recursively, but switches back to normal pruning behaviour if nested properties or additionalProperties are specified in the schema. This can either be true or undefined. False is forbidden.
   x_kubernetes_preserve_unknown_fields:Boolean
+}
+# A property entry
+type io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1beta1_JSONSchemaPropsResultResultProp {
+  key:String!
+  value:io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1beta1_JSONSchemaPropsResult
 }
 # ServiceReference holds a reference to Service.legacy.k8s.io
 input io_k8s_apiextensions_apiserver_pkg_apis_apiextensions_v1beta1_ServiceReferenceInput {
@@ -17203,6 +17411,8 @@ type io_k8s_apimachinery_pkg_apis_meta_v1_GroupVersionForDiscoveryResult {
 input io_k8s_apimachinery_pkg_apis_meta_v1_LabelSelectorInput {
   # matchExpressions is a list of label selector requirements. The requirements are ANDed.
   matchExpressions:[io_k8s_apimachinery_pkg_apis_meta_v1_LabelSelectorRequirementInput]
+  # matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+  matchLabels:[StringInputProp!]
 }
 # A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
 input io_k8s_apimachinery_pkg_apis_meta_v1_LabelSelectorRequirementInput {
@@ -17226,6 +17436,8 @@ type io_k8s_apimachinery_pkg_apis_meta_v1_LabelSelectorRequirementResult {
 type io_k8s_apimachinery_pkg_apis_meta_v1_LabelSelectorResult {
   # matchExpressions is a list of label selector requirements. The requirements are ANDed.
   matchExpressions:[io_k8s_apimachinery_pkg_apis_meta_v1_LabelSelectorRequirementResult]
+  # matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+  matchLabels:[StringResultProp!]
 }
 # ListMeta describes metadata that synthetic resources must have, including lists and various status objects. A resource may have only one of {ObjectMeta, ListMeta}.
 type io_k8s_apimachinery_pkg_apis_meta_v1_ListMetaResult {
@@ -17267,6 +17479,8 @@ type io_k8s_apimachinery_pkg_apis_meta_v1_ManagedFieldsEntryResult {
 }
 # ObjectMeta is metadata that all persisted resources must have, which includes all objects users must create.
 input io_k8s_apimachinery_pkg_apis_meta_v1_ObjectMetaInput {
+  # Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects. More info: http://kubernetes.io/docs/user-guide/annotations
+  annotations:[StringInputProp!]
   # The name of the cluster which the object belongs to. This is used to distinguish resources with same name and namespace in different clusters. This field is not set anywhere right now and apiserver is going to ignore it if set in create or update request.
   clusterName:String
   # Time is a wrapper around time.Time which supports correct marshaling to YAML and JSON.  Wrappers are provided for many of the factory methods that the time package offers.
@@ -17283,6 +17497,8 @@ input io_k8s_apimachinery_pkg_apis_meta_v1_ObjectMetaInput {
   generateName:String
   # A sequence number representing a specific generation of the desired state. Populated by the system. Read-only.
   generation:Int
+  # Map of string keys and values that can be used to organize and categorize (scope and select) objects. May match selectors of replication controllers and services. More info: http://kubernetes.io/docs/user-guide/labels
+  labels:[StringInputProp!]
   # ManagedFields maps workflow-id and version to the set of fields that are managed by that workflow. This is mostly for internal housekeeping, and users typically shouldn't need to set or understand this field. A workflow can be the user's name, a controller's name, or the name of a specific apply path like "ci-cd". The set of fields is always in the version that the workflow used when modifying the object.
   managedFields:[io_k8s_apimachinery_pkg_apis_meta_v1_ManagedFieldsEntryInput]
   # Name must be unique within a namespace. Is required when creating resources, although some resources may allow a client to request the generation of an appropriate name automatically. Name is primarily intended for creation idempotence and configuration definition. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names
@@ -17304,6 +17520,8 @@ input io_k8s_apimachinery_pkg_apis_meta_v1_ObjectMetaInput {
 }
 # ObjectMeta is metadata that all persisted resources must have, which includes all objects users must create.
 type io_k8s_apimachinery_pkg_apis_meta_v1_ObjectMetaResult {
+  # Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects. More info: http://kubernetes.io/docs/user-guide/annotations
+  annotations:[StringResultProp!]
   # The name of the cluster which the object belongs to. This is used to distinguish resources with same name and namespace in different clusters. This field is not set anywhere right now and apiserver is going to ignore it if set in create or update request.
   clusterName:String
   # Time is a wrapper around time.Time which supports correct marshaling to YAML and JSON.  Wrappers are provided for many of the factory methods that the time package offers.
@@ -17320,6 +17538,8 @@ type io_k8s_apimachinery_pkg_apis_meta_v1_ObjectMetaResult {
   generateName:String
   # A sequence number representing a specific generation of the desired state. Populated by the system. Read-only.
   generation:Int
+  # Map of string keys and values that can be used to organize and categorize (scope and select) objects. May match selectors of replication controllers and services. More info: http://kubernetes.io/docs/user-guide/labels
+  labels:[StringResultProp!]
   # ManagedFields maps workflow-id and version to the set of fields that are managed by that workflow. This is mostly for internal housekeeping, and users typically shouldn't need to set or understand this field. A workflow can be the user's name, a controller's name, or the name of a specific apply path like "ci-cd". The set of fields is always in the version that the workflow used when modifying the object.
   managedFields:[io_k8s_apimachinery_pkg_apis_meta_v1_ManagedFieldsEntryResult]
   # Name must be unique within a namespace. Is required when creating resources, although some resources may allow a client to request the generation of an appropriate name automatically. Name is primarily intended for creation idempotence and configuration definition. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names

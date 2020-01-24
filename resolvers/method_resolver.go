@@ -11,9 +11,14 @@ import (
 // implemented by a receiver type.
 //
 ///////////////////////////////////////////////////////////////////////
-type MethodResolverFactory struct{}
+type methodResolverFactory byte
 
-func (this *MethodResolverFactory) CreateResolver(request *ResolveRequest) Resolver {
+const MethodResolverFactory = methodResolverFactory(0)
+
+func (this methodResolverFactory) CreateResolver(request *ResolveRequest) Resolver {
+    if !request.Parent.IsValid() {
+        return nil
+    }
     childMethod := getChildMethod(&request.Parent, request.Field.Name)
     if childMethod == nil {
         return nil
@@ -56,4 +61,3 @@ func (this *MethodResolverFactory) CreateResolver(request *ResolveRequest) Resol
 
     }
 }
-
