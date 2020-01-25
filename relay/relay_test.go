@@ -1,68 +1,41 @@
 package relay_test
 
 import (
-    "github.com/chirino/graphql/internal/deprecated"
     "github.com/stretchr/testify/require"
-	"net/http/httptest"
-	"strings"
-	"testing"
+    "net/http/httptest"
+    "strings"
+    "testing"
 
-	"github.com/chirino/graphql"
+    "github.com/chirino/graphql"
     "github.com/chirino/graphql/internal/example/starwars"
-	"github.com/chirino/graphql/relay"
+    "github.com/chirino/graphql/relay"
 )
 
-var starwarsSchema = deprecated.MustParseSchema(starwars.Schema, &starwars.Resolver{})
-
-
-func TestSchemaAPIServeHTTP(t *testing.T) {
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest("POST", "/some/path/here", strings.NewReader(`{"query":"{ hero { name } }", "operationName":"", "variables": null}`))
-	h := relay.Handler{Engine: starwarsSchema.Engine}
-
-	h.ServeHTTP(w, r)
-
-	if w.Code != 200 {
-		t.Fatalf("Expected status code 200, got %d.", w.Code)
-	}
-
-	contentType := w.Header().Get("Content-Type")
-	if contentType != "application/json" {
-		t.Fatalf("Invalid content-type. Expected [application/json], but instead got [%s]", contentType)
-	}
-
-	expectedResponse := `{"data":{"hero":{"name":"R2-D2"}}}`
-	actualResponse := w.Body.String()
-	if expectedResponse != actualResponse {
-		t.Fatalf("Invalid response. Expected [%s], but instead got [%s]", expectedResponse, actualResponse)
-	}
-}
-
 func TestEngineAPIServeHTTP(t *testing.T) {
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest("POST", "/some/path/here", strings.NewReader(`{"query":"{ hero { name } }", "operationName":"", "variables": null}`))
+    w := httptest.NewRecorder()
+    r := httptest.NewRequest("POST", "/some/path/here", strings.NewReader(`{"query":"{ hero { name } }", "operationName":"", "variables": null}`))
 
-	starwarsEngine := graphql.New()
-	err := starwarsEngine.Schema.Parse(starwars.Schema)
+    engine := graphql.New()
+    err := engine.Schema.Parse(starwars.Schema)
 
-	require.NoError(t, err)
-	starwarsEngine.Root = &starwars.Resolver{}
-	h := relay.Handler{Engine: starwarsEngine}
+    require.NoError(t, err)
+    engine.Root = &starwars.Resolver{}
+    h := relay.Handler{Engine: engine}
 
-	h.ServeHTTP(w, r)
+    h.ServeHTTP(w, r)
 
-	if w.Code != 200 {
-		t.Fatalf("Expected status code 200, got %d.", w.Code)
-	}
+    if w.Code != 200 {
+        t.Fatalf("Expected status code 200, got %d.", w.Code)
+    }
 
-	contentType := w.Header().Get("Content-Type")
-	if contentType != "application/json" {
-		t.Fatalf("Invalid content-type. Expected [application/json], but instead got [%s]", contentType)
-	}
+    contentType := w.Header().Get("Content-Type")
+    if contentType != "application/json" {
+        t.Fatalf("Invalid content-type. Expected [application/json], but instead got [%s]", contentType)
+    }
 
-	expectedResponse := `{"data":{"hero":{"name":"R2-D2"}}}`
-	actualResponse := w.Body.String()
-	if expectedResponse != actualResponse {
-		t.Fatalf("Invalid response. Expected [%s], but instead got [%s]", expectedResponse, actualResponse)
-	}
+    expectedResponse := `{"data":{"hero":{"name":"R2-D2"}}}`
+    actualResponse := w.Body.String()
+    if expectedResponse != actualResponse {
+        t.Fatalf("Invalid response. Expected [%s], but instead got [%s]", expectedResponse, actualResponse)
+    }
 }

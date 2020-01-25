@@ -27,12 +27,12 @@ func (this methodResolverFactory) CreateResolver(request *ResolveRequest) Resolv
     var structPacker *packer.StructPacker = nil
     if childMethod.argumentsType != nil {
         p := packer.NewBuilder()
-        defer p.Finish()
         sp, err := p.MakeStructPacker(request.Field.Args, *childMethod.argumentsType)
         if err != nil {
             return nil
         }
         structPacker = sp
+        p.Finish()
     }
 
     return func() (reflect.Value, error) {
