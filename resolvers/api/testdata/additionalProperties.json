@@ -1,0 +1,47 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/process": {
+      "post": {
+        "description": "example operation",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "operationId": "action",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TagMap"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/TagMap"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "TagMap": {
+      "description": "A dictionary of tags",
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

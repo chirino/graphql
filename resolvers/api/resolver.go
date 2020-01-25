@@ -10,6 +10,7 @@ import (
     "os"
     "reflect"
     "sort"
+    "strconv"
     "strings"
 )
 
@@ -147,21 +148,41 @@ func (factory resolverFactory) addRootField(draftSchema *schema.Schema, rootType
     field += ")"
     field += ": "
 
-    for status, response := range operation.Responses {
+    responseTypesToStatus := map[string][]int{}
+    for statusText, response := range operation.Responses {
+        status, err := strconv.Atoi(statusText)
+        if err != nil {
+            fmt.Fprintf(factory.options.Logs, "skipping %s.%s field respose, not an integer: %s\n", rootType, fieldName, statusText)
+        }
         content := response.Value.Content.Get("application/json")
-        if strings.HasPrefix(status, "2") && content != nil {
+        if strings.HasPrefix(statusText, "2") && content != nil {
+
             qlType, err := factory.addGraphQLType(generated, content.Schema, fmt.Sprintf("%s/DefaultResponse", typePath), refCache, false)
             if err != nil {
                 fmt.Fprintf(factory.options.Logs, "dropping %s.%s field: result type cannot be converted: %s\n", rootType, fieldName, err)
                 return nil
             }
-            field += qlType
 
+            statuses := responseTypesToStatus[qlType]
+            if statuses == nil {
+                responseTypesToStatus[qlType] = []int{status}
+            } else {
+                responseTypesToStatus[qlType] = append(statuses, status)
+            }
+        }
+    }
+    switch len(responseTypesToStatus) {
+    case 0:
+        fmt.Fprintf(factory.options.Logs, "dropping %s.%s field: graphql result type could not be determined\n", rootType, fieldName)
+        return nil
+    case 1:
+        for qlType, status := range responseTypesToStatus {
+            field += qlType
             gql := fmt.Sprintf(`type %s @graphql(alter:"add") { %s }`, rootType, field)
             for _, g := range generated {
                 gql += "\n " + g
             }
-            err = draftSchema.Parse(gql)
+            err := draftSchema.Parse(gql)
             if err != nil {
                 return err
             }
@@ -169,11 +190,10 @@ func (factory resolverFactory) addRootField(draftSchema *schema.Schema, rootType
             factory.resolvers[rootType+":"+fieldName] = resolvers.Func(func(request *resolvers.ResolveRequest) resolvers.Resolver {
                 return factory.resolve(request, operation, method, path, status)
             })
-
             return nil
         }
     }
-    fmt.Fprintf(factory.options.Logs, "dropping %s.%s field: graphql result type could not be determined\n", rootType, fieldName)
+    fmt.Fprintf(factory.options.Logs, "dropping %s.%s field: graphql multiple result types not yet supported\n", rootType, fieldName)
     return nil
 }
 
@@ -338,6 +358,9 @@ func (factory *resolverFactory) addPropWrapper(generated map[string]string, nest
         return reflect.ValueOf(props), nil
     }
     factory.inputConverters["["+name+"!]"] = func(t schema.Type, value interface{}) (interface{}, error) {
+        if value == nil {
+            return nil, nil
+        }
         // input is an array.. convert to a map...
         if value, ok := value.([]interface{}); ok {
             result := make(map[string]interface{}, len(value))

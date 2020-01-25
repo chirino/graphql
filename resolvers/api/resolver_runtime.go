@@ -49,7 +49,7 @@ func (factory *resolverFactory) CreateResolver(request *resolvers.ResolveRequest
     return nil
 }
 
-func (factory resolverFactory) resolve(gqlRequest *resolvers.ResolveRequest, operation *openapi3.Operation, method string, path string, status string) resolvers.Resolver {
+func (factory resolverFactory) resolve(gqlRequest *resolvers.ResolveRequest, operation *openapi3.Operation, method string, path string, expectedStatus []int) resolvers.Resolver {
     return func() (reflect.Value, error) {
 
         query := url.Values{}
@@ -130,7 +130,7 @@ func (factory resolverFactory) resolve(gqlRequest *resolvers.ResolveRequest, ope
             content := operation.RequestBody.Value.Content.Get("application/json")
             if content != nil {
 
-                v, err := factory.inputConverters.Convert(gqlRequest.Field.Args.Get("body").Type, gqlRequest.Args["body"])
+                v, err := factory.inputConverters.Convert(gqlRequest.Field.Args.Get("body").Type, gqlRequest.Args["body"], "body")
                 if err != nil {
                     return reflect.Value{}, errors.WithStack(err)
                 }
@@ -139,6 +139,8 @@ func (factory resolverFactory) resolve(gqlRequest *resolvers.ResolveRequest, ope
                 if err != nil {
                     return reflect.Value{}, errors.WithStack(err)
                 }
+
+                fmt.Println("request body: "+string(data))
                 body = bytes.NewReader(data)
             }
         }
@@ -161,18 +163,19 @@ func (factory resolverFactory) resolve(gqlRequest *resolvers.ResolveRequest, ope
         }
         defer resp.Body.Close()
 
-        statusCode := fmt.Sprintf("%d", resp.StatusCode)
-        if status == statusCode {
-            var result map[string]interface{}
-            err := json.NewDecoder(resp.Body).Decode(&result)
-            if err != nil {
-                return reflect.Value{}, errors.WithStack(err)
+        for _, expected := range expectedStatus {
+            if expected == resp.StatusCode {
+                var result map[string]interface{}
+                err := json.NewDecoder(resp.Body).Decode(&result)
+                if err != nil {
+                    return reflect.Value{}, errors.WithStack(err)
+                }
+                return reflect.ValueOf(result), nil
             }
-            return reflect.ValueOf(result), nil
-        } else {
-            // error case....
-            all, _ := ioutil.ReadAll(resp.Body)
-            return reflect.Value{}, errors.New("http request status code: " + statusCode + ", body: " + string(all))
         }
+
+        // All other statuses are considered errors...
+        all, _ := ioutil.ReadAll(resp.Body)
+        return reflect.Value{}, errors.Errorf("http request status code: %d, body: %s", resp.StatusCode, string(all))
     }
 }
