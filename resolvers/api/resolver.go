@@ -2,6 +2,7 @@ package api
 
 import (
     "fmt"
+    "github.com/chirino/graphql/internal/exec/inputconv"
     "github.com/chirino/graphql/resolvers"
     "github.com/chirino/graphql/schema"
     "github.com/getkin/kin-openapi/openapi3"
@@ -20,10 +21,11 @@ type ResolverHook struct {
 type Converter func(value reflect.Value, err error) (reflect.Value, error)
 
 type resolverFactory struct {
-    next       resolvers.ResolverFactory
-    options    ApiResolverOptions
-    resolvers  map[string]resolvers.ResolverFactory
-    converters map[string]Converter
+    next             resolvers.ResolverFactory
+    options          ApiResolverOptions
+    resolvers        map[string]resolvers.ResolverFactory
+    resultConverters map[string]Converter
+    inputConverters  inputconv.TypeConverters
 }
 
 var _ resolvers.ResolverFactory = &resolverFactory{}
@@ -32,7 +34,8 @@ func NewResolverFactory(doc *openapi3.Swagger, options ApiResolverOptions) (reso
     result := &resolverFactory{options: options}
     result.next = resolvers.DynamicResolverFactory()
     result.resolvers = make(map[string]resolvers.ResolverFactory)
-    result.converters = make(map[string]Converter)
+    result.resultConverters = make(map[string]Converter)
+    result.inputConverters = inputconv.TypeConverters{}
 
     if result.options.Logs == nil {
         result.options.Logs = os.Stderr
@@ -309,7 +312,8 @@ func (factory *resolverFactory) addPropWrapper(generated map[string]string, nest
     generated[name] = gql
 
     // Lets register a converter for this type....
-    factory.converters["["+name+"!]"] = func(value reflect.Value, err error) (reflect.Value, error) {
+    factory.resultConverters["["+name+"!]"] = func(value reflect.Value, err error) (reflect.Value, error) {
+        // input is an map.. convert to an array
         if err != nil {
             return value, err
         }
@@ -332,6 +336,26 @@ func (factory *resolverFactory) addPropWrapper(generated map[string]string, nest
             i++
         }
         return reflect.ValueOf(props), nil
+    }
+    factory.inputConverters["["+name+"!]"] = func(t schema.Type, value interface{}) (interface{}, error) {
+        // input is an array.. convert to a map...
+        if value, ok := value.([]interface{}); ok {
+            result := make(map[string]interface{}, len(value))
+            for _, item := range value {
+                if item, ok := item.(map[string]interface{}); ok {
+                    if key, ok := item["key"].(string); ok {
+                        value := item["value"]
+                        result[key] = value
+                    } else {
+                        return nil, errors.Errorf("input conversion of "+t.String()+" type failed: expected array item key to be a string, got: %T", key)
+                    }
+                } else {
+                    return nil, errors.Errorf("input conversion of "+t.String()+" type failed: expected array item to be a map, got: %T", item)
+                }
+            }
+            return result, nil
+        }
+        return nil, errors.Errorf("input conversion of "+t.String()+" type failed: expected array, got: %T", value)
     }
     return name, nil
 }

@@ -4,17 +4,19 @@ import (
     "github.com/chirino/graphql"
     "github.com/chirino/graphql/resolvers"
     "io"
+    "net/http"
     "os"
 )
 
 // EndpointOptions defines how to access an endpoint URL
 type EndpointOptions struct {
     // URL is the endpoint or endpoint base path that will be accessed.
-    URL            string
+    URL string
     // BearerToken is the Authentication Bearer token that will added to the request headers.
-    BearerToken    string
+    BearerToken string
     // InsecureClient allows the client request to connect to TLS servers that do not have a valid certificate.
     InsecureClient bool
+    Client         *http.Client `json:"-"`
 }
 
 type ApiResolverOptions struct {

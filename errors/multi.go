@@ -13,8 +13,8 @@ func Multi(args ...error) error {
     values := []error{}
     for _, err := range args {
         if err != nil {
-            if err, ok := err.(multi); ok {
-                values = append(values, err...)
+            if errs, ok := err.(multi); ok {
+                values = append(values, errs...)
             } else {
                 values = append(values, err)
             }

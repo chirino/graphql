@@ -1,0 +1,12 @@
+# Configures how to get the openapi document.  It can be openapi v2 or v3.
+Openapi:
+  URL: openapi.json
+  InsecureClient: false
+  BearerToken:
+
+# Configures the base URL that API requests will get issued against.
+APIBase:
+  URL: https://api.crc.testing:6443
+  InsecureClient: true
+  BearerToken:
+

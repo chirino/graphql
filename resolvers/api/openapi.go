@@ -115,9 +115,14 @@ func readURL(endpointOptions EndpointOptions) ([]byte, error) {
     }
 
     if location.Scheme != "" && location.Host != "" {
-        client := http.Client{Transport: &http.Transport{
-            TLSClientConfig: &tls.Config{InsecureSkipVerify: endpointOptions.InsecureClient},
-        }}
+
+        client := endpointOptions.Client
+        if client == nil {
+            client = &http.Client{Transport: &http.Transport{
+                TLSClientConfig: &tls.Config{InsecureSkipVerify: endpointOptions.InsecureClient},
+            }}
+        }
+
         request, err := http.NewRequest("GET", location.String(), nil)
         if err != nil {
             return nil, errors.WithStack(err)

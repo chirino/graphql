@@ -18,7 +18,7 @@ import (
 
 func (factory *resolverFactory) convert(request *resolvers.ResolveRequest, next resolvers.Resolver) resolvers.Resolver {
     fieldType := request.Field.Type.String()
-    if converter, ok := factory.converters[fieldType]; ok {
+    if converter, ok := factory.resultConverters[fieldType]; ok {
         return func() (value reflect.Value, err error) {
             return converter(next())
         }
@@ -118,15 +118,23 @@ func (factory resolverFactory) resolve(gqlRequest *resolvers.ResolveRequest, ope
         apiURL.Path += path
         apiURL.RawQuery = query.Encode()
 
-        client := http.Client{Transport: &http.Transport{
-            TLSClientConfig: &tls.Config{InsecureSkipVerify: factory.options.APIBase.InsecureClient},
-        }}
+        client := factory.options.APIBase.Client
+        if client == nil {
+            client = &http.Client{Transport: &http.Transport{
+                TLSClientConfig: &tls.Config{InsecureSkipVerify: factory.options.APIBase.InsecureClient},
+            }}
+        }
 
         var body io.Reader = nil
         if operation.RequestBody != nil {
             content := operation.RequestBody.Value.Content.Get("application/json")
             if content != nil {
-                v := gqlRequest.Args["body"]
+
+                v, err := factory.inputConverters.Convert(gqlRequest.Field.Args.Get("body").Type, gqlRequest.Args["body"])
+                if err != nil {
+                    return reflect.Value{}, errors.WithStack(err)
+                }
+
                 data, err := json.Marshal(v)
                 if err != nil {
                     return reflect.Value{}, errors.WithStack(err)

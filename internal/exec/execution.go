@@ -68,16 +68,19 @@ func (this *Execution) Execute() []*errors.QueryError {
     if this.Operation.Type == query.Query {
         rootType = this.Schema.EntryPoints["query"]
     } else if this.Operation.Type == query.Mutation {
-        rootType = this.Schema.EntryPoints["query"]
+        rootType = this.Schema.EntryPoints["mutation"]
     } else if this.Operation.Type == query.Subscription {
-        rootType = this.Schema.EntryPoints["query"]
+        rootType = this.Schema.EntryPoints["subscription"]
     }
 
     rootValue := reflect.ValueOf(this.Root)
-    errors := this.recursiveExecute(nil, rootValue, rootType, this.Operation.Selections)
+    this.recursiveExecute(nil, rootValue, rootType, this.Operation.Selections)
     this.Out.Flush()
 
-    return errors
+    if err := this.Context.Err(); err != nil {
+        return []*errors.QueryError{errors.Errorf("%s", err)}
+    }
+    return this.Errs
 }
 
 type selectionResolver struct {
@@ -224,7 +227,7 @@ func (this *Execution) CreateSelectionResolversForFragment(parentSelectionResolv
     }
 }
 
-func (this *Execution) recursiveExecute(parentSelection *selectionResolver, parentValue reflect.Value, parentType schema.Type, selections []query.Selection) []*errors.QueryError {
+func (this *Execution) recursiveExecute(parentSelection *selectionResolver, parentValue reflect.Value, parentType schema.Type, selections []query.Selection) {
     {
         defer func() {
             if value := recover(); value != nil {
@@ -301,10 +304,6 @@ func (this *Execution) recursiveExecute(parentSelection *selectionResolver, pare
         this.Out.WriteByte('}')
 
     }
-    if err := this.Context.Err(); err != nil {
-        return []*errors.QueryError{errors.Errorf("%s", err)}
-    }
-    return this.Errs
 }
 
 func (this *Execution) skipByDirective(directives schema.DirectiveList) bool {
@@ -338,6 +337,10 @@ func (this *Execution) writeList(listType schema.List, childValue reflect.Value,
     for ; childValue.Kind() == reflect.Ptr; {
         childValue = childValue.Elem()
     }
+    // Dereference interfaces...
+    for ; childValue.Kind() == reflect.Interface; {
+        childValue = childValue.Elem()
+    }
 
     switch childValue.Kind() {
     case reflect.Slice, reflect.Array:
@@ -358,7 +361,7 @@ func (this *Execution) writeList(listType schema.List, childValue reflect.Value,
         this.Out.WriteByte(']')
     default:
         this.AddError((&errors.QueryError{
-            Message: fmt.Sprintf("Resolved object was not an array, it was a: %v", childValue.Kind()),
+            Message: fmt.Sprintf("Resolved object was not an array, it was a: %s", childValue.Type().String()),
             Path:    selectionResolver.Path(),
         }).WithStack())
 	}
