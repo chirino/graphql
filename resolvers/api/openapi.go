@@ -10,12 +10,13 @@ import (
     "github.com/pkg/errors"
     "io/ioutil"
     "net/http"
+    "net/url"
     "regexp"
 )
 
-func LoadOpenApiDoc(docLocation EndpointOptions) (*openapi3.Swagger, error) {
+func LoadOpenApiV2orV3Doc(docLocation EndpointOptions) (*openapi3.Swagger, error) {
 
-    var data, err = readUrl(docLocation)
+    var data, err = readURL(docLocation)
     if err != nil {
         return nil, err
     }
@@ -31,6 +32,12 @@ func LoadOpenApiDoc(docLocation EndpointOptions) (*openapi3.Swagger, error) {
         return nil, errors.Wrap(err, "could not detect openapi version")
     }
 
+
+    location, err := url.Parse(docLocation.URL)
+    if err != nil {
+        return nil, err
+    }
+
     if doc.Swagger != "" || doc.OpenAPI == "" {
         // Lets load it up as openapi v2 and convert to v3
         var swagger2 openapi2.Swagger
@@ -44,7 +51,7 @@ func LoadOpenApiDoc(docLocation EndpointOptions) (*openapi3.Swagger, error) {
             return nil, errors.WithStack(err)
         }
 
-        err = openapi3.NewSwaggerLoader().ResolveRefsIn(apiDoc, docLocation.URL.URL)
+        err = openapi3.NewSwaggerLoader().ResolveRefsIn(apiDoc, location)
         if err != nil {
             return nil, errors.WithStack(err)
         }
@@ -52,7 +59,7 @@ func LoadOpenApiDoc(docLocation EndpointOptions) (*openapi3.Swagger, error) {
         return apiDoc, nil
     } else {
         // It should be a v3 document already..
-        apiDoc, err := openapi3.NewSwaggerLoader().LoadSwaggerFromDataWithPath(data, docLocation.URL.URL)
+        apiDoc, err := openapi3.NewSwaggerLoader().LoadSwaggerFromDataWithPath(data, location)
         if err != nil {
             return nil, errors.WithStack(err)
         }
@@ -63,6 +70,10 @@ func LoadOpenApiDoc(docLocation EndpointOptions) (*openapi3.Swagger, error) {
 
 var pathVariableRegex = regexp.MustCompile("{(.+?)}")
 
+//
+// enrichApiDoc does some pre-processing of the API document to make them more consistent:
+// 1: Creates a operation parameter for path parameter if it's missing.
+//
 func enrichApiDoc(doc *openapi3.Swagger) {
     // Lets make sure there are path parameters defined for the path variable bits..
     for path, v := range doc.Paths {
@@ -97,8 +108,12 @@ func enrichApiDoc(doc *openapi3.Swagger) {
     }
 }
 
-func readUrl(endpointOptions EndpointOptions) ([]byte, error) {
-    location := endpointOptions.URL.URL
+func readURL(endpointOptions EndpointOptions) ([]byte, error) {
+    location, err := url.Parse(endpointOptions.URL)
+    if err != nil {
+        return nil, err
+    }
+
     if location.Scheme != "" && location.Host != "" {
         client := http.Client{Transport: &http.Transport{
             TLSClientConfig: &tls.Config{InsecureSkipVerify: endpointOptions.InsecureClient},

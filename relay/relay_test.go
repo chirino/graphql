@@ -18,7 +18,7 @@ var starwarsSchema = deprecated.MustParseSchema(starwars.Schema, &starwars.Resol
 func TestSchemaAPIServeHTTP(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/some/path/here", strings.NewReader(`{"query":"{ hero { name } }", "operationName":"", "variables": null}`))
-	h := relay.Handler{Schema: starwarsSchema}
+	h := relay.Handler{Engine: starwarsSchema.Engine}
 
 	h.ServeHTTP(w, r)
 

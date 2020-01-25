@@ -21,3 +21,5 @@ require (
 go 1.13
 
 replace github.com/getkin/kin-openapi => /Users/chirino/sandbox/kin-openapi
+
+replace github.com/stretchr/testify => /Users/chirino/sandbox/testify

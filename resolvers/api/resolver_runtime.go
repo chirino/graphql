@@ -110,7 +110,11 @@ func (factory resolverFactory) resolve(gqlRequest *resolvers.ResolveRequest, ope
         headers.Set("Content-Type", "application/json")
         headers.Set("Accept", "application/json")
 
-        var apiURL = *factory.options.APIBase.URL.URL
+        apiURL, err := url.Parse(factory.options.APIBase.URL)
+        if err != nil {
+            return reflect.Value{}, errors.WithStack(err)
+        }
+
         apiURL.Path += path
         apiURL.RawQuery = query.Encode()
 

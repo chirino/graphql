@@ -20,7 +20,7 @@ func main() {
 		w.Write(page)
 	}))
 
-	http.Handle("/query", &relay.Handler{Schema: schema})
+	http.Handle("/query", &relay.Handler{Engine: schema.Engine})
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

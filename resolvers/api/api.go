@@ -1,35 +1,19 @@
 package api
 
 import (
-    "encoding/json"
-    "fmt"
     "github.com/chirino/graphql"
     "github.com/chirino/graphql/resolvers"
     "io"
-    "net/url"
     "os"
 )
 
-type URL struct {
-    *url.URL
-}
-
-func (u *URL) UnmarshalJSON(b []byte) error {
-    url, err := url.Parse(fmt.Sprintf("%s", b[1:len(b)-1]))
-    if err != nil {
-        return err
-    }
-    u.URL = url
-    return nil
-}
-
-func (u *URL) MarshalJSON() ([]byte, error) {
-    return json.Marshal(u.String())
-}
-
+// EndpointOptions defines how to access an endpoint URL
 type EndpointOptions struct {
-    URL            URL
+    // URL is the endpoint or endpoint base path that will be accessed.
+    URL            string
+    // BearerToken is the Authentication Bearer token that will added to the request headers.
     BearerToken    string
+    // InsecureClient allows the client request to connect to TLS servers that do not have a valid certificate.
     InsecureClient bool
 }
 
@@ -59,7 +43,7 @@ func MountApi(engine *graphql.Engine, option ApiResolverOptions) error {
     o.Openapi = option.Openapi
     o.APIBase = option.APIBase
 
-    doc, err := LoadOpenApiDoc(o.Openapi)
+    doc, err := LoadOpenApiV2orV3Doc(o.Openapi)
     if err != nil {
         return err
     }

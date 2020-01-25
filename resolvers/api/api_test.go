@@ -3,7 +3,6 @@ package api_test
 import (
     "github.com/chirino/graphql"
     "github.com/chirino/graphql/resolvers/api"
-    "github.com/stretchr/testify/assert"
     "github.com/stretchr/testify/require"
     "io/ioutil"
     "testing"
@@ -12,8 +11,11 @@ import (
 func TestApiResolver(t *testing.T) {
     engine := graphql.New()
 
-    err := api.MountApi(engine, "k8s.json", api.ApiResolverOptions{
-        //Logs: ioutil.Discard,
+    err := api.MountApi(engine, api.ApiResolverOptions{
+        Openapi: api.EndpointOptions{
+            URL: "k8s.json",
+        },
+        Logs: ioutil.Discard,
     })
     require.NoError(t, err)
 
@@ -24,5 +26,5 @@ func TestApiResolver(t *testing.T) {
     require.NoError(t, err)
     expected := string(file)
 
-    assert.Equal(t, actual, expected)
+    require.Equal(t, actual, expected)
 }

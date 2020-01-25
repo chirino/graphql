@@ -1,14 +1,12 @@
-#
-# Config file for this graphql/rest gateway example....
-#
-
-# Configures how to get the openapi doc for the API that will be exposed via GraphQL
+# Configures how to get the openapi document.  It can be openapi v2 or v3.
 Openapi:
-  URL:  https://api.crc.testing:6443/openapi/v2
-  InsecureClient: true
-  BearerToken: EDTZLFif5hPmdgl4PNE23SJh-50mTaia7L9DTgJNf_U
+  URL: openapi.json
+  InsecureClient: false
+  BearerToken:
 
-# Configures the base URL for the API that tou will be accessing..
+# Configures the base URL that API requests will get issued against.
 APIBase:
-  URL:  https://api.crc.testing:6443
+  URL: https://api.crc.testing:6443
   InsecureClient: true
+  BearerToken:
+
