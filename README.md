@@ -19,11 +19,6 @@ This project is still under heavy development and APIs are almost certainly subj
 - modifying schemas and generating new schema documents
 - relay compatible http interface
 
-## Roadmap
-
-We're trying out the GitHub Project feature to manage `graphql-go`'s [development roadmap](https://github.com/chirino/graphql/projects/1).
-Feedback is welcome and appreciated.
-
 ## (Some) Documentation
 
 ### Basic Sample
