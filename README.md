@@ -1,9 +1,9 @@
-# graphql [![Sourcegraph](https://sourcegraph.com/github.com/chirino/graphql/-/badge.svg)](https://sourcegraph.com/github.com/chirino/graphql?badge) [![GoDoc](https://godoc.org/github.com/chirino/graphql?status.svg)](https://godoc.org/github.com/chirino/graphql)
+# graphql [![GoDoc](https://godoc.org/github.com/chirino/graphql?status.svg)](https://godoc.org/github.com/chirino/graphql)
+<!-- [![Sourcegraph](https://sourcegraph.com/github.com/chirino/graphql/-/badge.svg)](https://sourcegraph.com/github.com/chirino/graphql?badge) --> 
 
 The goal of this project is to provide full support of the [GraphQL draft specification](https://facebook.github.io/graphql/draft) with a set of idiomatic, easy to use Go packages.
 
-While still under heavy development (`internal` APIs are almost certainly subject to change), this library is
-safe for production use.
+This project is still under heavy development and APIs are almost certainly subject to change.
 
 ## Features
 
@@ -11,9 +11,13 @@ safe for production use.
 - support for `context.Context`
 - support for the `OpenTracing` standard
 - schema type-checking against resolvers
-- resolvers are matched to the schema based on method sets (can resolve a GraphQL schema with a Go interface or Go struct).
+- custom resolvers
+- built int resolvers against maps, struct fields, interface methods
+- resolve against external APIs that have an openapi spec
 - handles panics in resolvers
 - parallel execution of resolvers
+- modifying schemas and generating new schema documents
+- relay compatible http interface
 
 ## Roadmap
 
@@ -28,35 +32,46 @@ Feedback is welcome and appreciated.
 package main
 
 import (
-	"log"
-	"net/http"
-
-	graphql "github.com/chirino/graphql"
+    "fmt"
+    "github.com/chirino/graphql"
     "github.com/chirino/graphql/relay"
+    "github.com/friendsofgo/graphiql"
+    "log"
+    "net/http"
 )
 
-type query struct{}
-
-func (_ *query) Hello() string { return "Hello, world!" }
+type query struct {
+    Name string `json:"name"`
+}
+func (q *query) Hello() string { return "Hello, " + q.Name }
 
 func main() {
-	s := `
-                schema {
-                        query: Query
-                }
-                type Query {
-                        hello: String!
-                }
-        `
+    engine := graphql.New()
+    engine.Root = &query{
+        Name: "World!",
+    }
+    err := engine.Schema.Parse(`
+        schema {
+            query: Query
+        }
+        type Query {
+            name: String!
+            hello: String!
+        }
+    `)
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	engine, err := graphql.CreateEngine(s)
-	if err != nil {
-		log.Fatal(err)
-	}
+    addr := ":8080"
+    http.Handle("/graphql", &relay.Handler{Engine: engine})
+    fmt.Println("GraphQL service running at http://localhost" + addr + "/graphql")
 
-	engine.Root = &query{}
-	http.Handle("/query", &relay.Handler{Engine: engine})
-	log.Fatal(http.ListenAndServe(":8080", nil))
+    graphiql, _ := graphiql.NewGraphiqlHandler("/graphql")
+    http.Handle("/graphiql", graphiql)
+    fmt.Println("GraphiQL UI running at http://localhost" + addr + "/graphiql")
+    
+    log.Fatal(http.ListenAndServe(addr, nil))
 }
 ```
 
@@ -252,10 +267,3 @@ func (this *MyHttpResolverFactory) CreateResolver(request *resolvers.ResolveRequ
 
 This is a fork of the http://github.com/graph-gophers/graphql-go project.  
 
-### Community Examples
-
-[tonyghita/graphql-go-example](https://github.com/tonyghita/graphql-go-example) - A more "productionized" version of the Star Wars API example given in this repository.
-
-[deltaskelta/graphql-go-pets-example](https://github.com/deltaskelta/graphql-go-pets-example) - graphql-go resolving against a sqlite database
-
-[OscarYuen/go-graphql-starter](https://github.com/OscarYuen/go-graphql-starter) - a starter application integrated with dataloader, psql and basic authentication

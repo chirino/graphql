@@ -64,18 +64,14 @@ func main() {
     }
     engine.Root = root(0)
 
-    router := http.NewServeMux()
-    router.Handle("/graphql", &relay.Handler{Engine: engine})
-    handler, err := graphiql.NewGraphiqlHandler("/graphql")
-    if err != nil {
-        log.Fatalf("%+v", err)
-    }
-    router.Handle("/graphiql", handler)
+    http.Handle("/graphql", &relay.Handler{Engine: engine})
+    graphiql, _ := graphiql.NewGraphiqlHandler("/graphql")
+    http.Handle("/graphiql", graphiql)
+
     addr := ":8080"
-    server := &http.Server{Addr: addr, Handler: router}
     fmt.Println("GraphQL service running at http://localhost" + addr + "/graphql")
     fmt.Println("GraphiQL UI running at http://localhost" + addr + "/graphiql")
-    server.ListenAndServe()
+    log.Fatal(http.ListenAndServe(addr, nil))
 }
 
 type root byte
