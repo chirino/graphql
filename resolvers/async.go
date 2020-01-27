@@ -5,7 +5,7 @@ import (
     "reflect"
 )
 
-func (this *ResolveRequest) RunAsync(resolver Resolver) Resolver {
+func (this *ResolveRequest) RunAsync(resolver Resolution) Resolution {
 
     type resolution struct {
         result reflect.Value

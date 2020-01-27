@@ -18,20 +18,21 @@ import (
 )
 
 type Execution struct {
-    Schema          *schema.Schema
-    Vars            map[string]interface{}
-    Doc             *query.Document
-    Operation       *query.Operation
-    Limiter         chan byte
-    Tracer          trace.Tracer
-    Logger          log.Logger
-    Root            interface{}
-    VarTypes        map[string]*introspection.Type
-    Context         context.Context
-    ResolverFactory resolvers.ResolverFactory
-    Mu              sync.Mutex
-    Errs            []*errors.QueryError
-    Out             *bufio.Writer
+    Schema    *schema.Schema
+    Vars      map[string]interface{}
+    Doc       *query.Document
+    Operation *query.Operation
+    Limiter   chan byte
+    Tracer    trace.Tracer
+    Logger    log.Logger
+    Root      interface{}
+    VarTypes  map[string]*introspection.Type
+    Context   context.Context
+    Resolver  resolvers.Resolver
+    Filter    resolvers.ResolutionFilter
+    Mu        sync.Mutex
+    Errs      []*errors.QueryError
+    Out       *bufio.Writer
 }
 
 func (this *Execution) GetSchema() *schema.Schema {
@@ -62,7 +63,7 @@ func (this *Execution) Execute() []*errors.QueryError {
 
     // This is the first execution goroutine.
     this.Limiter <- 1
-	defer func() { <-this.Limiter }()
+    defer func() { <-this.Limiter }()
 
     var rootType schema.NamedType
     if this.Operation.Type == query.Query {
@@ -86,7 +87,7 @@ func (this *Execution) Execute() []*errors.QueryError {
 type selectionResolver struct {
     parent     *selectionResolver
     field      *query.Field
-    resolver   resolvers.Resolver
+    resolver   resolvers.Resolution
     selections []query.Selection
 }
 
@@ -130,7 +131,7 @@ func (this *linkedMap) Set(key interface{}, value interface{}) interface{} {
         entry := this.valuesByKey[key]
         entry.value = value
         return prevValue
-	}
+    }
     entry := &linkedMapEntry{
         value: value,
     }
@@ -171,10 +172,10 @@ func (this *Execution) CreateSelectionResolvers(parentSelectionResolver *selecti
                 typeName := parentType
                 evaluatedArguments := make(map[string]interface{}, len(field.Arguments))
                 for _, arg := range field.Arguments {
-                    evaluatedArguments[arg.Name.Text] = arg.Value.Value(this.Vars)
+                    evaluatedArguments[arg.Name.Text] = arg.Value.Evaluate(this.Vars)
                 }
 
-                resolver := this.ResolverFactory.CreateResolver(&resolvers.ResolveRequest{
+                resolveRequest := &resolvers.ResolveRequest{
                     Context:       this,
                     ParentType:    typeName,
                     Parent:        parentValue,
@@ -182,15 +183,16 @@ func (this *Execution) CreateSelectionResolvers(parentSelectionResolver *selecti
                     Args:          evaluatedArguments,
                     Selection:     field,
                     SelectionPath: sr.Path,
-                })
+                }
+                resolution := this.Resolver.Resolve(resolveRequest)
 
-                if resolver == nil {
+                if resolution == nil {
                     this.AddError((&errors.QueryError{
                         Message: "No resolver found",
                         Path:    append(parentSelectionResolver.Path(), field.Alias.Text),
                     }).WithStack())
                 } else {
-                    sr.resolver = resolver
+                    sr.resolver = this.Filter.Filter(resolveRequest, resolution)
                     selectionResolvers.Set(field.Alias.Text, sr)
                 }
             } else {
@@ -201,7 +203,7 @@ func (this *Execution) CreateSelectionResolvers(parentSelectionResolver *selecti
         case *query.InlineFragment:
             if this.skipByDirective(field.Directives) {
                 continue
-			}
+            }
 
             fragment := &field.Fragment
             this.CreateSelectionResolversForFragment(parentSelectionResolver, fragment, parentType, parentValue, selectionResolvers)
@@ -247,12 +249,12 @@ func (this *Execution) recursiveExecute(parentSelection *selectionResolver, pare
         this.Out.WriteByte('{')
 
         writeComma := false
-		for entry := selectedFields.first; entry != nil; entry = entry.next {
+        for entry := selectedFields.first; entry != nil; entry = entry.next {
             if writeComma {
                 this.Out.WriteByte(',')
             }
             writeComma = true
-			selected := entry.value.(*selectionResolver)
+            selected := entry.value.(*selectionResolver)
             field := selected.field
 
             this.Out.WriteByte('"')
@@ -274,7 +276,7 @@ func (this *Execution) recursiveExecute(parentSelection *selectionResolver, pare
 
             childType, nonNullType := unwrapNonNull(field.Schema.Field.Type)
             if (childValue.Kind() == reflect.Ptr || childValue.Kind() == reflect.Interface) &&
-							childValue.IsNil() {
+                childValue.IsNil() {
                 if nonNullType {
                     this.AddError((&errors.QueryError{
                         Message: "ResolverFactory produced a nil value for a Non Null type",
@@ -309,7 +311,7 @@ func (this *Execution) recursiveExecute(parentSelection *selectionResolver, pare
 func (this *Execution) skipByDirective(directives schema.DirectiveList) bool {
     if d := directives.Get("skip"); d != nil {
         p := packer.ValuePacker{ValueType: reflect.TypeOf(false)}
-        v, err := p.Pack(d.Args.MustGet("if").Value(this.Vars))
+        v, err := p.Pack(d.Args.MustGet("if").Evaluate(this.Vars))
         if err != nil {
             this.AddError(errors.Errorf("%s", err))
         }
@@ -320,7 +322,7 @@ func (this *Execution) skipByDirective(directives schema.DirectiveList) bool {
 
     if d := directives.Get("include"); d != nil {
         p := packer.ValuePacker{ValueType: reflect.TypeOf(false)}
-        v, err := p.Pack(d.Args.MustGet("if").Value(this.Vars))
+        v, err := p.Pack(d.Args.MustGet("if").Evaluate(this.Vars))
         if err != nil {
             this.AddError(errors.Errorf("%s", err))
         }
@@ -364,7 +366,7 @@ func (this *Execution) writeList(listType schema.List, childValue reflect.Value,
             Message: fmt.Sprintf("Resolved object was not an array, it was a: %s", childValue.Type().String()),
             Path:    selectionResolver.Path(),
         }).WithStack())
-	}
+    }
 }
 
 func (this *Execution) writeLeaf(childValue reflect.Value, selectionResolver *selectionResolver, childType schema.Type) {

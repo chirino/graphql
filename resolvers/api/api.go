@@ -55,6 +55,6 @@ func MountApi(engine *graphql.Engine, option ApiResolverOptions) error {
         return err
     }
     engine.Schema.Parse(schema)
-    engine.ResolverFactory = resolvers.List(resolver, engine.ResolverFactory)
+    engine.Resolver = resolvers.List(resolver, engine.Resolver)
     return nil
 }

@@ -1,12 +1,12 @@
 package resolvers
 
-type TypeResolverFactory map[string]ResolverFactory
+type TypeResolver map[string]Resolver
 
-func (this TypeResolverFactory) Set(typeName string, factory ResolverFactory) {
+func (this TypeResolver) Set(typeName string, factory Resolver) {
     this[typeName] = factory
 }
 
-func (this TypeResolverFactory) CreateResolver(request *ResolveRequest) Resolver {
+func (this TypeResolver) Resolve(request *ResolveRequest) Resolution {
     if request.ParentType == nil {
         return nil
     }
@@ -14,6 +14,6 @@ func (this TypeResolverFactory) CreateResolver(request *ResolveRequest) Resolver
     if resolverFunc == nil {
         return nil
     }
-    return resolverFunc.CreateResolver(request)
+    return resolverFunc.Resolve(request)
 }
 

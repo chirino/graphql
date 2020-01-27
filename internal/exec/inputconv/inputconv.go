@@ -41,7 +41,7 @@ func (tc TypeConverters) Convert(t schema.Type, value interface{}, path string) 
         }
         value := value.(map[string]interface{})
         converted := make(map[string]interface{}, len(value))
-        for _, field := range t.Values {
+        for _, field := range t.Fields {
             fieldName := field.Name.Text
             cv := value[fieldName]
             cv, err := tc.Convert(field.Type, cv, path+"/"+fieldName)

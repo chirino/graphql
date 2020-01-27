@@ -6,20 +6,20 @@ package resolvers
 // requests.  First resolver that matches wins.
 //
 ///////////////////////////////////////////////////////////////////////
-type ResolverFactoryList []ResolverFactory
+type ResolverList []Resolver
 
-func List(factories ...ResolverFactory) *ResolverFactoryList {
-    list := ResolverFactoryList(factories)
+func List(factories ...Resolver) *ResolverList {
+    list := ResolverList(factories)
     return &list
 }
 
-func (this *ResolverFactoryList) Add(factory ResolverFactory) {
+func (this *ResolverList) Add(factory Resolver) {
     *this = append(*this, factory)
 }
 
-func (this *ResolverFactoryList) CreateResolver(request *ResolveRequest) Resolver {
+func (this *ResolverList) Resolve(request *ResolveRequest) Resolution {
     for _, f := range *this {
-        resolver := f.CreateResolver(request)
+        resolver := f.Resolve(request)
         if resolver != nil {
             return resolver
         }

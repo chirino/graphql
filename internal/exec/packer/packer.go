@@ -46,7 +46,7 @@ func (b *Builder) Finish() error {
 		p.defaultStruct = reflect.New(p.structType).Elem()
 		for _, f := range p.fields {
 			if defaultVal := f.field.Default; defaultVal != nil {
-				v, err := f.fieldPacker.Pack(defaultVal.Value(nil))
+				v, err := f.fieldPacker.Pack(defaultVal.Evaluate(nil))
 				if err != nil {
 					return err
 				}
@@ -125,7 +125,7 @@ func (b *Builder) makeNonNullPacker(schemaType schema.Type, reflectType reflect.
 		}, nil
 
 	case *schema.InputObject:
-		e, err := b.MakeStructPacker(t.Values, reflectType)
+		e, err := b.MakeStructPacker(t.Fields, reflectType)
 		if err != nil {
 			return nil, err
 		}

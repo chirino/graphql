@@ -258,10 +258,10 @@ func TestCustomTypeResolver(t *testing.T) {
 
     require.NoError(t, err)
 
-    engine.ResolverFactory = &resolvers.ResolverFactoryList{
+    engine.Resolver = &resolvers.ResolverList{
         // First try out custom resolver...
-        &resolvers.TypeResolverFactory{
-            "Alien": resolvers.Func(func(request *resolvers.ResolveRequest) resolvers.Resolver {
+        &resolvers.TypeResolver{
+            "Alien": resolvers.Func(func(request *resolvers.ResolveRequest) resolvers.Resolution {
                 // Only interested in changing result of shape...
                 if request.Field.Name == "shape" {
                     return func() (reflect.Value, error) {
@@ -274,7 +274,7 @@ func TestCustomTypeResolver(t *testing.T) {
         },
 
         // then use the default resolvers
-        engine.ResolverFactory,
+        engine.Resolver,
     }
 
     gqltesting.AssertRequestString(t, engine,
@@ -301,17 +301,17 @@ func TestCustomAsyncResolvers(t *testing.T) {
 
     err := engine.Schema.Parse(schema)
     require.NoError(t, err)
-    engine.ResolverFactory = &resolvers.ResolverFactoryList{
+    engine.Resolver = &resolvers.ResolverList{
         // First try out custom resolver...
         resolvers.Func(
-            func(request *resolvers.ResolveRequest) resolvers.Resolver {
+            func(request *resolvers.ResolveRequest) resolvers.Resolution {
                 return func() (reflect.Value, error) {
                     time.Sleep(1 * time.Second)
                     return reflect.ValueOf(request.Field.Name), nil
                 }
             },
         ),
-        engine.ResolverFactory,
+        engine.Resolver,
     }
 
     benchmark := testing.Benchmark(func(b *testing.B) {
@@ -327,10 +327,10 @@ func TestCustomAsyncResolvers(t *testing.T) {
 
     err = engine.Schema.Parse(schema)
     require.NoError(t, err)
-    engine.ResolverFactory = &resolvers.ResolverFactoryList{
+    engine.Resolver = &resolvers.ResolverList{
         // First try out custom resolver...
         resolvers.Func(
-            func(request *resolvers.ResolveRequest) resolvers.Resolver {
+            func(request *resolvers.ResolveRequest) resolvers.Resolution {
                 // Use request.RunAsync to signal that the resolution will run async:
                 return request.RunAsync(func() (reflect.Value, error) {
                     time.Sleep(1 * time.Second)
@@ -338,7 +338,7 @@ func TestCustomAsyncResolvers(t *testing.T) {
                 })
             },
         ),
-        engine.ResolverFactory,
+        engine.Resolver,
     }
     benchmark = testing.Benchmark(func(b *testing.B) {
         response := engine.Execute(context.TODO(), &graphql.EngineRequest{Query: "{f1,f2,f3,f4}"}, nil)

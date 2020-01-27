@@ -10,7 +10,7 @@ import (
 )
 
 type Literal interface {
-	Value(vars map[string]interface{}) interface{}
+	Evaluate(vars map[string]interface{}) interface{}
 	String() string
 	Location() errors.Location
 	WriteSchemaFormat(out io.StringWriter)
@@ -24,7 +24,7 @@ type BasicLit struct {
 	Loc  errors.Location
 }
 
-func (lit *BasicLit) Value(vars map[string]interface{}) interface{} {
+func (lit *BasicLit) Evaluate(vars map[string]interface{}) interface{} {
 	switch lit.Type {
 	case scanner.Int:
 		value, err := strconv.ParseInt(lit.Text, 10, 32)
@@ -75,10 +75,10 @@ type ListLit struct {
 	Loc     errors.Location
 }
 
-func (lit *ListLit) Value(vars map[string]interface{}) interface{} {
+func (lit *ListLit) Evaluate(vars map[string]interface{}) interface{} {
 	entries := make([]interface{}, len(lit.Entries))
 	for i, entry := range lit.Entries {
-		entries[i] = entry.Value(vars)
+		entries[i] = entry.Evaluate(vars)
 	}
 	return entries
 }
@@ -105,10 +105,10 @@ type ObjectLitField struct {
 	Value Literal
 }
 
-func (lit *ObjectLit) Value(vars map[string]interface{}) interface{} {
+func (lit *ObjectLit) Evaluate(vars map[string]interface{}) interface{} {
 	fields := make(map[string]interface{}, len(lit.Fields))
 	for _, f := range lit.Fields {
-		fields[f.Name.Text] = f.Value.Value(vars)
+		fields[f.Name.Text] = f.Value.Evaluate(vars)
 	}
 	return fields
 }
@@ -129,7 +129,7 @@ type NullLit struct {
 	Loc errors.Location
 }
 
-func (lit *NullLit) Value(vars map[string]interface{}) interface{} {
+func (lit *NullLit) Evaluate(vars map[string]interface{}) interface{} {
 	return nil
 }
 
@@ -146,7 +146,7 @@ type Variable struct {
 	Loc  errors.Location
 }
 
-func (v Variable) Value(vars map[string]interface{}) interface{} {
+func (v Variable) Evaluate(vars map[string]interface{}) interface{} {
 	return vars[v.Name]
 }
 

@@ -31,14 +31,14 @@ func (r *Schema) Types() []*Type {
 
 func (r *Schema) Directives() []*Directive {
 	var names []string
-	for name := range r.schema.Directives {
+	for name := range r.schema.DeclaredDirectives {
 		names = append(names, name)
 	}
 	sort.Strings(names)
 
 	l := make([]*Directive, len(names))
 	for i, name := range names {
-		l[i] = &Directive{r.schema.Directives[name]}
+		l[i] = &Directive{r.schema.DeclaredDirectives[name]}
 	}
 	return l
 }
@@ -175,8 +175,8 @@ func (r *Type) InputFields() *[]*InputValue {
 		return nil
 	}
 
-	l := make([]*InputValue, len(t.Values))
-	for i, v := range t.Values {
+	l := make([]*InputValue, len(t.Fields))
+	for i, v := range t.Fields {
 		l[i] = &InputValue{v}
 	}
 	return &l
@@ -229,7 +229,7 @@ func (r *Field) DeprecationReason() *string {
 	if d == nil {
 		return nil
 	}
-	reason := d.Args.MustGet("reason").Value(nil).(string)
+	reason := d.Args.MustGet("reason").Evaluate(nil).(string)
 	return &reason
 }
 
@@ -288,7 +288,7 @@ func (r *EnumValue) DeprecationReason() *string {
 	if d == nil {
 		return nil
 	}
-	reason := d.Args.MustGet("reason").Value(nil).(string)
+	reason := d.Args.MustGet("reason").Evaluate(nil).(string)
 	return &reason
 }
 

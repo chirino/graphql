@@ -1,26 +1,26 @@
 package resolvers
 
-type dynamicResolverFactory struct {
+type dynamicResolver struct {
 }
 
-func DynamicResolverFactory() ResolverFactory {
-    return &dynamicResolverFactory{}
+func DynamicResolverFactory() Resolver {
+    return &dynamicResolver{}
 }
 
-func (this *dynamicResolverFactory) CreateResolver(request *ResolveRequest) Resolver {
-    resolver := MetadataResolverFactory.CreateResolver(request)
+func (this *dynamicResolver) Resolve(request *ResolveRequest) Resolution {
+    resolver := MetadataResolverFactory.Resolve(request)
     if resolver != nil {
         return resolver
     }
-    resolver = MethodResolverFactory.CreateResolver(request)
+    resolver = MethodResolverFactory.Resolve(request)
     if resolver != nil {
         return resolver
     }
-    resolver = FieldResolverFactory.CreateResolver(request)
+    resolver = FieldResolverFactory.Resolve(request)
     if resolver != nil {
         return resolver
     }
-    resolver = MapResolverFactory.CreateResolver(request)
+    resolver = MapResolverFactory.Resolve(request)
     if resolver != nil {
         return resolver
     }

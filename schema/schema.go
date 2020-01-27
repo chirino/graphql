@@ -16,6 +16,10 @@ import (
 //
 // http://facebook.github.io/graphql/draft/#sec-Schema
 type Schema struct {
+
+    // These are directives applied to the schema.
+    Directives DirectiveList
+
     // EntryPoints determines the place in the type system where `query`, `mutation`, and
     // `subscription` operations begin.
     //
@@ -39,12 +43,16 @@ type Schema struct {
     // generator.
     //
     // http://facebook.github.io/graphql/draft/#sec-Type-System.Directives
-    Directives map[string]*DirectiveDecl
+    DeclaredDirectives map[string]*DirectiveDecl
 
     entryPointNames map[string]string
     objects         []*Object
     unions          []*Union
     enums           []*Enum
+}
+
+type HasDirectives interface {
+    GetDirectives() DirectiveList
 }
 
 type Type interface {
@@ -87,8 +95,9 @@ type NamedType interface {
 //
 // http://facebook.github.io/graphql/draft/#sec-Scalars
 type Scalar struct {
-    Name string
-    Desc string
+    Name       string
+    Desc       string
+    Directives DirectiveList
     // TODO: Add a list of directives?
 }
 
@@ -120,7 +129,7 @@ type Interface struct {
     PossibleTypes []*Object
     Fields        FieldList // NOTE: the spec refers to this as `FieldsDefinition`.
     Desc          string
-    // TODO: Add a list of directives?
+    Directives    DirectiveList
 }
 
 type InterfaceList []*Interface
@@ -174,9 +183,8 @@ type Union struct {
     Name          string
     PossibleTypes []*Object // NOTE: the spec refers to this as `UnionMemberTypes`.
     Desc          string
-    // TODO: Add a list of directives?
-
-    typeNames []string
+    typeNames     []string
+    Directives    DirectiveList
 }
 
 // Enum types describe a set of possible values.
@@ -185,10 +193,10 @@ type Union struct {
 //
 // http://facebook.github.io/graphql/draft/#sec-Enums
 type Enum struct {
-    Name   string
-    Values []*EnumValue // NOTE: the spec refers to this as `EnumValuesDefinition`.
-    Desc   string
-    // TODO: Add a list of directives?
+    Name       string
+    Values     []*EnumValue // NOTE: the spec refers to this as `EnumValuesDefinition`.
+    Desc       string
+    Directives DirectiveList
 }
 
 // EnumValue types are unique values that may be serialized as a string: the name of the
@@ -209,10 +217,10 @@ type EnumValue struct {
 //
 // http://facebook.github.io/graphql/draft/#sec-Input-Objects
 type InputObject struct {
-    Name   string
-    Desc   string
-    Values InputValueList
-    // TODO: Add a list of directives?
+    Name       string
+    Desc       string
+    Fields     InputValueList
+    Directives DirectiveList
 }
 
 // FieldsList is a list of an Object's Fields.
@@ -293,6 +301,19 @@ func (t *Union) Description() string       { return t.Desc }
 func (t *Enum) Description() string        { return t.Desc }
 func (t *InputObject) Description() string { return t.Desc }
 
+func (t *Schema) GetDirectives() DirectiveList    { return t.Directives }
+func (t *Object) GetDirectives() DirectiveList    { return t.Directives }
+func (t *Field) GetDirectives() DirectiveList     { return t.Directives }
+func (t *EnumValue) GetDirectives() DirectiveList { return t.Directives }
+
+// TODO:
+func (t *Scalar) GetDirectives() DirectiveList      { return t.Directives }
+func (t *InputValue) GetDirectives() DirectiveList  { return t.Directives }
+func (t *Interface) GetDirectives() DirectiveList   { return t.Directives }
+func (t *Union) GetDirectives() DirectiveList       { return t.Directives }
+func (t *Enum) GetDirectives() DirectiveList        { return t.Directives }
+func (t *InputObject) GetDirectives() DirectiveList { return t.Directives }
+
 // Field is a conceptual function which yields values.
 // http://facebook.github.io/graphql/draft/#FieldDefinition
 type Field struct {
@@ -306,15 +327,15 @@ type Field struct {
 // New initializes an instance of Schema.
 func New() *Schema {
     s := &Schema{
-        entryPointNames: make(map[string]string),
-        Types:           make(map[string]NamedType),
-        Directives:      make(map[string]*DirectiveDecl),
+        entryPointNames:    make(map[string]string),
+        Types:              make(map[string]NamedType),
+        DeclaredDirectives: make(map[string]*DirectiveDecl),
     }
     for n, t := range Meta.Types {
         s.Types[n] = t
     }
-    for n, d := range Meta.Directives {
-        s.Directives[n] = d
+    for n, d := range Meta.DeclaredDirectives {
+        s.DeclaredDirectives[n] = d
     }
     return s
 }
@@ -333,7 +354,7 @@ func (s *Schema) Parse(schemaString string) error {
             return err
         }
     }
-    for _, d := range s.Directives {
+    for _, d := range s.DeclaredDirectives {
         for _, arg := range d.Args {
             t, err := ResolveType(arg.Type, s.Resolve)
             if err != nil {
@@ -396,6 +417,50 @@ func (s *Schema) Parse(schemaString string) error {
     return nil
 }
 
+func (s *Schema) VisitDirective(name string, visitor func (directive *Directive, on HasDirectives, parent NamedType) error) error {
+    d := s.GetDirectives().Get(name)
+    if d!=nil {
+        err := visitor(d, s, nil)
+        if err != nil {
+            return err
+        }
+    }
+    for _, t := range s.Types {
+        if t, ok :=t.(HasDirectives); ok {
+            d := t.GetDirectives().Get(name)
+            if d!=nil {
+                err := visitor(d, t, nil)
+                if err != nil {
+                    return err
+                }
+            }
+        }
+        switch t := t.(type) {
+        case *Object:
+            for _, f := range t.Fields {
+                d := f.GetDirectives().Get(name)
+                if d!=nil {
+                    err := visitor(d, f, t)
+                    if err != nil {
+                        return err
+                    }
+                }
+            }
+        case *InputObject:
+            for _, f := range t.Fields {
+                d := f.GetDirectives().Get(name)
+                if d!=nil {
+                    err := visitor(d, f, t)
+                    if err != nil {
+                        return err
+                    }
+                }
+            }
+        }
+    }
+    return nil
+}
+
 func resolveNamedType(s *Schema, t NamedType) error {
     switch t := t.(type) {
     case *Object:
@@ -411,7 +476,7 @@ func resolveNamedType(s *Schema, t NamedType) error {
             }
         }
     case *InputObject:
-        if err := resolveInputObject(s, t.Values); err != nil {
+        if err := resolveInputObject(s, t.Fields); err != nil {
             return err
         }
     }
@@ -433,7 +498,7 @@ func resolveField(s *Schema, f *Field) error {
 func resolveDirectives(s *Schema, directives DirectiveList) error {
     for _, d := range directives {
         dirName := d.Name.Text
-        dd, ok := s.Directives[dirName]
+        dd, ok := s.DeclaredDirectives[dirName]
         if !ok {
             return errors.Errorf("directive %q not found", dirName)
         }
@@ -470,6 +535,7 @@ func parseSchema(s *Schema, l *Lexer) {
         switch x := l.ConsumeIdent(); x {
 
         case "schema":
+            s.Directives = ParseDirectives(l)
             l.ConsumeToken('{')
             for l.Peek() != '}' {
                 name := l.ConsumeIdent()
@@ -488,11 +554,11 @@ func parseSchema(s *Schema, l *Lexer) {
 
                 // Drop this directive.. since we are processing it here.
                 obj.Directives = obj.Directives.Select(func(d2 *Directive) bool {
-                    return d2 !=d
+                    return d2 != d
                 })
 
                 if mode, ok := d.Args.Get("alter"); ok {
-                    switch mode.Value(nil) {
+                    switch mode.Evaluate(nil) {
                     case "add":
                         existing := s.Types[obj.Name]
                         if existing == nil {
@@ -533,7 +599,7 @@ func parseSchema(s *Schema, l *Lexer) {
                         panic(`@graphql alter value must be one of: "add" or "drop"`)
                     }
                 } else if mode, ok := d.Args.Get("if"); ok {
-                    switch mode.Value(nil) {
+                    switch mode.Evaluate(nil) {
                     case "missing":
                         existing := s.Types[obj.Name]
                         if existing == nil {
@@ -576,12 +642,16 @@ func parseSchema(s *Schema, l *Lexer) {
 
         case "scalar":
             name := l.ConsumeIdent()
-            s.Types[name] = &Scalar{Name: name, Desc: desc}
+            s.Types[name] = &Scalar{
+                Name:       name,
+                Desc:       desc,
+                Directives: ParseDirectives(l),
+            }
 
         case "directive":
             directive := parseDirectiveDef(l)
             directive.Desc = desc
-            s.Directives[directive.Name] = directive
+            s.DeclaredDirectives[directive.Name] = directive
 
         default:
             // TODO: Add support for type extensions.
@@ -619,7 +689,7 @@ func parseObjectDef(l *Lexer) *Object {
 
 func parseInterfaceDef(l *Lexer) *Interface {
     i := &Interface{Name: l.ConsumeIdent()}
-
+    i.Directives = ParseDirectives(l)
     l.ConsumeToken('{')
     i.Fields = parseFieldsDef(l)
     l.ConsumeToken('}')
@@ -629,7 +699,7 @@ func parseInterfaceDef(l *Lexer) *Interface {
 
 func parseUnionDef(l *Lexer) *Union {
     union := &Union{Name: l.ConsumeIdent()}
-
+    union.Directives = ParseDirectives(l)
     l.ConsumeToken('=')
     union.typeNames = []string{l.ConsumeIdent()}
     for l.Peek() == '|' {
@@ -643,9 +713,10 @@ func parseUnionDef(l *Lexer) *Union {
 func parseInputDef(l *Lexer) *InputObject {
     i := &InputObject{}
     i.Name = l.ConsumeIdent()
+    i.Directives = ParseDirectives(l)
     l.ConsumeToken('{')
     for l.Peek() != '}' {
-        i.Values = append(i.Values, ParseInputValue(l))
+        i.Fields = append(i.Fields, ParseInputValue(l))
     }
     l.ConsumeToken('}')
     return i
@@ -653,7 +724,7 @@ func parseInputDef(l *Lexer) *InputObject {
 
 func parseEnumDef(l *Lexer) *Enum {
     enum := &Enum{Name: l.ConsumeIdent()}
-
+    enum.Directives = ParseDirectives(l)
     l.ConsumeToken('{')
     for l.Peek() != '}' {
         v := &EnumValue{

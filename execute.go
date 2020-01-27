@@ -75,18 +75,19 @@ func (engine *Engine) Execute(ctx context.Context, request *EngineRequest, root 
     out := bytes.Buffer{}
 
     r := exec.Execution{
-        Schema:          engine.Schema,
-        Tracer:          engine.Tracer,
-        Logger:          engine.Logger,
-        ResolverFactory: engine.ResolverFactory,
-        Doc:             doc,
-        Operation:       op,
-        Vars:            request.Variables,
-        VarTypes:        varTypes,
-        Limiter:         make(chan byte, engine.MaxParallelism),
-        Context:         traceContext,
-        Root:            root,
-        Out:             bufio.NewWriter(&out),
+        Schema:    engine.Schema,
+        Tracer:    engine.Tracer,
+        Logger:    engine.Logger,
+        Resolver:  engine.Resolver,
+        Filter:    engine.Filter,
+        Doc:       doc,
+        Operation: op,
+        Vars:      request.Variables,
+        VarTypes:  varTypes,
+        Limiter:   make(chan byte, engine.MaxParallelism),
+        Context:   traceContext,
+        Root:      root,
+        Out:       bufio.NewWriter(&out),
     }
 
     errs = r.Execute()

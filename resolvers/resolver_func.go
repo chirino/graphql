@@ -1,13 +1,13 @@
 package resolvers
 
-func Func(fn func(request *ResolveRequest) Resolver) ResolverFactory {
-    return &resolverFactoryFunc{fn}
+func Func(fn func(request *ResolveRequest) Resolution) Resolver {
+    return &resolverFunc{fn}
 }
 
-type resolverFactoryFunc struct {
-    apply func(request *ResolveRequest) Resolver
+type resolverFunc struct {
+    apply func(request *ResolveRequest) Resolution
 }
 
-func (this *resolverFactoryFunc) CreateResolver(request *ResolveRequest) Resolver {
+func (this *resolverFunc) Resolve(request *ResolveRequest) Resolution {
     return this.apply(request)
 }

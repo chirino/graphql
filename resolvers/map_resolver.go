@@ -7,10 +7,10 @@ import "reflect"
 // MapResolverFactory resolves fields using entries in a map
 //
 ///////////////////////////////////////////////////////////////////////
-type mapResolverFactory byte
-const MapResolverFactory = mapResolverFactory(0)
+type mapResolver byte
+const MapResolverFactory = mapResolver(0)
 
-func (this mapResolverFactory) CreateResolver(request *ResolveRequest) Resolver {
+func (this mapResolver) Resolve(request *ResolveRequest) Resolution {
     parentValue := dereference(request.Parent)
     if parentValue.Kind() != reflect.Map || parentValue.Type().Key().Kind() != reflect.String {
         return nil

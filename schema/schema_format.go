@@ -21,7 +21,7 @@ func (s *Schema) String() string {
 }
 func (s *Schema) WriteSchemaFormat(out io.StringWriter) {
 
-    for _, entry := range mapToSortedArray(s.Directives) {
+    for _, entry := range mapToSortedArray(s.DeclaredDirectives) {
         value := entry.Value.(*DirectiveDecl)
         if isBuiltIn(value) {
             continue
@@ -152,7 +152,7 @@ func (t *InputObject) WriteSchemaFormat(out io.StringWriter) {
     out.WriteString("input ")
     out.WriteString(t.Name)
     out.WriteString(" {\n")
-    for _, f := range t.Values {
+    for _, f := range t.Fields {
         i := &indent{}
         f.WriteSchemaFormat(i)
         i.WriteString("\n")
@@ -322,7 +322,7 @@ func isBuiltIn(m interface{}) bool {
             return true
         }
     }
-    for _, d := range Meta.Directives {
+    for _, d := range Meta.DeclaredDirectives {
         if m == d {
             return true
         }

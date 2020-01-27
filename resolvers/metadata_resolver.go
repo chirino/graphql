@@ -12,10 +12,10 @@ import (
 // MetadataResolverFactory resolves fields using schema metadata
 //
 ///////////////////////////////////////////////////////////////////////
-type metadataResolverFactory byte
-const MetadataResolverFactory = metadataResolverFactory(0)
+type metadataResolver byte
+const MetadataResolverFactory = metadataResolver(0)
 
-func (this metadataResolverFactory) CreateResolver(request *ResolveRequest) Resolver {
+func (this metadataResolver) Resolve(request *ResolveRequest) Resolution {
     s := request.Context.GetSchema()
     switch request.Field.Name {
     case "__typename":

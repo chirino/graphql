@@ -11,11 +11,11 @@ import (
 // implemented by a receiver type.
 //
 ///////////////////////////////////////////////////////////////////////
-type methodResolverFactory byte
+type methodResolver byte
 
-const MethodResolverFactory = methodResolverFactory(0)
+const MethodResolverFactory = methodResolver(0)
 
-func (this methodResolverFactory) CreateResolver(request *ResolveRequest) Resolver {
+func (this methodResolver) Resolve(request *ResolveRequest) Resolution {
     if !request.Parent.IsValid() {
         return nil
     }

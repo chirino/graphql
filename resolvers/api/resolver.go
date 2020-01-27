@@ -21,20 +21,20 @@ type ResolverHook struct {
 
 type Converter func(value reflect.Value, err error) (reflect.Value, error)
 
-type resolverFactory struct {
-    next             resolvers.ResolverFactory
+type apiResolver struct {
+    next             resolvers.Resolver
     options          ApiResolverOptions
-    resolvers        map[string]resolvers.ResolverFactory
+    resolvers        map[string]resolvers.Resolver
     resultConverters map[string]Converter
     inputConverters  inputconv.TypeConverters
 }
 
-var _ resolvers.ResolverFactory = &resolverFactory{}
+var _ resolvers.Resolver = &apiResolver{}
 
-func NewResolverFactory(doc *openapi3.Swagger, options ApiResolverOptions) (resolvers.ResolverFactory, string, error) {
-    result := &resolverFactory{options: options}
+func NewResolverFactory(doc *openapi3.Swagger, options ApiResolverOptions) (resolvers.Resolver, string, error) {
+    result := &apiResolver{options: options}
     result.next = resolvers.DynamicResolverFactory()
-    result.resolvers = make(map[string]resolvers.ResolverFactory)
+    result.resolvers = make(map[string]resolvers.Resolver)
     result.resultConverters = make(map[string]Converter)
     result.inputConverters = inputconv.TypeConverters{}
 
@@ -78,8 +78,8 @@ func NewResolverFactory(doc *openapi3.Swagger, options ApiResolverOptions) (reso
             })
         }
         if t, ok := t.(*schema.InputObject); ok {
-            sort.Slice(t.Values, func(i, j int) bool {
-                return t.Values[i].Name.Text < t.Values[j].Name.Text
+            sort.Slice(t.Fields, func(i, j int) bool {
+                return t.Fields[i].Name.Text < t.Fields[j].Name.Text
             })
         }
     }
@@ -87,7 +87,7 @@ func NewResolverFactory(doc *openapi3.Swagger, options ApiResolverOptions) (reso
     return result, draftSchema.String(), nil
 }
 
-func (factory resolverFactory) addRootField(draftSchema *schema.Schema, rootType string, operation *openapi3.Operation, refCache map[string]interface{}, method string, path string) error {
+func (factory apiResolver) addRootField(draftSchema *schema.Schema, rootType string, operation *openapi3.Operation, refCache map[string]interface{}, method string, path string) error {
 
     fieldName := sanitizeName(path)
     if operation.OperationID != "" {
@@ -187,7 +187,7 @@ func (factory resolverFactory) addRootField(draftSchema *schema.Schema, rootType
                 return err
             }
 
-            factory.resolvers[rootType+":"+fieldName] = resolvers.Func(func(request *resolvers.ResolveRequest) resolvers.Resolver {
+            factory.resolvers[rootType+":"+fieldName] = resolvers.Func(func(request *resolvers.ResolveRequest) resolvers.Resolution {
                 return factory.resolve(request, operation, method, path, status)
             })
             return nil
@@ -197,7 +197,7 @@ func (factory resolverFactory) addRootField(draftSchema *schema.Schema, rootType
     return nil
 }
 
-func (factory resolverFactory) addGraphQLType(generated map[string]string, sf *openapi3.SchemaRef, path string, refCache map[string]interface{}, inputType bool) (string, error) {
+func (factory apiResolver) addGraphQLType(generated map[string]string, sf *openapi3.SchemaRef, path string, refCache map[string]interface{}, inputType bool) (string, error) {
     if sf.Value == nil {
         panic("a schema reference was not resolved.")
     }
@@ -312,7 +312,7 @@ func (factory resolverFactory) addGraphQLType(generated map[string]string, sf *o
 
 }
 
-func (factory *resolverFactory) addPropWrapper(generated map[string]string, nestedType string, inputType bool) (string, error) {
+func (factory *apiResolver) addPropWrapper(generated map[string]string, nestedType string, inputType bool) (string, error) {
     nestedTypeLong := toTypeName(nestedType)
     graphType := "type"
     name := nestedTypeLong + "ResultProp"

@@ -540,7 +540,7 @@ func argumentsConflict(a, b schema.ArgumentList) bool {
 	}
 	for _, argA := range a {
 		valB, ok := b.Get(argA.Name.Text)
-		if !ok || !reflect.DeepEqual(argA.Value.Value(nil), valB.Value(nil)) {
+		if !ok || !reflect.DeepEqual(argA.Value.Evaluate(nil), valB.Evaluate(nil)) {
 			return true
 		}
 	}
@@ -594,7 +594,7 @@ func validateDirectives(c *opContext, loc string, directives schema.DirectiveLis
 
 		validateArgumentLiterals(c, d.Args)
 
-		dd, ok := c.schema.Directives[dirName]
+		dd, ok := c.schema.DeclaredDirectives[dirName]
 		if !ok {
 			c.addErr(d.Name.Loc, "KnownDirectives", "Unknown directive %q.", dirName)
 			continue
@@ -748,7 +748,7 @@ func validateValueType(c *opContext, v schema.Literal, t schema.Type) (bool, str
 		}
 		for _, f := range v.Fields {
 			name := f.Name.Text
-			iv := t.Values.Get(name)
+			iv := t.Fields.Get(name)
 			if iv == nil {
 				return false, fmt.Sprintf("In field %q: Unknown field.", name)
 			}
@@ -756,7 +756,7 @@ func validateValueType(c *opContext, v schema.Literal, t schema.Type) (bool, str
 				return false, fmt.Sprintf("In field %q: %s", name, reason)
 			}
 		}
-		for _, iv := range t.Values {
+		for _, iv := range t.Fields {
 			found := false
 			for _, f := range v.Fields {
 				if f.Name.Text == iv.Name.Text {

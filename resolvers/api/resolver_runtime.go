@@ -16,7 +16,7 @@ import (
     "strings"
 )
 
-func (factory *resolverFactory) convert(request *resolvers.ResolveRequest, next resolvers.Resolver) resolvers.Resolver {
+func (factory *apiResolver) convert(request *resolvers.ResolveRequest, next resolvers.Resolution) resolvers.Resolution {
     fieldType := request.Field.Type.String()
     if converter, ok := factory.resultConverters[fieldType]; ok {
         return func() (value reflect.Value, err error) {
@@ -26,22 +26,22 @@ func (factory *resolverFactory) convert(request *resolvers.ResolveRequest, next 
     return next
 }
 
-func (factory *resolverFactory) CreateResolver(request *resolvers.ResolveRequest) resolvers.Resolver {
+func (factory *apiResolver) Resolve(request *resolvers.ResolveRequest) resolvers.Resolution {
     key := request.ParentType.String() + ":" + request.Field.Name
     if r, ok := factory.resolvers[key]; ok {
-        resolver := r.CreateResolver(request)
+        resolver := r.Resolve(request)
         if resolver != nil {
             return factory.convert(request, resolver)
         }
     }
 
     // We need these one to traverse the json results that are held as maps...
-    resolver := resolvers.MapResolverFactory.CreateResolver(request)
+    resolver := resolvers.MapResolverFactory.Resolve(request)
     if resolver != nil {
         return factory.convert(request, resolver)
     }
     // And this one to handle Additional properties conversions.
-    resolver = resolvers.FieldResolverFactory.CreateResolver(request)
+    resolver = resolvers.FieldResolverFactory.Resolve(request)
     if resolver != nil {
         return factory.convert(request, resolver)
     }
@@ -49,7 +49,7 @@ func (factory *resolverFactory) CreateResolver(request *resolvers.ResolveRequest
     return nil
 }
 
-func (factory resolverFactory) resolve(gqlRequest *resolvers.ResolveRequest, operation *openapi3.Operation, method string, path string, expectedStatus []int) resolvers.Resolver {
+func (factory apiResolver) resolve(gqlRequest *resolvers.ResolveRequest, operation *openapi3.Operation, method string, path string, expectedStatus []int) resolvers.Resolution {
     return func() (reflect.Value, error) {
 
         query := url.Values{}
