@@ -24,7 +24,7 @@ type DirectiveList []*Directive
 
 func (l DirectiveList) Get(name string) *Directive {
 	for _, d := range l {
-		if d.Name.Name == name {
+		if d.Name.Text == name {
 			return d
 		}
 	}

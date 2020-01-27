@@ -17,7 +17,7 @@ type Lexer struct {
 }
 
 type Ident struct {
-	Name string
+	Text string
 	Loc  errors.Location
 }
 

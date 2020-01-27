@@ -95,9 +95,9 @@ func (this *selectionResolver) Path() []string {
         return []string{}
     }
     if this.parent == nil {
-        return []string{this.field.Alias.Name}
+        return []string{this.field.Alias.Text}
     }
-    return append(this.parent.Path(), this.field.Alias.Name)
+    return append(this.parent.Path(), this.field.Alias.Text)
 }
 
 type linkedMapEntry struct {
@@ -154,7 +154,7 @@ func (this *Execution) CreateSelectionResolvers(parentSelectionResolver *selecti
             }
 
             var sr *selectionResolver = nil
-            x := selectionResolvers.Get(field.Alias.Name)
+            x := selectionResolvers.Get(field.Alias.Text)
             if x != nil {
                 sr = x.(*selectionResolver)
             } else {
@@ -171,7 +171,7 @@ func (this *Execution) CreateSelectionResolvers(parentSelectionResolver *selecti
                 typeName := parentType
                 evaluatedArguments := make(map[string]interface{}, len(field.Arguments))
                 for _, arg := range field.Arguments {
-                    evaluatedArguments[arg.Name.Name] = arg.Value.Value(this.Vars)
+                    evaluatedArguments[arg.Name.Text] = arg.Value.Value(this.Vars)
                 }
 
                 resolver := this.ResolverFactory.CreateResolver(&resolvers.ResolveRequest{
@@ -187,11 +187,11 @@ func (this *Execution) CreateSelectionResolvers(parentSelectionResolver *selecti
                 if resolver == nil {
                     this.AddError((&errors.QueryError{
                         Message: "No resolver found",
-                        Path:    append(parentSelectionResolver.Path(), field.Alias.Name),
+                        Path:    append(parentSelectionResolver.Path(), field.Alias.Text),
                     }).WithStack())
                 } else {
                     sr.resolver = resolver
-                    selectionResolvers.Set(field.Alias.Name, sr)
+                    selectionResolvers.Set(field.Alias.Text, sr)
                 }
             } else {
                 // field previously resolved, but fragment is adding more child field selections.
@@ -210,16 +210,16 @@ func (this *Execution) CreateSelectionResolvers(parentSelectionResolver *selecti
             if this.skipByDirective(field.Directives) {
                 continue
             }
-            fragment := &this.Doc.Fragments.Get(field.Name.Name).Fragment
+            fragment := &this.Doc.Fragments.Get(field.Name.Text).Fragment
             this.CreateSelectionResolversForFragment(parentSelectionResolver, fragment, parentType, parentValue, selectionResolvers)
         }
     }
 }
 
 func (this *Execution) CreateSelectionResolversForFragment(parentSelectionResolver *selectionResolver, fragment *query.Fragment, parentType schema.Type, parentValue reflect.Value, selectionResolvers *linkedMap) {
-    if fragment.On.Name != "" && fragment.On.Name != parentType.String() {
-        castType := this.Schema.Types[fragment.On.Name]
-        if casted, ok := resolvers.TryCastFunction(parentValue, fragment.On.Name); ok {
+    if fragment.On.Text != "" && fragment.On.Text != parentType.String() {
+        castType := this.Schema.Types[fragment.On.Text]
+        if casted, ok := resolvers.TryCastFunction(parentValue, fragment.On.Text); ok {
             this.CreateSelectionResolvers(parentSelectionResolver, selectionResolvers, casted, castType, fragment.Selections)
         }
     } else {
@@ -256,7 +256,7 @@ func (this *Execution) recursiveExecute(parentSelection *selectionResolver, pare
             field := selected.field
 
             this.Out.WriteByte('"')
-            this.Out.WriteString(selected.field.Alias.Name)
+            this.Out.WriteString(selected.field.Alias.Text)
             this.Out.WriteByte('"')
             this.Out.WriteByte(':')
 

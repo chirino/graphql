@@ -18,7 +18,7 @@ type InputValueList []*InputValue
 
 func (l InputValueList) Get(name string) *InputValue {
 	for _, v := range l {
-		if v.Name.Name == name {
+		if v.Name.Text == name {
 			return v
 		}
 	}
@@ -49,7 +49,7 @@ type ArgumentList []Argument
 
 func (l ArgumentList) Get(name string) (Literal, bool) {
 	for _, arg := range l {
-		if arg.Name.Name == name {
+		if arg.Name.Text == name {
 			return arg.Value, true
 		}
 	}

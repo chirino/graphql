@@ -189,7 +189,7 @@ func (t DirectiveList) WriteSchemaFormat(out io.StringWriter) {
 
 func (t *Directive) WriteSchemaFormat(out io.StringWriter) {
     out.WriteString("@")
-    out.WriteString(t.Name.Name)
+    out.WriteString(t.Name.Text)
     t.Args.WriteSchemaFormat(out)
 }
 
@@ -207,7 +207,7 @@ func (t ArgumentList) WriteSchemaFormat(out io.StringWriter) {
 }
 
 func (t *Argument) WriteSchemaFormat(out io.StringWriter) {
-    out.WriteString(t.Name.Name)
+    out.WriteString(t.Name.Text)
     out.WriteString(":")
     t.Value.WriteSchemaFormat(out)
 }
@@ -244,7 +244,7 @@ func (t InputValueList) WriteSchemaFormat(out io.StringWriter) {
 
 func (t *InputValue) WriteSchemaFormat(out io.StringWriter) {
     writeDescription(out, t.Desc)
-    out.WriteString(t.Name.Name)
+    out.WriteString(t.Name.Text)
     out.WriteString(":")
     out.WriteString(t.Type.String())
     if t.Default != nil {
@@ -275,7 +275,7 @@ func (lit *ObjectLit) WriteSchemaFormat(out io.StringWriter) {
         if i != 0 {
             out.WriteString(", ")
         }
-        out.WriteString(v.Name.Name)
+        out.WriteString(v.Name.Text)
         out.WriteString(": ")
         v.Value.WriteSchemaFormat(out)
     }

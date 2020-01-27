@@ -432,18 +432,18 @@ func resolveField(s *Schema, f *Field) error {
 
 func resolveDirectives(s *Schema, directives DirectiveList) error {
     for _, d := range directives {
-        dirName := d.Name.Name
+        dirName := d.Name.Text
         dd, ok := s.Directives[dirName]
         if !ok {
             return errors.Errorf("directive %q not found", dirName)
         }
         for _, arg := range d.Args {
-            if dd.Args.Get(arg.Name.Name) == nil {
-                return errors.Errorf("invalid argument %q for directive %q", arg.Name.Name, dirName)
+            if dd.Args.Get(arg.Name.Text) == nil {
+                return errors.Errorf("invalid argument %q for directive %q", arg.Name.Text, dirName)
             }
         }
         for _, arg := range dd.Args {
-            if _, ok := d.Args.Get(arg.Name.Name); !ok {
+            if _, ok := d.Args.Get(arg.Name.Text); !ok {
                 d.Args = append(d.Args, Argument{Name: arg.Name, Value: arg.Default})
             }
         }
@@ -517,7 +517,7 @@ func parseSchema(s *Schema, l *Lexer) {
                                 l.SyntaxError(fmt.Sprintf("Cannot update %s, it was a %s", obj.Name, existing.Kind()))
                             }
                             existing.Directives = existing.Directives.Select(func(d *Directive) bool {
-                                return obj.Directives.Get(d.Name.Name) == nil
+                                return obj.Directives.Get(d.Name.Text) == nil
                             })
                             existing.Fields = existing.Fields.Select(func(d *Field) bool {
                                 return obj.Fields.Get(d.Name) == nil

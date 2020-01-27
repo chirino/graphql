@@ -79,7 +79,7 @@ func NewResolverFactory(doc *openapi3.Swagger, options ApiResolverOptions) (reso
         }
         if t, ok := t.(*schema.InputObject); ok {
             sort.Slice(t.Values, func(i, j int) bool {
-                return t.Values[i].Name.Name < t.Values[j].Name.Name
+                return t.Values[i].Name.Text < t.Values[j].Name.Text
             })
         }
     }

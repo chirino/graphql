@@ -62,9 +62,9 @@ func ResolveType(t Type, resolver Resolver) (Type, *errors.QueryError) {
 		}
 		return &NonNull{OfType: ofType}, nil
 	case *TypeName:
-		refT := resolver(t.Name)
+		refT := resolver(t.Text)
 		if refT == nil {
-			err := errors.Errorf("Unknown type %q.", t.Name)
+			err := errors.Errorf("Unknown type %q.", t.Text)
 			err.Rule = "KnownTypeNames"
 			err.Locations = []errors.Location{t.Loc}
 			return nil, err

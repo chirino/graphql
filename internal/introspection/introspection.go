@@ -242,7 +242,7 @@ func (r *InputValue) To__InputValue() (*InputValue, bool) {
 }
 
 func (r *InputValue) Name() string {
-	return r.value.Name.Name
+	return r.value.Name.Text
 }
 
 func (r *InputValue) Description() *string {

@@ -17,7 +17,7 @@ type OperationList []*Operation
 
 func (l OperationList) Get(name string) *Operation {
 	for _, f := range l {
-		if f.Name.Name == name {
+		if f.Name.Text == name {
 			return f
 		}
 	}
@@ -28,7 +28,7 @@ type FragmentList []*FragmentDecl
 
 func (l FragmentList) Get(name string) *FragmentDecl {
 	for _, f := range l {
-		if f.Name.Name == name {
+		if f.Name.Text == name {
 			return f
 		}
 	}
@@ -224,7 +224,7 @@ func parseSpread(l *schema.Lexer) Selection {
 	f := &InlineFragment{Loc: loc}
 	if l.Peek() == scanner.Ident {
 		ident := l.ConsumeIdentWithLoc()
-		if ident.Name != "on" {
+		if ident.Text != "on" {
 			fs := &FragmentSpread{
 				Name: ident,
 				Loc:  loc,

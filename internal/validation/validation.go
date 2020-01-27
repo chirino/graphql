@@ -77,10 +77,10 @@ func Validate(s *schema.Schema, doc *query.Document, maxDepth int) []*errors.Que
 			return c.errs
 		}
 
-		if op.Name.Name == "" && len(doc.Operations) != 1 {
+		if op.Name.Text == "" && len(doc.Operations) != 1 {
 			c.addErr(op.Loc, "LoneAnonymousOperation", "This anonymous operation must be the only defined operation.")
 		}
-		if op.Name.Name != "" {
+		if op.Name.Text != "" {
 			validateName(c, opNames, op.Name, "UniqueOperationNames", "operation")
 		}
 
@@ -92,7 +92,7 @@ func Validate(s *schema.Schema, doc *query.Document, maxDepth int) []*errors.Que
 
 			t := resolveType(c, v.Type)
 			if !canBeInput(t) {
-				c.addErr(v.TypeLoc, "VariablesAreInputTypes", "Variable %q cannot be non-input type %q.", "$"+v.Name.Name, t)
+				c.addErr(v.TypeLoc, "VariablesAreInputTypes", "Variable %q cannot be non-input type %q.", "$"+v.Name.Text, t)
 			}
 
 			if v.Default != nil {
@@ -100,11 +100,11 @@ func Validate(s *schema.Schema, doc *query.Document, maxDepth int) []*errors.Que
 
 				if t != nil {
 					if nn, ok := t.(*schema.NonNull); ok {
-						c.addErr(v.Default.Location(), "DefaultValuesOfCorrectType", "Variable %q of type %q is required and will not use the default value. Perhaps you meant to use type %q.", "$"+v.Name.Name, t, nn.OfType)
+						c.addErr(v.Default.Location(), "DefaultValuesOfCorrectType", "Variable %q of type %q is required and will not use the default value. Perhaps you meant to use type %q.", "$"+v.Name.Text, t, nn.OfType)
 					}
 
 					if ok, reason := validateValueType(opc, v.Default, t); !ok {
-						c.addErr(v.Default.Location(), "DefaultValuesOfCorrectType", "Variable %q of type %q has invalid default value %s.\n%s", "$"+v.Name.Name, t, v.Default, reason)
+						c.addErr(v.Default.Location(), "DefaultValuesOfCorrectType", "Variable %q of type %q has invalid default value %s.\n%s", "$"+v.Name.Text, t, v.Default, reason)
 					}
 				}
 			}
@@ -142,20 +142,20 @@ func Validate(s *schema.Schema, doc *query.Document, maxDepth int) []*errors.Que
 		t := unwrapType(resolveType(c, &frag.On))
 		// continue even if t is nil
 		if t != nil && !canBeFragment(t) {
-			c.addErr(frag.On.Loc, "FragmentsOnCompositeTypes", "Fragment %q cannot condition on non composite type %q.", frag.Name.Name, t)
+			c.addErr(frag.On.Loc, "FragmentsOnCompositeTypes", "Fragment %q cannot condition on non composite type %q.", frag.Name.Text, t)
 			continue
 		}
 
 		validateSelectionSet(opc, frag.Selections, t)
 
 		if _, ok := fragVisited[frag]; !ok {
-			detectFragmentCycle(c, frag.Selections, fragVisited, nil, map[string]int{frag.Name.Name: 0})
+			detectFragmentCycle(c, frag.Selections, fragVisited, nil, map[string]int{frag.Name.Text: 0})
 		}
 	}
 
 	for _, frag := range doc.Fragments {
 		if len(fragUsedBy[frag]) == 0 {
-			c.addErr(frag.Loc, "NoUnusedFragments", "Fragment %q is never used.", frag.Name.Name)
+			c.addErr(frag.Loc, "NoUnusedFragments", "Fragment %q is never used.", frag.Name.Text)
 		}
 	}
 
@@ -166,10 +166,10 @@ func Validate(s *schema.Schema, doc *query.Document, maxDepth int) []*errors.Que
 		for _, v := range op.Vars {
 			if _, ok := opUsedVars[v]; !ok {
 				opSuffix := ""
-				if op.Name.Name != "" {
-					opSuffix = fmt.Sprintf(" in operation %q", op.Name.Name)
+				if op.Name.Text != "" {
+					opSuffix = fmt.Sprintf(" in operation %q", op.Name.Text)
 				}
-				c.addErr(v.Loc, "NoUnusedVariables", "Variable %q is never used%s.", "$"+v.Name.Name, opSuffix)
+				c.addErr(v.Loc, "NoUnusedVariables", "Variable %q is never used%s.", "$"+v.Name.Text, opSuffix)
 			}
 		}
 	}
@@ -192,7 +192,7 @@ func validateMaxDepth(c *opContext, sels []query.Selection, depth int) bool {
 		case *query.Field:
 			if depth > c.maxDepth {
 				exceededMaxDepth = true
-				c.addErr(sel.Alias.Loc, "MaxDepthExceeded", "Field %q has depth %d that exceeds max depth %d", sel.Name.Name, depth, c.maxDepth)
+				c.addErr(sel.Alias.Loc, "MaxDepthExceeded", "Field %q has depth %d that exceeds max depth %d", sel.Name.Text, depth, c.maxDepth)
 				continue
 			}
 			exceededMaxDepth = exceededMaxDepth || validateMaxDepth(c, sel.Selections, depth+1)
@@ -202,10 +202,10 @@ func validateMaxDepth(c *opContext, sels []query.Selection, depth int) bool {
 			exceededMaxDepth = exceededMaxDepth || validateMaxDepth(c, sel.Selections, depth)
 		case *query.FragmentSpread:
 			// Depth is not checked because fragments resolve to other fields which are checked.
-			frag := c.doc.Fragments.Get(sel.Name.Name)
+			frag := c.doc.Fragments.Get(sel.Name.Text)
 			if frag == nil {
 				// In case of unknown fragment (invalid request), ignore max depth evaluation
-				c.addErr(sel.Loc, "MaxDepthEvaluationError", "Unknown fragment %q. Unable to evaluate depth.", sel.Name.Name)
+				c.addErr(sel.Loc, "MaxDepthEvaluationError", "Unknown fragment %q. Unable to evaluate depth.", sel.Name.Text)
 				continue
 			}
 			// Depth is not incremented because fragments have the same depth as surrounding fields
@@ -233,7 +233,7 @@ func validateSelection(c *opContext, sel query.Selection, t schema.NamedType) {
 	case *query.Field:
 		validateDirectives(c, "FIELD", sel.Directives)
 
-		fieldName := sel.Name.Name
+		fieldName := sel.Name.Text
 		var f *schema.Field
 		switch fieldName {
 		case "__typename":
@@ -251,7 +251,7 @@ func validateSelection(c *opContext, sel query.Selection, t schema.NamedType) {
 				Name: "__type",
 				Args: schema.InputValueList{
 					&schema.InputValue{
-						Name: schema.Ident{Name: "name"},
+						Name: schema.Ident{Text: "name"},
 						Type: &schema.NonNull{OfType: c.schema.Types["String"]},
 					},
 				},
@@ -296,7 +296,7 @@ func validateSelection(c *opContext, sel query.Selection, t schema.NamedType) {
 
 	case *query.InlineFragment:
 		validateDirectives(c, "INLINE_FRAGMENT", sel.Directives)
-		if sel.On.Name != "" {
+		if sel.On.Text != "" {
 			fragTyp := unwrapType(resolveType(c.context, &sel.On))
 			if fragTyp != nil && !compatible(t, fragTyp) {
 				c.addErr(sel.Loc, "PossibleFragmentSpreads", "Fragment cannot be spread here as objects of type %q can never be of type %q.", t, fragTyp)
@@ -312,14 +312,14 @@ func validateSelection(c *opContext, sel query.Selection, t schema.NamedType) {
 
 	case *query.FragmentSpread:
 		validateDirectives(c, "FRAGMENT_SPREAD", sel.Directives)
-		frag := c.doc.Fragments.Get(sel.Name.Name)
+		frag := c.doc.Fragments.Get(sel.Name.Text)
 		if frag == nil {
-			c.addErr(sel.Name.Loc, "KnownFragmentNames", "Unknown fragment %q.", sel.Name.Name)
+			c.addErr(sel.Name.Loc, "KnownFragmentNames", "Unknown fragment %q.", sel.Name.Text)
 			return
 		}
-		fragTyp := c.schema.Types[frag.On.Name]
+		fragTyp := c.schema.Types[frag.On.Text]
 		if !compatible(t, fragTyp) {
-			c.addErr(sel.Loc, "PossibleFragmentSpreads", "Fragment %q cannot be spread here as objects of type %q can never be of type %q.", frag.Name.Name, t, fragTyp)
+			c.addErr(sel.Loc, "PossibleFragmentSpreads", "Fragment %q cannot be spread here as objects of type %q can never be of type %q.", frag.Name.Text, t, fragTyp)
 		}
 
 	default:
@@ -363,7 +363,7 @@ func markUsedFragments(c *context, sels []query.Selection, fragUsed map[*query.F
 			markUsedFragments(c, sel.Selections, fragUsed)
 
 		case *query.FragmentSpread:
-			frag := c.doc.Fragments.Get(sel.Name.Name)
+			frag := c.doc.Fragments.Get(sel.Name.Text)
 			if frag == nil {
 				return
 			}
@@ -397,19 +397,19 @@ func detectFragmentCycleSel(c *context, sel query.Selection, fragVisited map[*qu
 		detectFragmentCycle(c, sel.Selections, fragVisited, spreadPath, spreadPathIndex)
 
 	case *query.FragmentSpread:
-		frag := c.doc.Fragments.Get(sel.Name.Name)
+		frag := c.doc.Fragments.Get(sel.Name.Text)
 		if frag == nil {
 			return
 		}
 
 		spreadPath = append(spreadPath, sel)
-		if i, ok := spreadPathIndex[frag.Name.Name]; ok {
+		if i, ok := spreadPathIndex[frag.Name.Text]; ok {
 			cyclePath := spreadPath[i:]
 			via := ""
 			if len(cyclePath) > 1 {
 				names := make([]string, len(cyclePath)-1)
 				for i, frag := range cyclePath[:len(cyclePath)-1] {
-					names[i] = frag.Name.Name
+					names[i] = frag.Name.Text
 				}
 				via = " via " + strings.Join(names, ", ")
 			}
@@ -418,7 +418,7 @@ func detectFragmentCycleSel(c *context, sel query.Selection, fragVisited map[*qu
 			for i, frag := range cyclePath {
 				locs[i] = frag.Loc
 			}
-			c.addErrMultiLoc(locs, "NoFragmentCycles", "Cannot spread fragment %q within itself%s.", frag.Name.Name, via)
+			c.addErrMultiLoc(locs, "NoFragmentCycles", "Cannot spread fragment %q within itself%s.", frag.Name.Text, via)
 			return
 		}
 
@@ -427,9 +427,9 @@ func detectFragmentCycleSel(c *context, sel query.Selection, fragVisited map[*qu
 		}
 		fragVisited[frag] = struct{}{}
 
-		spreadPathIndex[frag.Name.Name] = len(spreadPath)
+		spreadPathIndex[frag.Name.Text] = len(spreadPath)
 		detectFragmentCycle(c, frag.Selections, fragVisited, spreadPath, spreadPathIndex)
-		delete(spreadPathIndex, frag.Name.Name)
+		delete(spreadPathIndex, frag.Name.Text)
 
 	default:
 		panic("unreachable")
@@ -457,11 +457,11 @@ func (c *context) validateOverlap(a, b query.Selection, reasons *[]string, locs 
 			if reasons2, locs2 := c.validateFieldOverlap(a, b); len(reasons2) != 0 {
 				locs2 = append(locs2, a.Alias.Loc, b.Alias.Loc)
 				if reasons == nil {
-					c.addErrMultiLoc(locs2, "OverlappingFieldsCanBeMerged", "Fields %q conflict because %s. Use different aliases on the fields to fetch both if this was intentional.", a.Alias.Name, strings.Join(reasons2, " and "))
+					c.addErrMultiLoc(locs2, "OverlappingFieldsCanBeMerged", "Fields %q conflict because %s. Use different aliases on the fields to fetch both if this was intentional.", a.Alias.Text, strings.Join(reasons2, " and "))
 					return
 				}
 				for _, r := range reasons2 {
-					*reasons = append(*reasons, fmt.Sprintf("subfields %q conflict because %s", a.Alias.Name, r))
+					*reasons = append(*reasons, fmt.Sprintf("subfields %q conflict because %s", a.Alias.Text, r))
 				}
 				*locs = append(*locs, locs2...)
 			}
@@ -472,7 +472,7 @@ func (c *context) validateOverlap(a, b query.Selection, reasons *[]string, locs 
 			}
 
 		case *query.FragmentSpread:
-			if frag := c.doc.Fragments.Get(b.Name.Name); frag != nil {
+			if frag := c.doc.Fragments.Get(b.Name.Text); frag != nil {
 				for _, sel := range frag.Selections {
 					c.validateOverlap(a, sel, reasons, locs)
 				}
@@ -488,7 +488,7 @@ func (c *context) validateOverlap(a, b query.Selection, reasons *[]string, locs 
 		}
 
 	case *query.FragmentSpread:
-		if frag := c.doc.Fragments.Get(a.Name.Name); frag != nil {
+		if frag := c.doc.Fragments.Get(a.Name.Text); frag != nil {
 			for _, sel := range frag.Selections {
 				c.validateOverlap(sel, b, reasons, locs)
 			}
@@ -500,7 +500,7 @@ func (c *context) validateOverlap(a, b query.Selection, reasons *[]string, locs 
 }
 
 func (c *context) validateFieldOverlap(a, b *query.Field) ([]string, []errors.Location) {
-	if a.Alias.Name != b.Alias.Name {
+	if a.Alias.Text != b.Alias.Text {
 		return nil, nil
 	}
 
@@ -515,8 +515,8 @@ func (c *context) validateFieldOverlap(a, b *query.Field) ([]string, []errors.Lo
 	at := c.fieldMap[a].parent
 	bt := c.fieldMap[b].parent
 	if at == nil || bt == nil || at == bt {
-		if a.Name.Name != b.Name.Name {
-			return []string{fmt.Sprintf("%s and %s are different fields", a.Name.Name, b.Name.Name)}, nil
+		if a.Name.Text != b.Name.Text {
+			return []string{fmt.Sprintf("%s and %s are different fields", a.Name.Text, b.Name.Text)}, nil
 		}
 
 		if argumentsConflict(a.Arguments, b.Arguments) {
@@ -539,7 +539,7 @@ func argumentsConflict(a, b schema.ArgumentList) bool {
 		return true
 	}
 	for _, argA := range a {
-		valB, ok := b.Get(argA.Name.Name)
+		valB, ok := b.Get(argA.Name.Text)
 		if !ok || !reflect.DeepEqual(argA.Value.Value(nil), valB.Value(nil)) {
 			return true
 		}
@@ -587,7 +587,7 @@ func resolveType(c *context, t schema.Type) schema.Type {
 func validateDirectives(c *opContext, loc string, directives schema.DirectiveList) {
 	directiveNames := make(nameSet)
 	for _, d := range directives {
-		dirName := d.Name.Name
+		dirName := d.Name.Text
 		validateNameCustomMsg(c.context, directiveNames, d.Name, "UniqueDirectivesPerLocation", func() string {
 			return fmt.Sprintf("The directive %q can only be used once at this location.", dirName)
 		})
@@ -622,34 +622,34 @@ type nameSet map[string]errors.Location
 
 func validateName(c *context, set nameSet, name schema.Ident, rule string, kind string) {
 	validateNameCustomMsg(c, set, name, rule, func() string {
-		return fmt.Sprintf("There can be only one %s named %q.", kind, name.Name)
+		return fmt.Sprintf("There can be only one %s named %q.", kind, name.Text)
 	})
 }
 
 func validateNameCustomMsg(c *context, set nameSet, name schema.Ident, rule string, msg func() string) {
-	if loc, ok := set[name.Name]; ok {
+	if loc, ok := set[name.Text]; ok {
 		c.addErrMultiLoc([]errors.Location{loc, name.Loc}, rule, msg())
 		return
 	}
-	set[name.Name] = name.Loc
+	set[name.Text] = name.Loc
 }
 
 func validateArgumentTypes(c *opContext, args schema.ArgumentList, argDecls schema.InputValueList, loc errors.Location, owner1, owner2 func() string) {
 	for _, selArg := range args {
-		arg := argDecls.Get(selArg.Name.Name)
+		arg := argDecls.Get(selArg.Name.Text)
 		if arg == nil {
-			c.addErr(selArg.Name.Loc, "KnownArgumentNames", "Unknown argument %q on %s.", selArg.Name.Name, owner1())
+			c.addErr(selArg.Name.Loc, "KnownArgumentNames", "Unknown argument %q on %s.", selArg.Name.Text, owner1())
 			continue
 		}
 		value := selArg.Value
 		if ok, reason := validateValueType(c, value, arg.Type); !ok {
-			c.addErr(value.Location(), "ArgumentsOfCorrectType", "Argument %q has invalid value %s.\n%s", arg.Name.Name, value, reason)
+			c.addErr(value.Location(), "ArgumentsOfCorrectType", "Argument %q has invalid value %s.\n%s", arg.Name.Text, value, reason)
 		}
 	}
 	for _, decl := range argDecls {
 		if _, ok := decl.Type.(*schema.NonNull); ok {
-			if _, ok := args.Get(decl.Name.Name); !ok {
-				c.addErr(loc, "ProvidedNonNullArguments", "%s argument %q of type %q is required but not provided.", owner2(), decl.Name.Name, decl.Type)
+			if _, ok := args.Get(decl.Name.Text); !ok {
+				c.addErr(loc, "ProvidedNonNullArguments", "%s argument %q of type %q is required but not provided.", owner2(), decl.Name.Text, decl.Type)
 			}
 		}
 	}
@@ -680,8 +680,8 @@ func validateLiteral(c *opContext, l schema.Literal) {
 			v := op.Vars.Get(l.Name)
 			if v == nil {
 				byOp := ""
-				if op.Name.Name != "" {
-					byOp = fmt.Sprintf(" by operation %q", op.Name.Name)
+				if op.Name.Text != "" {
+					byOp = fmt.Sprintf(" by operation %q", op.Name.Text)
 				}
 				c.opErrs[op] = append(c.opErrs[op], (&errors.QueryError{
 					Message:   fmt.Sprintf("Variable %q is not defined%s.", "$"+l.Name, byOp),
@@ -747,7 +747,7 @@ func validateValueType(c *opContext, v schema.Literal, t schema.Type) (bool, str
 			return false, fmt.Sprintf("Expected %q, found not an object.", t)
 		}
 		for _, f := range v.Fields {
-			name := f.Name.Name
+			name := f.Name.Text
 			iv := t.Values.Get(name)
 			if iv == nil {
 				return false, fmt.Sprintf("In field %q: Unknown field.", name)
@@ -759,14 +759,14 @@ func validateValueType(c *opContext, v schema.Literal, t schema.Type) (bool, str
 		for _, iv := range t.Values {
 			found := false
 			for _, f := range v.Fields {
-				if f.Name.Name == iv.Name.Name {
+				if f.Name.Text == iv.Name.Text {
 					found = true
 					break
 				}
 			}
 			if !found {
 				if _, ok := iv.Type.(*schema.NonNull); ok && iv.Default == nil {
-					return false, fmt.Sprintf("In field %q: Expected %q, found null.", iv.Name.Name, iv.Type)
+					return false, fmt.Sprintf("In field %q: Expected %q, found null.", iv.Name.Text, iv.Type)
 				}
 			}
 		}

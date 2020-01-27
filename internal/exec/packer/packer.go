@@ -166,7 +166,7 @@ func (b *Builder) MakeStructPacker(values schema.InputValueList, typ reflect.Typ
 	for i, v := range values {
 		fe := &structPackerField{field: v}
 		fx := func(n string) bool {
-			return strings.EqualFold(stripUnderscore(n), stripUnderscore(v.Name.Name))
+			return strings.EqualFold(stripUnderscore(n), stripUnderscore(v.Name.Text))
 		}
 
 		sf, ok := structType.FieldByNameFunc(fx)
@@ -222,7 +222,7 @@ func (p *StructPacker) Pack(value interface{}) (reflect.Value, error) {
 	v := reflect.New(p.structType)
 	v.Elem().Set(p.defaultStruct)
 	for _, f := range p.fields {
-		if value, ok := values[f.field.Name.Name]; ok {
+		if value, ok := values[f.field.Name.Text]; ok {
 			packed, err := f.fieldPacker.Pack(value)
 			if err != nil {
 				return reflect.Value{}, err

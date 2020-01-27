@@ -64,7 +64,7 @@ func (engine *Engine) Execute(ctx context.Context, request *EngineRequest, root 
         if err != nil {
             return &EngineResponse{Errors: []*errors.QueryError{err}}
         }
-        varTypes[v.Name.Name] = introspection.WrapType(t)
+        varTypes[v.Name.Text] = introspection.WrapType(t)
     }
 
     if root == nil {
