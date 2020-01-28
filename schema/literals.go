@@ -47,6 +47,9 @@ func (lit *BasicLit) Evaluate(vars map[string]interface{}) interface{} {
 		}
 		return value
 
+	case scanner.BlockString:
+		return lit.Text[3:len(lit.Text)-3]
+
 	case scanner.Ident:
 		switch lit.Text {
 		case "true":

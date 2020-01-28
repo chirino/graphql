@@ -419,3 +419,54 @@ type Test @graphql(alter:"drop") {
     assert.Equal(t, 1, len(object.Fields))
     assert.Equal(t, "firstName", object.Fields[0].Name)
 }
+
+type MyMutation struct {
+    name string
+}
+
+func (m*MyMutation) SetName(args struct{ Name string }) string {
+    m.name = args.Name
+    return "Hi "+m.name
+}
+
+func TestMutationStringArgs(t *testing.T) {
+    engine := graphql.New()
+    root := &MyMutation{}
+    engine.Root = root
+
+    err := engine.Schema.Parse(`
+schema {
+    mutation: MyMutation
+}
+type MyMutation {
+	setName(name: String!): String
+}
+`)
+    assert.NoError(t, err)
+    result := ""
+    err = engine.Exec(context.Background(), &result, `mutation{ setName(name: "Hiram") }`)
+    assert.NoError(t, err)
+    assert.Equal(t, `{"setName":"Hi Hiram"}`, result)
+    assert.Equal(t, "Hiram", root.name)
+}
+
+func TestMutationBlockStringArgs(t *testing.T) {
+    engine := graphql.New()
+    root := &MyMutation{}
+    engine.Root = root
+
+    err := engine.Schema.Parse(`
+schema {
+    mutation: MyMutation
+}
+type MyMutation {
+	setName(name: String!): String
+}
+`)
+    require.NoError(t, err)
+    result := ""
+    err = engine.Exec(context.Background(), &result, `mutation{ setName(name: """Hiram""") }`)
+    require.NoError(t, err)
+    assert.Equal(t, `{"setName":"Hi Hiram"}`, result)
+    assert.Equal(t, "Hiram", root.name)
+}
