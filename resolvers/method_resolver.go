@@ -13,7 +13,7 @@ import (
 ///////////////////////////////////////////////////////////////////////
 type methodResolver byte
 
-const MethodResolverFactory = methodResolver(0)
+const MethodResolver = methodResolver(0)
 
 func (this methodResolver) Resolve(request *ResolveRequest) Resolution {
     if !request.Parent.IsValid() {

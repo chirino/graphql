@@ -9,7 +9,7 @@ import "reflect"
 //
 ///////////////////////////////////////////////////////////////////////
 type fieldResolver byte
-const FieldResolverFactory = fieldResolver(0)
+const FieldResolver = fieldResolver(0)
 
 func (this fieldResolver) Resolve(request *ResolveRequest) Resolution {
     parentValue := dereference(request.Parent)

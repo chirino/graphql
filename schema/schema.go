@@ -307,7 +307,6 @@ func (t *Object) GetDirectives() DirectiveList    { return t.Directives }
 func (t *Field) GetDirectives() DirectiveList     { return t.Directives }
 func (t *EnumValue) GetDirectives() DirectiveList { return t.Directives }
 
-// TODO:
 func (t *Scalar) GetDirectives() DirectiveList      { return t.Directives }
 func (t *InputValue) GetDirectives() DirectiveList  { return t.Directives }
 func (t *Interface) GetDirectives() DirectiveList   { return t.Directives }

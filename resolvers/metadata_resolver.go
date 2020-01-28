@@ -13,7 +13,7 @@ import (
 //
 ///////////////////////////////////////////////////////////////////////
 type metadataResolver byte
-const MetadataResolverFactory = metadataResolver(0)
+const MetadataResolver = metadataResolver(0)
 
 func (this metadataResolver) Resolve(request *ResolveRequest) Resolution {
     s := request.Context.GetSchema()

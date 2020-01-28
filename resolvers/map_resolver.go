@@ -8,7 +8,7 @@ import "reflect"
 //
 ///////////////////////////////////////////////////////////////////////
 type mapResolver byte
-const MapResolverFactory = mapResolver(0)
+const MapResolver = mapResolver(0)
 
 func (this mapResolver) Resolve(request *ResolveRequest) Resolution {
     parentValue := dereference(request.Parent)

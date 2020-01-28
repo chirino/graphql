@@ -8,19 +8,19 @@ func DynamicResolverFactory() Resolver {
 }
 
 func (this *dynamicResolver) Resolve(request *ResolveRequest) Resolution {
-    resolver := MetadataResolverFactory.Resolve(request)
+    resolver := MetadataResolver.Resolve(request)
     if resolver != nil {
         return resolver
     }
-    resolver = MethodResolverFactory.Resolve(request)
+    resolver = MethodResolver.Resolve(request)
     if resolver != nil {
         return resolver
     }
-    resolver = FieldResolverFactory.Resolve(request)
+    resolver = FieldResolver.Resolve(request)
     if resolver != nil {
         return resolver
     }
-    resolver = MapResolverFactory.Resolve(request)
+    resolver = MapResolver.Resolve(request)
     if resolver != nil {
         return resolver
     }

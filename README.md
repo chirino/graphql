@@ -13,7 +13,6 @@ This project is still under heavy development and APIs are almost certainly subj
 - schema type-checking against resolvers
 - custom resolvers
 - built int resolvers against maps, struct fields, interface methods
-- resolve against external APIs that have an openapi spec
 - handles panics in resolvers
 - parallel execution of resolvers
 - modifying schemas and generating new schema documents
@@ -42,7 +41,7 @@ func (q *query) Hello() string { return "Hello, " + q.Name }
 
 func main() {
     engine := graphql.New()
-    engine.Root = &query{
+    engine.Root = &query{         
         Name: "World!",
     }
     err := engine.Schema.Parse(`
@@ -58,15 +57,14 @@ func main() {
         log.Fatal(err)
     }
 
-    addr := ":8080"
     http.Handle("/graphql", &relay.Handler{Engine: engine})
-    fmt.Println("GraphQL service running at http://localhost" + addr + "/graphql")
+    fmt.Println("GraphQL service running at http://localhost:8080/graphql")
 
     graphiql, _ := graphiql.NewGraphiqlHandler("/graphql")
     http.Handle("/graphiql", graphiql)
-    fmt.Println("GraphiQL UI running at http://localhost" + addr + "/graphiql")
-    
-    log.Fatal(http.ListenAndServe(addr, nil))
+    fmt.Println("GraphiQL UI running at http://localhost:8080/graphiql")
+
+    log.Fatal(http.ListenAndServe(":8080", nil))
 }
 ```
 
@@ -75,20 +73,68 @@ To test:
 $ curl -XPOST -d '{"query": "{ hello }"}' localhost:8080/query
 ```
 
+Or open `http://localhost:8080/graphiql` and use the graphiql UI.
+
+### Example Walk Through
+
+* Step 1: `engine := graphql.New()` : Create the GraphQL engine
+* Step 2: `engine.Root = ...`: Associate a root object that the resolvers will operate against with the  call.  
+If you use custom resolvers this may not be required, but all the default resolvers, navigate this Root object. 
+* Step 3:  `err := engine.Schema.Parse(...)`: Configure the engine to know what the valid graphql operations that can 
+be performed using the [`GraphQL schema language`](https://graphql.org/learn/schema/#type-language).
+* Step 4:  `http.Handle("/graphql", &relay.Handler{Engine: engine})`: Use a relay http interface to access the GraphQL 
+engine. 
+* Step 5:  `log.Fatal(http.ListenAndServe(":8080", nil))`: Start the http server
+
+The example also starts a `http://localhost:8080/graphiql` which is optional. It gives you a nice UI interface
+to introspect your graphql endpoint and test it out.
+
+### Schema Updates
+
+You can call `err := engine.Schema.Parse(...)` multiple times to evolve the schema. By default any types
+redeclared will replace the previous definition.  You can use engine.Schema.String() to get the schema back in the 
+[`GraphQL schema language`](https://graphql.org/learn/schema/#type-language).
+
+You can use a `@graphql(alter:"add")` directive to add fields, directives, or interfaces to previously defined type.
+
+For example, lets say your  previously parsed:
+```graphql
+type Person {
+    name: String
+}
+```
+
+If you then subsequently parse:
+```graphql
+type Person @graphql(alter:"add") {
+    children: [Person!]
+}
+```
+
+then the resulting schema would be:
+```graphql
+type Person {
+    name: String
+    children: [Person!]
+}
+```
+
+Similarly you can use `@graphql(alter:"drop")` to remove fields, directives, or interfaces from a type.
+
 ### Resolvers
 
 Resolvers implement accessing that data selected by the GraphQL query or mutations.
 
-When a graphql field is access, we the graphql engine tries using the following resolver factories until one of them
-is able to create a resolver for the field:
-1. `resolvers.MetadataResolverFactory`: Resolves the `__typename`, `__schema`, and `__type` metadata fields.
-2. `resolvers.MethodResolverFactory`: Resolves the field using exported functions implemented on the current struct
-3. `resolvers.FieldResolverFactory`: Resolves the field using exported fields on the current struct
-4. `resolvers.MapResolverFactory`: Resolves the field using map entries on the current map.
+When a graphql field is access, we the graphql engine tries using each of the following resolvers until one of them
+is able to resolve field:
+1. `resolvers.MetadataResolver`: Resolves the `__typename`, `__schema`, and `__type` metadata fields.
+2. `resolvers.MethodResolver`: Resolves the field using exported functions implemented on the current struct
+3. `resolvers.FieldResolver`: Resolves the field using exported fields on the current struct
+4. `resolvers.MapResolver`: Resolves the field using map entries on the current map.
 
-If no resolver factory can resolve the GraphQL field, then it results in a GraphQL error.
+If no resolver can resolve the GraphQL field, then it results in a GraphQL error.
 
-#### Resolving fields using `resolvers.MethodResolverFactory`
+#### Resolving fields using `resolvers.MethodResolver`
 
 The method name has to be [exported](https://golang.org/ref/spec#Exported_identifiers) and match the field's name
 in a non-case-sensitive way.
@@ -121,8 +167,7 @@ func (r *helloWorldResolver) Hello(ctx resolvers.ExecutionContext) (string, erro
 }
 ```
 
-
-#### Resolving fields using `resolvers.FieldResolverFactory`
+#### Resolving fields using `resolvers.FieldResolver`
 
 The method name has to be [exported](https://golang.org/ref/spec#Exported_identifiers). The GraphQL field's name
 must match the struct field name or the name in a `json:""` annotation.
@@ -145,7 +190,7 @@ type Query {
 }
 ```
 
-#### Resolving fields using `resolvers.MapResolverFactory`
+#### Resolving fields using `resolvers.MapResolver`
 
 You must use maps with string keys.
 
@@ -169,56 +214,28 @@ type Query {
 
 ### Custom Resolvers
 
-You can change the resolver factories used by the engine and implement custom resolver factories if needed.
+You can change the resolvers used by the engine and implement custom resolvers if needed.
 
-Changing the default list of resolver factories so that only metadata and method based resolvers are used:
+Changing the default list of resolvers so that only metadata and method based resolvers are used:
 ```go
-engine, err := graphql.CreateEngine(starwars.Schema)
-engine.ResolverFactory = &resolvers.ResolverFactoryList{
-        &resolvers.MetadataResolverFactory{},
-        &resolvers.MethodResolverFactory{},
+engine.ResolverFactory = &resolvers.ResolverList{
+    resolvers.MetadataResolver,
+    resolvers.MethodResolver,
 }
 ```
 
-You can also implement a custom resolver factory.  Here's an example resolver factory, that would resolve all `foo` GraphQL
+You can also implement a custom resolver.  Here's an example resolver, that would resolve all `foo` GraphQL
 fields to the value `"bar"`:
 
 ```go
-type MyFooResolverFactory struct{}
-func (this *MyFooResolverFactory) CreateResolver(request *resolvers.ResolveRequest) resolvers.Resolver {
+type MyFooResolver struct{}
+func (this *MyFooResolver) Resolve(request *resolvers.ResolveRequest) resolvers.Resolution {
     if request.Field.Name!="foo" {
         return nil // Lets only handle the foo fields:
     }
     return func() (reflect.Value, error) {
         return reflect.ValueOf("bar"), nil
     }
-}
-```
-
-or you could do like:
-
-```go
-myFooResolverFactory := resolvers.FuncResolverFactory{ func (request *resolvers.ResolveRequest) resolvers.Resolver {
-    if request.Field.Name!="foo" {
-        return nil // Lets only handle the foo fields:
-    }
-    return func() (reflect.Value, error) {
-        return reflect.ValueOf("bar"), nil
-    }
-}}
-```
-
-If you only want to apply a custom resolver for a specific GraphQL type, you can do it like:
-```go
-myTypeResolverFactory := resolvers.TypeResolverFactory {
-    "Query": func (request *resolvers.ResolveRequest) resolvers.Resolver {
-        if request.Field.Name!="foo" {
-            return nil // Lets only handle the foo fields:
-        }
-        return func() (reflect.Value, error) {
-            return reflect.ValueOf("bar"), nil
-        }
-    },
 }
 ```
 
@@ -228,20 +245,19 @@ If resolvers are going to fetch data from multiple remote systems, you will want
 each fetch is done in parallel.  You can enable async resolution in your custom resolver using the following pattern:
 
 ```go
-type MyHttpResolverFactory struct{}
-func (this *MyHttpResolverFactory) CreateResolver(request *resolvers.ResolveRequest) resolvers.Resolver {
+type MyHttpResolver struct{}
+func (this *MyHttpResolver) Resolve(request *resolvers.ResolveRequest) resolvers.Resolution {
 
     if request.Field.Name!="google" {
         return nil // Lets only handle the google field:
     }
 
-    httpClient := &http.Client{}
-    req, err := http.NewRequest("GET", "http://google.com", nil)
-    if err!=nil {
-        panic(err)
-    }
-
     return request.RunAsync(func() (reflect.Value, error) {
+        httpClient := &http.Client{}
+        req, err := http.NewRequest("GET", "http://google.com", nil)
+        if err!=nil {
+            return nil, error
+        }
         resp, err := httpClient.Do(req)
         if err != nil {
             return nil, err
@@ -262,3 +278,4 @@ func (this *MyHttpResolverFactory) CreateResolver(request *resolvers.ResolveRequ
 
 This is a fork of the http://github.com/graph-gophers/graphql-go project.  
 
+### GraphQL Schema Updates
