@@ -2,6 +2,7 @@ package schema
 
 import (
     "fmt"
+    "github.com/chirino/graphql/internal/lexer"
     "io"
     "text/scanner"
 
@@ -70,7 +71,7 @@ type NonNull struct {
 }
 
 type TypeName struct {
-    Ident
+    lexer.Ident
 }
 
 // Resolve a named type in the schema by its name.
@@ -96,16 +97,9 @@ type NamedType interface {
 // http://facebook.github.io/graphql/draft/#sec-Scalars
 type Scalar struct {
     Name       string
-    Desc       *Description
+    Desc       *lexer.Description
     Directives DirectiveList
     // TODO: Add a list of directives?
-}
-
-func (d *Description) String() string {
-    if d == nil {
-        return ""
-    }
-    return d.Text
 }
 
 // Object types represent a list of named fields, each of which yield a value of a specific type.
@@ -119,7 +113,7 @@ type Object struct {
     Name       string
     Interfaces InterfaceList
     Fields     FieldList `json:"fields"`
-    Desc       *Description
+    Desc       *lexer.Description
     Directives DirectiveList
 
     interfaceNames []string
@@ -135,7 +129,7 @@ type Interface struct {
     Name          string
     PossibleTypes []*Object
     Fields        FieldList // NOTE: the spec refers to this as `FieldsDefinition`.
-    Desc          *Description
+    Desc          *lexer.Description
     Directives    DirectiveList
 }
 
@@ -189,7 +183,7 @@ func StringListSelect(l []string, keep func(d string) bool) []string {
 type Union struct {
     Name          string
     PossibleTypes []*Object // NOTE: the spec refers to this as `UnionMemberTypes`.
-    Desc          *Description
+    Desc          *lexer.Description
     typeNames     []string
     Directives    DirectiveList
 }
@@ -202,7 +196,7 @@ type Union struct {
 type Enum struct {
     Name       string
     Values     []*EnumValue // NOTE: the spec refers to this as `EnumValuesDefinition`.
-    Desc       *Description
+    Desc       *lexer.Description
     Directives DirectiveList
 }
 
@@ -213,7 +207,7 @@ type Enum struct {
 type EnumValue struct {
     Name       string
     Directives DirectiveList
-    Desc       *Description
+    Desc       *lexer.Description
     // TODO: Add a list of directives?
 }
 
@@ -225,7 +219,7 @@ type EnumValue struct {
 // http://facebook.github.io/graphql/draft/#sec-Input-Objects
 type InputObject struct {
     Name       string
-    Desc       *Description
+    Desc       *lexer.Description
     Fields     InputValueList
     Directives DirectiveList
 }
@@ -269,7 +263,7 @@ func (l FieldList) Select(keep func(d *Field) bool) FieldList {
 // http://facebook.github.io/graphql/draft/#sec-Type-System.Directives
 type DirectiveDecl struct {
     Name string
-    Desc *Description
+    Desc *lexer.Description
     Locs []string
     Args InputValueList
 }
@@ -328,7 +322,7 @@ type Field struct {
     Args       InputValueList `json:"args"` // NOTE: the spec refers to this as `ArgumentsDefinition`.
     Type       Type
     Directives DirectiveList
-    Desc       *Description `json:"desc"`
+    Desc       *lexer.Description `json:"desc"`
 }
 
 // New initializes an instance of Schema.
@@ -349,7 +343,7 @@ func New() *Schema {
 
 // Parse the schema string.
 func (s *Schema) Parse(schemaString string) error {
-    l := NewLexer(schemaString)
+    l := lexer.NewLexer(schemaString)
 
     err := l.CatchSyntaxError(func() { parseSchema(s, l) })
     if err != nil {
@@ -534,7 +528,7 @@ func resolveInputObject(s *Schema, values InputValueList) error {
     return nil
 }
 
-func parseSchema(s *Schema, l *Lexer) {
+func parseSchema(s *Schema, l *lexer.Lexer) {
     l.Consume()
 
     for l.Peek() != scanner.EOF {
@@ -671,7 +665,7 @@ func parseSchema(s *Schema, l *Lexer) {
     }
 }
 
-func parseObjectDef(l *Lexer) *Object {
+func parseObjectDef(l *lexer.Lexer) *Object {
     object := &Object{Name: l.ConsumeIdent()}
 
     if l.PeekKeyword("implements") {
@@ -698,7 +692,7 @@ func parseObjectDef(l *Lexer) *Object {
     return object
 }
 
-func parseInterfaceDef(l *Lexer) *Interface {
+func parseInterfaceDef(l *lexer.Lexer) *Interface {
     i := &Interface{Name: l.ConsumeIdent()}
     i.Directives = ParseDirectives(l)
     l.ConsumeToken('{')
@@ -708,7 +702,7 @@ func parseInterfaceDef(l *Lexer) *Interface {
     return i
 }
 
-func parseUnionDef(l *Lexer) *Union {
+func parseUnionDef(l *lexer.Lexer) *Union {
     union := &Union{Name: l.ConsumeIdent()}
     union.Directives = ParseDirectives(l)
     l.ConsumeToken('=')
@@ -721,7 +715,7 @@ func parseUnionDef(l *Lexer) *Union {
     return union
 }
 
-func parseInputDef(l *Lexer) *InputObject {
+func parseInputDef(l *lexer.Lexer) *InputObject {
     i := &InputObject{}
     i.Name = l.ConsumeIdent()
     i.Directives = ParseDirectives(l)
@@ -733,7 +727,7 @@ func parseInputDef(l *Lexer) *InputObject {
     return i
 }
 
-func parseEnumDef(l *Lexer) *Enum {
+func parseEnumDef(l *lexer.Lexer) *Enum {
     enum := &Enum{Name: l.ConsumeIdent()}
     enum.Directives = ParseDirectives(l)
     l.ConsumeToken('{')
@@ -750,7 +744,7 @@ func parseEnumDef(l *Lexer) *Enum {
     return enum
 }
 
-func parseDirectiveDef(l *Lexer) *DirectiveDecl {
+func parseDirectiveDef(l *lexer.Lexer) *DirectiveDecl {
     l.ConsumeToken('@')
     d := &DirectiveDecl{Name: l.ConsumeIdent()}
 
@@ -776,7 +770,7 @@ func parseDirectiveDef(l *Lexer) *DirectiveDecl {
     return d
 }
 
-func parseFieldsDef(l *Lexer) FieldList {
+func parseFieldsDef(l *lexer.Lexer) FieldList {
     var fields FieldList
     for l.Peek() != '}' {
         f := &Field{}

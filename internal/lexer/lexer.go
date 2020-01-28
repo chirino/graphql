@@ -1,4 +1,4 @@
-package schema
+package lexer
 
 import (
     "fmt"
@@ -91,10 +91,16 @@ func (l *Lexer) ConsumeKeyword(keyword string) {
     l.Consume()
 }
 
-func (l *Lexer) ConsumeLiteral() *BasicLit {
-    lit := &BasicLit{Type: l.next, Text: l.sc.TokenText()}
-    l.Consume()
-    return lit
+func (l *Lexer) ConsumeLiteral() string {
+    switch l.next {
+    case scanner.Int, scanner.Float, scanner.String, scanner.BlockString, scanner.Ident:
+        lit := l.sc.TokenText()
+        l.Consume()
+        return lit
+    default:
+        l.SyntaxError(fmt.Sprintf("unexpected %q, expecting literal", l.next))
+        panic("unreachable")
+    }
 }
 
 func (l *Lexer) ConsumeToken(expected rune) {
@@ -108,6 +114,13 @@ type Description struct {
     Text        string
     BlockString bool
     Loc         errors.Location
+}
+
+func (d *Description) String() string {
+    if d == nil {
+        return ""
+    }
+    return d.Text
 }
 
 func (l *Lexer) ConsumeDescription() *Description {

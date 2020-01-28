@@ -2,6 +2,7 @@ package schema
 
 import (
     "github.com/chirino/graphql/errors"
+    "github.com/chirino/graphql/internal/lexer"
 )
 
 func DeepestType(t Type) Type {
@@ -25,7 +26,7 @@ func OfType(t Type) Type {
 	}
 }
 
-func ParseType(l *Lexer) Type {
+func ParseType(l *lexer.Lexer) Type {
 	t := parseNullType(l)
 	if l.Peek() == '!' {
 		l.ConsumeToken('!')
@@ -34,7 +35,7 @@ func ParseType(l *Lexer) Type {
 	return t
 }
 
-func parseNullType(l *Lexer) Type {
+func parseNullType(l *lexer.Lexer) Type {
 	if l.Peek() == '[' {
 		l.ConsumeToken('[')
 		ofType := ParseType(l)

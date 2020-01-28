@@ -1,7 +1,8 @@
 package schema
 
 import (
-	"testing"
+    "github.com/chirino/graphql/internal/lexer"
+    "testing"
 
 	"github.com/chirino/graphql/errors"
 )
@@ -154,10 +155,10 @@ func compareObjects(t *testing.T, expected, actual *Object) {
 	}
 }
 
-func setup(t *testing.T, def string) *Lexer {
+func setup(t *testing.T, def string) *lexer.Lexer {
 	t.Helper()
 
-	lex := NewLexer(def)
+	lex := lexer.NewLexer(def)
 	lex.Consume()
 
 	return lex

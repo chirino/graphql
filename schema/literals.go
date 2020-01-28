@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"github.com/chirino/graphql/internal/lexer"
 	"github.com/chirino/graphql/internal/scanner"
 	"io"
 	"strconv"
@@ -104,7 +105,7 @@ type ObjectLit struct {
 }
 
 type ObjectLitField struct {
-	Name  Ident
+	Name  lexer.Ident
 	Value Literal
 }
 
@@ -161,7 +162,7 @@ func (v *Variable) Location() errors.Location {
 	return v.Loc
 }
 
-func ParseLiteral(l *Lexer, constOnly bool) Literal {
+func ParseLiteral(l *lexer.Lexer, constOnly bool) Literal {
 	loc := l.Location()
 	switch l.Peek() {
 	case '$':
@@ -173,7 +174,7 @@ func ParseLiteral(l *Lexer, constOnly bool) Literal {
 		return &Variable{l.ConsumeIdent(), loc}
 
 	case scanner.Int, scanner.Float, scanner.String, scanner.BlockString, scanner.Ident:
-		lit := l.ConsumeLiteral()
+		lit := ConsumeLiteral(l)
 		if lit.Type == scanner.Ident && lit.Text == "null" {
 			return &NullLit{loc}
 		}
@@ -181,7 +182,7 @@ func ParseLiteral(l *Lexer, constOnly bool) Literal {
 		return lit
 	case '-':
 		l.ConsumeToken('-')
-		lit := l.ConsumeLiteral()
+		lit := ConsumeLiteral(l)
 		lit.Text = "-" + lit.Text
 		lit.Loc = loc
 		return lit
@@ -210,5 +211,13 @@ func ParseLiteral(l *Lexer, constOnly bool) Literal {
 		peek := l.Peek()
 		l.SyntaxError("invalid value: "+string(peek))
 		panic("unreachable")
+	}
+}
+
+func ConsumeLiteral(l *lexer.Lexer) *BasicLit {
+	return &BasicLit{
+		Loc:  l.Location(),
+		Type: l.Peek(),
+		Text: l.ConsumeLiteral(),
 	}
 }

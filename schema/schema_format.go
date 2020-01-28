@@ -3,6 +3,7 @@ package schema
 import (
     "bytes"
     "fmt"
+    "github.com/chirino/graphql/internal/lexer"
     "github.com/chirino/graphql/text"
     "io"
     "reflect"
@@ -287,7 +288,7 @@ func (lit *Variable) WriteSchemaFormat(out io.StringWriter) {
     out.WriteString(lit.Name)
 }
 
-func writeDescription(out io.StringWriter, desc *Description) {
+func writeDescription(out io.StringWriter, desc *lexer.Description) {
     if desc != nil && desc.Text != "" {
         // desc := desc.Text
         if desc.BlockString {

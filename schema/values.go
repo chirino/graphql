@@ -2,15 +2,16 @@ package schema
 
 import (
     "github.com/chirino/graphql/errors"
+    "github.com/chirino/graphql/internal/lexer"
 )
 
 // http://facebook.github.io/graphql/draft/#InputValueDefinition
 type InputValue struct {
-    Name       Ident
-    Type       Type
-    Default    Literal
-    Desc       *Description
-    Loc        errors.Location
+    Name    lexer.Ident
+    Type    Type
+    Default Literal
+    Desc    *lexer.Description
+    Loc     errors.Location
     TypeLoc    errors.Location
     Directives DirectiveList
 }
@@ -26,7 +27,7 @@ func (l InputValueList) Get(name string) *InputValue {
     return nil
 }
 
-func ParseInputValue(l *Lexer) *InputValue {
+func ParseInputValue(l *lexer.Lexer) *InputValue {
     p := &InputValue{}
     p.Loc = l.Location()
     p.Desc = l.ConsumeDescription()
@@ -43,7 +44,7 @@ func ParseInputValue(l *Lexer) *InputValue {
 }
 
 type Argument struct {
-    Name  Ident
+    Name  lexer.Ident
     Value Literal
 }
 
@@ -74,7 +75,7 @@ func (l ArgumentList) Value(vars map[string]interface{}) map[string]interface{} 
     return result
 }
 
-func ParseArguments(l *Lexer) ArgumentList {
+func ParseArguments(l *lexer.Lexer) ArgumentList {
     var args ArgumentList
     l.ConsumeToken('(')
     for l.Peek() != ')' {

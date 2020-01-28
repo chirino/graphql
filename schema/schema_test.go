@@ -1,7 +1,8 @@
 package schema_test
 
 import (
-	"testing"
+    "github.com/chirino/graphql/internal/lexer"
+    "testing"
 
 	"github.com/chirino/graphql/schema"
 )
@@ -33,7 +34,7 @@ var parseTests = []parseTestCase{{
 		Types: map[string]schema.NamedType{
 			"Type": &schema.Object{
 				Name: "Type",
-				Desc: &schema.Description{Text:"Single line description."},
+				Desc: &lexer.Description{Text: "Single line description."},
 			}},
 	}}, {
 	description: "Parses type with multi-line description string",
@@ -48,7 +49,7 @@ var parseTests = []parseTestCase{{
 		Types: map[string]schema.NamedType{
 			"Type": &schema.Object{
 				Name: "Type",
-				Desc: &schema.Description{Text:"Multi-line description."},
+				Desc: &lexer.Description{Text: "Multi-line description."},
 			}},
 	}}, {
 	description: "Parses type with multi-line description and ignores comments",
@@ -64,7 +65,7 @@ var parseTests = []parseTestCase{{
 		Types: map[string]schema.NamedType{
 			"Type": &schema.Object{
 				Name: "Type",
-				Desc: &schema.Description{Text:"Multi-line description with ignored comments."},
+				Desc: &lexer.Description{Text: "Multi-line description with ignored comments."},
 			}},
 	}},
 }
