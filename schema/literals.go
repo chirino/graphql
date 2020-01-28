@@ -1,10 +1,10 @@
 package schema
 
 import (
+	"github.com/chirino/graphql/internal/scanner"
 	"io"
 	"strconv"
 	"strings"
-	"text/scanner"
 
 	"github.com/chirino/graphql/errors"
 )
@@ -169,7 +169,7 @@ func ParseLiteral(l *Lexer, constOnly bool) Literal {
 		l.ConsumeToken('$')
 		return &Variable{l.ConsumeIdent(), loc}
 
-	case scanner.Int, scanner.Float, scanner.String, scanner.Ident:
+	case scanner.Int, scanner.Float, scanner.String, scanner.BlockString, scanner.Ident:
 		lit := l.ConsumeLiteral()
 		if lit.Type == scanner.Ident && lit.Text == "null" {
 			return &NullLit{loc}
@@ -204,7 +204,8 @@ func ParseLiteral(l *Lexer, constOnly bool) Literal {
 		return &ObjectLit{fields, loc}
 
 	default:
-		l.SyntaxError("invalid value")
+		peek := l.Peek()
+		l.SyntaxError("invalid value: "+string(peek))
 		panic("unreachable")
 	}
 }

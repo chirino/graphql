@@ -7,6 +7,7 @@ import (
     "io"
     "reflect"
     "sort"
+    "strconv"
     "strings"
 )
 
@@ -286,12 +287,17 @@ func (lit *Variable) WriteSchemaFormat(out io.StringWriter) {
     out.WriteString(lit.Name)
 }
 
-func writeDescription(out io.StringWriter, desc string) {
-    if desc != "" {
-        if !strings.HasSuffix(desc, "\n") {
-            desc += "\n"
+func writeDescription(out io.StringWriter, desc *Description) {
+    if desc != nil && desc.Text != "" {
+        // desc := desc.Text
+        if desc.BlockString {
+            out.WriteString(`"""`)
+            out.WriteString(desc.Text)
+            out.WriteString(`"""`+"\n")
+        } else {
+            out.WriteString(strconv.Quote(desc.Text))
+            out.WriteString("\n")
         }
-        out.WriteString(text.Indent(desc, "# "))
     }
 }
 

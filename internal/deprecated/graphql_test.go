@@ -1354,74 +1354,74 @@ func TestIntrospection(t *testing.T) {
 				}
 			`,
             ExpectedResult: `
-				{
-						"__schema": {
-							"directives": [
-								{
-									"name": "deprecated",
-									"description": "Marks an element of a GraphQL schema as no longer supported.",
-									"locations": [
-										"FIELD_DEFINITION",
-										"ENUM_VALUE"
-									],
-									"args": [
-										{
-											"name": "reason",
-											"description": "Explains why this element was deprecated, usually also including a suggestion\nfor how to access supported similar data. Formatted in\n[Markdown](https://daringfireball.net/projects/markdown/).",
-											"type": {
-												"kind": "SCALAR",
-												"ofType": null
-											}
-										}
-									]
-								},
-								{
-									"name": "include",
-									"description": "Directs the executor to include this field or fragment only when the ` + "`" + `if` + "`" + ` argument is true.",
-									"locations": [
-										"FIELD",
-										"FRAGMENT_SPREAD",
-										"INLINE_FRAGMENT"
-									],
-									"args": [
-										{
-											"name": "if",
-											"description": "Included when true.",
-											"type": {
-												"kind": "NON_NULL",
-												"ofType": {
-													"kind": "SCALAR",
-													"name": "Boolean"
-												}
-											}
-										}
-									]
-								},
-								{
-									"name": "skip",
-									"description": "Directs the executor to skip this field or fragment when the ` + "`" + `if` + "`" + ` argument is true.",
-									"locations": [
-										"FIELD",
-										"FRAGMENT_SPREAD",
-										"INLINE_FRAGMENT"
-									],
-									"args": [
-										{
-											"name": "if",
-											"description": "Skipped when true.",
-											"type": {
-												"kind": "NON_NULL",
-												"ofType": {
-													"kind": "SCALAR",
-													"name": "Boolean"
-												}
-											}
-										}
-									]
-								}
-							]
-						}
-					}
+                {
+                  "__schema": {
+                    "directives": [
+                      {
+                        "args": [
+                          {
+                            "description": "\n    Explains why this element was deprecated, usually also including a suggestion\n    for how to access supported similar data. Formatted in\n    [Markdown](https://daringfireball.net/projects/markdown/).\n    ",
+                            "name": "reason",
+                            "type": {
+                              "kind": "SCALAR",
+                              "ofType": null
+                            }
+                          }
+                        ],
+                        "description": "\nMarks an element of a GraphQL schema as no longer supported.\n",
+                        "locations": [
+                          "FIELD_DEFINITION",
+                          "ENUM_VALUE"
+                        ],
+                        "name": "deprecated"
+                      },
+                      {
+                        "args": [
+                          {
+                            "description": "Included when true.",
+                            "name": "if",
+                            "type": {
+                              "kind": "NON_NULL",
+                              "ofType": {
+                                "kind": "SCALAR",
+                                "name": "Boolean"
+                              }
+                            }
+                          }
+                        ],
+                        "description": "\nDirects the executor to include this field or fragment only when the `+"`if`"+` argument is true.\n",
+                        "locations": [
+                          "FIELD",
+                          "FRAGMENT_SPREAD",
+                          "INLINE_FRAGMENT"
+                        ],
+                        "name": "include"
+                      },
+                      {
+                        "args": [
+                          {
+                            "description": "Skipped when true.",
+                            "name": "if",
+                            "type": {
+                              "kind": "NON_NULL",
+                              "ofType": {
+                                "kind": "SCALAR",
+                                "name": "Boolean"
+                              }
+                            }
+                          }
+                        ],
+                        "description": "\nDirects the executor to skip this field or fragment when the `+"`if`"+` argument is true.\n",
+                        "locations": [
+                          "FIELD",
+                          "FRAGMENT_SPREAD",
+                          "INLINE_FRAGMENT"
+                        ],
+                        "name": "skip"
+                      }
+                    ]
+                  }
+                }
 			`,
         },
     })

@@ -33,7 +33,7 @@ var parseTests = []parseTestCase{{
 		Types: map[string]schema.NamedType{
 			"Type": &schema.Object{
 				Name: "Type",
-				Desc: "Single line description.",
+				Desc: &schema.Description{Text:"Single line description."},
 			}},
 	}}, {
 	description: "Parses type with multi-line description string",
@@ -48,7 +48,7 @@ var parseTests = []parseTestCase{{
 		Types: map[string]schema.NamedType{
 			"Type": &schema.Object{
 				Name: "Type",
-				Desc: "Multi-line description.",
+				Desc: &schema.Description{Text:"Multi-line description."},
 			}},
 	}}, {
 	description: "Parses type with multi-line description and ignores comments",
@@ -64,7 +64,7 @@ var parseTests = []parseTestCase{{
 		Types: map[string]schema.NamedType{
 			"Type": &schema.Object{
 				Name: "Type",
-				Desc: "Multi-line description with ignored comments.",
+				Desc: &schema.Description{Text:"Multi-line description with ignored comments."},
 			}},
 	}},
 }

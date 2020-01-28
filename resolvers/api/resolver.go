@@ -96,7 +96,7 @@ func (factory apiResolver) addRootField(draftSchema *schema.Schema, rootType str
 
     typePath := rootType + "/" + capitalizeFirstLetter(fieldName)
 
-    field := description(operation.Description + "\n\\\n\\\n**endpoint:** `" + method + " " + path + "`")
+    field := description(operation.Description + "\n\n**endpoint:** `" + method + " " + path + "`")
     field += fieldName
     field += "("
 

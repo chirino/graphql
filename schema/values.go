@@ -9,7 +9,7 @@ type InputValue struct {
     Name       Ident
     Type       Type
     Default    Literal
-    Desc       string
+    Desc       *Description
     Loc        errors.Location
     TypeLoc    errors.Location
     Directives DirectiveList
@@ -29,7 +29,7 @@ func (l InputValueList) Get(name string) *InputValue {
 func ParseInputValue(l *Lexer) *InputValue {
     p := &InputValue{}
     p.Loc = l.Location()
-    p.Desc = l.DescComment()
+    p.Desc = l.ConsumeDescription()
     p.Name = l.ConsumeIdentWithLoc()
     l.ConsumeToken(':')
     p.TypeLoc = l.Location()

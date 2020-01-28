@@ -2,11 +2,12 @@ package validation
 
 import (
 	"fmt"
+	"github.com/chirino/graphql/internal/scanner"
 	"math"
 	"reflect"
 	"strconv"
 	"strings"
-	"text/scanner"
+
 
 	"github.com/chirino/graphql/errors"
 	"github.com/chirino/graphql/internal/query"
@@ -792,11 +793,11 @@ func validateBasicLit(v *schema.BasicLit, t schema.Type) bool {
 		case "Float":
 			return v.Type == scanner.Int || v.Type == scanner.Float
 		case "String":
-			return v.Type == scanner.String
+			return v.Type == scanner.String || v.Type == scanner.BlockString
 		case "Boolean":
 			return v.Type == scanner.Ident && (v.Text == "true" || v.Text == "false")
 		case "ID":
-			return v.Type == scanner.Int || v.Type == scanner.String
+			return v.Type == scanner.Int || v.Type == scanner.String || v.Type == scanner.BlockString
 		default:
 			//TODO: Type-check against expected type by Unmarshalling
 			return true

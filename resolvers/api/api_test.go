@@ -24,7 +24,7 @@ func TestLoadComplexAPI(t *testing.T) {
     require.NoError(t, err)
 
     actual := engine.Schema.String()
-    // ioutil.WriteFile("k8s.graphql", []byte(actual), 0644)
+    //ioutil.WriteFile("testdata/k8s.graphql", []byte(actual), 0644)
 
     file, err := ioutil.ReadFile("testdata/k8s.graphql")
     require.NoError(t, err)

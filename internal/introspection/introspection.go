@@ -202,10 +202,14 @@ func (r *Field) Name() string {
 }
 
 func (r *Field) Description() *string {
-	if r.field.Desc == "" {
+	return Description(r.field.Desc)
+}
+
+func Description(desc *schema.Description) *string {
+	if desc == nil || desc.Text == "" {
 		return nil
 	}
-	return &r.field.Desc
+	return &desc.Text
 }
 
 func (r *Field) Args() []*InputValue {
@@ -246,10 +250,7 @@ func (r *InputValue) Name() string {
 }
 
 func (r *InputValue) Description() *string {
-	if r.value.Desc == "" {
-		return nil
-	}
-	return &r.value.Desc
+	return Description(r.value.Desc)
 }
 
 func (r *InputValue) Type() *Type {
@@ -273,10 +274,7 @@ func (r *EnumValue) Name() string {
 }
 
 func (r *EnumValue) Description() *string {
-	if r.value.Desc == "" {
-		return nil
-	}
-	return &r.value.Desc
+	return Description(r.value.Desc)
 }
 
 func (r *EnumValue) IsDeprecated() bool {
@@ -301,10 +299,7 @@ func (r *Directive) Name() string {
 }
 
 func (r *Directive) Description() *string {
-	if r.directive.Desc == "" {
-		return nil
-	}
-	return &r.directive.Desc
+	return Description(r.directive.Desc)
 }
 
 func (r *Directive) Locations() []string {

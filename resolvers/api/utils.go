@@ -51,7 +51,7 @@ func capitalizeFirstLetter(name string) string {
     return strings.ToUpper(name[0:1]) + name[1:]
 }
 
-func description(desc string) string {
+func comment(desc string) string {
     if desc == "" {
         return ""
     }
@@ -61,15 +61,15 @@ func description(desc string) string {
     return text.Indent(desc, "# ")
 }
 
-func newStyleDescription(desc string) string {
+func description(desc string) string {
     if desc == "" {
         return ""
     }
     if !strings.HasSuffix(desc, "\n") {
         desc += "\n"
     }
-    desc = `"""\n`+desc+`"""\n`
-    return text.Indent(desc, "  ")
+    desc = "\n"+`"""`+"\n"+desc+`"""`+"\n"
+    return desc
 }
 
 func renderTemplate(variables interface{}, templateText string) (string, error) {

@@ -1,15 +1,16 @@
 package gqltesting
 
 import (
-	"bytes"
-    "context"
-    "encoding/json"
-    "github.com/chirino/graphql/internal/deprecated"
-    "reflect"
-    "strconv"
-    "testing"
+	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/chirino/graphql/internal/deprecated"
+	"github.com/stretchr/testify/require"
+	"reflect"
+	"strconv"
+	"testing"
 
-    "github.com/chirino/graphql/errors"
+	"github.com/chirino/graphql/errors"
 )
 
 // Test is a GraphQL test case to be used with RunTest(s).
@@ -58,12 +59,8 @@ func RunTest(t *testing.T, test *Test) {
 		if err != nil {
 			t.Fatalf("want: invalid JSON: %s", err)
 		}
-
-		if !bytes.Equal(got, want) {
-			t.Logf("got:  %s", got)
-			t.Logf("want: %s", want)
-			t.Fail()
-		}
+		fmt.Println(string(got))
+		require.Equal(t, string(want), string(got))
 	}
 
 }
@@ -73,7 +70,7 @@ func formatJSON(data []byte) ([]byte, error) {
 	if err := json.Unmarshal(data, &v); err != nil {
 		return nil, err
 	}
-	formatted, err := json.Marshal(v)
+	formatted, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return nil, err
 	}
