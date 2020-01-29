@@ -274,8 +274,31 @@ func (this *MyHttpResolver) Resolve(request *resolvers.ResolveRequest) resolvers
 }
 ```
 
+## License
+
+[BSD](./LICENSE)
+
+## Development
+
+* We love [pull requests](https://github.com/chirino/graphql/pulls)
+* Having problems? Open an [issue](https://github.com/chirino/graphql/issues)
+* This project is written in [Go](https://golang.org/).  It should work on any platform where go is supported.
+* 
+
+## Future Work
+
+* setup ci jobs to validate PRs
+* provide better hooks to implement custom directives so you can do things like configuring/selecting resolvers
+  using directives.  Or using directives to drive schema generation.
+* implement the GraphQL websocket interface
+* implement subscriptions
+* provide [dataloader](https://github.com/graphql/dataloader) functionality 
+
+### Related Projects 
+
+* [graphql-4-apis](https://github.com/chirino/graphql-4-apis)
+
 ### History / Credits
 
 This is a fork of the http://github.com/graph-gophers/graphql-go project.  
 
-### GraphQL Schema Updates
