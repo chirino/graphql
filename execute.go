@@ -1,7 +1,6 @@
 package graphql
 
 import (
-    "bufio"
     "bytes"
     "context"
     "encoding/json"
@@ -87,7 +86,7 @@ func (engine *Engine) Execute(ctx context.Context, request *EngineRequest, root 
         Limiter:   make(chan byte, engine.MaxParallelism),
         Context:   traceContext,
         Root:      root,
-        Out:       bufio.NewWriter(&out),
+        Out:       &out,
     }
 
     errs = r.Execute()

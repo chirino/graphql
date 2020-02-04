@@ -1,7 +1,7 @@
 package exec
 
 import (
-    "bufio"
+    "bytes"
     "context"
     "encoding/json"
     "fmt"
@@ -32,7 +32,7 @@ type Execution struct {
     Filter    resolvers.ResolutionFilter
     Mu        sync.Mutex
     Errs      []*errors.QueryError
-    Out       *bufio.Writer
+    Out       *bytes.Buffer
 }
 
 func (this *Execution) GetSchema() *schema.Schema {
@@ -76,7 +76,6 @@ func (this *Execution) Execute() []*errors.QueryError {
 
     rootValue := reflect.ValueOf(this.Root)
     this.recursiveExecute(nil, rootValue, rootType, this.Operation.Selections)
-    this.Out.Flush()
 
     if err := this.Context.Err(); err != nil {
         return []*errors.QueryError{errors.Errorf("%s", err)}

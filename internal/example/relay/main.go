@@ -36,8 +36,8 @@ func main() {
     fmt.Println("GraphQL service running at http://localhost:8080/graphql")
 
     graphiql, _ := graphiql.NewGraphiqlHandler("/graphql")
-    http.Handle("/graphiql", graphiql)
-    fmt.Println("GraphiQL UI running at http://localhost:8080/graphiql")
+    http.Handle("/", graphiql)
+    fmt.Println("GraphiQL UI running at http://localhost:8080/")
 
     log.Fatal(http.ListenAndServe(":8080", nil))
 }
