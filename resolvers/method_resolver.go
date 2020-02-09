@@ -57,7 +57,11 @@ func (this methodResolver) Resolve(request *ResolveRequest) Resolution {
         if childMethod.hasError && !result[1].IsNil() {
             return reflect.Value{}, result[1].Interface().(error)
         }
-        return result[0], nil
+        if len(result) > 0 {
+            return result[0], nil
+        } else {
+            return reflect.ValueOf(nil), nil
+        }
 
     }
 }

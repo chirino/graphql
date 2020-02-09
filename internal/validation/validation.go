@@ -86,7 +86,7 @@ func Validate(s *schema.Schema, doc *query.Document, maxDepth int) []*errors.Que
 			validateName(c, opNames, op.Name, "UniqueOperationNames", "operation")
 		}
 
-		validateDirectives(opc, string(op.Type), op.Directives)
+		validateDirectives(opc, strings.ToUpper(string(op.Type)), op.Directives)
 
 		varNames := make(nameSet)
 		for _, v := range op.Vars {
@@ -112,18 +112,7 @@ func Validate(s *schema.Schema, doc *query.Document, maxDepth int) []*errors.Que
 			}
 		}
 
-		var entryPoint schema.NamedType
-		switch op.Type {
-		case query.Query:
-			entryPoint = s.EntryPoints["query"]
-		case query.Mutation:
-			entryPoint = s.EntryPoints["mutation"]
-		case query.Subscription:
-			entryPoint = s.EntryPoints["subscription"]
-		default:
-			panic("unreachable")
-		}
-
+		entryPoint := s.EntryPoints[op.Type]
 		validateSelectionSet(opc, op.Selections, entryPoint)
 
 		fragUsed := make(map[*query.FragmentDecl]struct{})

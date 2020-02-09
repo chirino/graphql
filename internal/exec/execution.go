@@ -8,6 +8,7 @@ import (
     "github.com/chirino/graphql/errors"
     "github.com/chirino/graphql/internal/exec/packer"
     "github.com/chirino/graphql/internal/introspection"
+    "github.com/chirino/graphql/internal/linkedmap"
     "github.com/chirino/graphql/internal/query"
     "github.com/chirino/graphql/log"
     "github.com/chirino/graphql/resolvers"
@@ -22,7 +23,7 @@ type Execution struct {
     Vars      map[string]interface{}
     Doc       *query.Document
     Operation *query.Operation
-    Limiter   chan byte
+    limiter   chan byte
     Tracer    trace.Tracer
     Logger    log.Logger
     Root      interface{}
@@ -31,8 +32,13 @@ type Execution struct {
     Resolver  resolvers.Resolver
     Filter    resolvers.ResolutionFilter
     Mu        sync.Mutex
-    Errs      []*errors.QueryError
-    Out       *bytes.Buffer
+
+    subMu          sync.Mutex
+    rootFields     *linkedmap.LinkedMap
+    data           *bytes.Buffer
+    errs           []*errors.QueryError
+    MaxParallelism int
+    Handler        func(data json.RawMessage, errors []*errors.QueryError)
 }
 
 func (this *Execution) GetSchema() *schema.Schema {
@@ -43,7 +49,7 @@ func (this *Execution) GetContext() context.Context {
     return this.Context
 }
 func (this *Execution) GetLimiter() *chan byte {
-    return &this.Limiter
+    return &this.limiter
 }
 func (this *Execution) HandlePanic(path []string) error {
     if value := recover(); value != nil {
@@ -59,38 +65,19 @@ func makePanicError(value interface{}) *errors.QueryError {
     return errors.Errorf("graphql: panic occurred: %v", value)
 }
 
-func (this *Execution) Execute() []*errors.QueryError {
-
-    // This is the first execution goroutine.
-    this.Limiter <- 1
-    defer func() { <-this.Limiter }()
-
-    var rootType schema.NamedType
-    if this.Operation.Type == query.Query {
-        rootType = this.Schema.EntryPoints["query"]
-    } else if this.Operation.Type == query.Mutation {
-        rootType = this.Schema.EntryPoints["mutation"]
-    } else if this.Operation.Type == query.Subscription {
-        rootType = this.Schema.EntryPoints["subscription"]
-    }
-
-    rootValue := reflect.ValueOf(this.Root)
-    this.recursiveExecute(nil, rootValue, rootType, this.Operation.Selections)
-
-    if err := this.Context.Err(); err != nil {
-        return []*errors.QueryError{errors.Errorf("%s", err)}
-    }
-    return this.Errs
+type ExecutionResult struct {
+    Errors []*errors.QueryError
+    Data   *bytes.Buffer
 }
 
-type selectionResolver struct {
-    parent     *selectionResolver
+type SelectionResolver struct {
+    parent     *SelectionResolver
     field      *query.Field
-    resolver   resolvers.Resolution
+    Resolution resolvers.Resolution
     selections []query.Selection
 }
 
-func (this *selectionResolver) Path() []string {
+func (this *SelectionResolver) Path() []string {
     if this == nil {
         return []string{}
     }
@@ -100,52 +87,7 @@ func (this *selectionResolver) Path() []string {
     return append(this.parent.Path(), this.field.Alias.Text)
 }
 
-type linkedMapEntry struct {
-    value interface{}
-    next  *linkedMapEntry
-}
-type linkedMap struct {
-    valuesByKey map[interface{}]*linkedMapEntry
-    first       *linkedMapEntry
-    last        *linkedMapEntry
-}
-
-func CreateLinkedMap(size int) *linkedMap {
-    return &linkedMap{
-        valuesByKey: make(map[interface{}]*linkedMapEntry, size),
-    }
-}
-
-func (this *linkedMap) Get(key interface{}) interface{} {
-    entry := this.valuesByKey[key]
-    if entry == nil {
-        return nil
-    }
-    return entry.value
-}
-
-func (this *linkedMap) Set(key interface{}, value interface{}) interface{} {
-    if previousEntry, found := this.valuesByKey[key]; found {
-        prevValue := previousEntry.value
-        entry := this.valuesByKey[key]
-        entry.value = value
-        return prevValue
-    }
-    entry := &linkedMapEntry{
-        value: value,
-    }
-    if this.first == nil {
-        this.first = entry
-        this.last = entry
-    } else {
-        this.last.next = entry
-        this.last = entry
-    }
-    this.valuesByKey[key] = entry
-    return nil
-}
-
-func (this *Execution) CreateSelectionResolvers(parentSelectionResolver *selectionResolver, selectionResolvers *linkedMap, parentValue reflect.Value, parentType schema.Type, selections []query.Selection) {
+func (this *Execution) resolveFields(parentSelectionResolver *SelectionResolver, selectionResolvers *linkedmap.LinkedMap, parentValue reflect.Value, parentType schema.Type, selections []query.Selection) {
     for _, selection := range selections {
         switch field := selection.(type) {
         case *query.Field:
@@ -153,17 +95,17 @@ func (this *Execution) CreateSelectionResolvers(parentSelectionResolver *selecti
                 continue
             }
 
-            var sr *selectionResolver = nil
+            var sr *SelectionResolver = nil
             x := selectionResolvers.Get(field.Alias.Text)
             if x != nil {
-                sr = x.(*selectionResolver)
+                sr = x.(*SelectionResolver)
             } else {
-                sr = &selectionResolver{}
+                sr = &SelectionResolver{}
                 sr.field = field
                 sr.parent = parentSelectionResolver
             }
 
-            if sr.resolver == nil {
+            if sr.Resolution == nil {
 
                 // This field has not been resolved yet..
                 sr.selections = field.Selections
@@ -191,7 +133,7 @@ func (this *Execution) CreateSelectionResolvers(parentSelectionResolver *selecti
                         Path:    append(parentSelectionResolver.Path(), field.Alias.Text),
                     }).WithStack())
                 } else {
-                    sr.resolver = this.Filter.Filter(resolveRequest, resolution)
+                    sr.Resolution = this.Filter.Filter(resolveRequest, resolution)
                     selectionResolvers.Set(field.Alias.Text, sr)
                 }
             } else {
@@ -217,94 +159,161 @@ func (this *Execution) CreateSelectionResolvers(parentSelectionResolver *selecti
     }
 }
 
-func (this *Execution) CreateSelectionResolversForFragment(parentSelectionResolver *selectionResolver, fragment *query.Fragment, parentType schema.Type, parentValue reflect.Value, selectionResolvers *linkedMap) {
+func (this *Execution) CreateSelectionResolversForFragment(parentSelectionResolver *SelectionResolver, fragment *query.Fragment, parentType schema.Type, parentValue reflect.Value, selectionResolvers *linkedmap.LinkedMap) {
     if fragment.On.Text != "" && fragment.On.Text != parentType.String() {
         castType := this.Schema.Types[fragment.On.Text]
         if casted, ok := resolvers.TryCastFunction(parentValue, fragment.On.Text); ok {
-            this.CreateSelectionResolvers(parentSelectionResolver, selectionResolvers, casted, castType, fragment.Selections)
+            this.resolveFields(parentSelectionResolver, selectionResolvers, casted, castType, fragment.Selections)
         }
     } else {
-        this.CreateSelectionResolvers(parentSelectionResolver, selectionResolvers, parentValue, parentType, fragment.Selections)
+        this.resolveFields(parentSelectionResolver, selectionResolvers, parentValue, parentType, fragment.Selections)
     }
 }
 
-func (this *Execution) recursiveExecute(parentSelection *selectionResolver, parentValue reflect.Value, parentType schema.Type, selections []query.Selection) {
-    {
-        defer func() {
-            if value := recover(); value != nil {
-                this.Logger.LogPanic(this.Context, value)
-                err := makePanicError(value)
-                err.Path = parentSelection.Path()
-                this.AddError(err)
-            }
-        }()
+func (this *Execution) Execute() (bool, error) {
 
-        // Create resolvers for the the selections.  Creating resolvers can trigger async fetching of
-        // the field data.
-        selectedFields := CreateLinkedMap(len(selections))
-        this.CreateSelectionResolvers(parentSelection, selectedFields, parentValue, parentType, selections)
+    rootType := this.Schema.EntryPoints[this.Operation.Type]
+    rootValue := reflect.ValueOf(this.Root)
+    rootFields := linkedmap.CreateLinkedMap(len(this.Operation.Selections))
 
-        // Write the
-        this.Out.WriteByte('{')
+    // async processing can start when the field is selected... apply limit here...
+    this.errs = []*errors.QueryError{}
+    this.limiter = make(chan byte, this.MaxParallelism)
+    this.limiter <- 1
+    this.resolveFields(nil, rootFields, rootValue, rootType, this.Operation.Selections)
 
-        writeComma := false
-        for entry := selectedFields.first; entry != nil; entry = entry.next {
-            if writeComma {
-                this.Out.WriteByte(',')
-            }
-            writeComma = true
-            selected := entry.value.(*selectionResolver)
-            field := selected.field
+    if this.Operation.Type == schema.Subscription {
 
-            this.Out.WriteByte('"')
-            this.Out.WriteString(selected.field.Alias.Text)
-            this.Out.WriteByte('"')
-            this.Out.WriteByte(':')
-
-            resolver := selected.resolver
-
-            childValue, err := resolver()
-            if err != nil {
-                this.AddError((&errors.QueryError{
-                    Message:       err.Error(),
-                    Path:          selected.Path(),
-                    ResolverError: err,
-                }).WithStack())
-                continue
-            }
-
-            childType, nonNullType := unwrapNonNull(field.Schema.Field.Type)
-            if (childValue.Kind() == reflect.Ptr || childValue.Kind() == reflect.Interface) &&
-                childValue.IsNil() {
-                if nonNullType {
-                    this.AddError((&errors.QueryError{
-                        Message: "ResolverFactory produced a nil value for a Non Null type",
-                        Path:    selected.Path(),
-                    }).WithStack())
-                } else {
-                    this.Out.WriteString("null")
-                }
-                continue
-            }
-
-            // Are we a leaf node?
-            if selected.selections == nil {
-                this.writeLeaf(childValue, selected, childType)
-            } else {
-                switch childType := childType.(type) {
-                case *schema.List:
-                    this.writeList(*childType, childValue, selected, func(elementType schema.Type, element reflect.Value) {
-                        this.recursiveExecute(selected, element, elementType, selected.selections)
-                    })
-                case *schema.Object, *schema.Interface, *schema.Union:
-                    this.recursiveExecute(selected, childValue, childType, selected.selections)
-                }
-            }
-
+        // subs are kinda special... we need to setup a subscription to an event,
+        // and execute it every time the event is triggered...
+        if len(this.Operation.Selections) != 1 {
+            return true, errors.Errorf("you can only select 1 field in a subscription")
         }
-        this.Out.WriteByte('}')
 
+        if len(rootFields.ValuesByKey) != 1 {
+            // We may not have resolved it correctly..
+            return true, errors.AsMulti(this.errs)
+        }
+        // This code path interact closely with with FireSubscriptionEvent method.
+        this.rootFields = rootFields
+        selected := rootFields.First.Value.(*SelectionResolver)
+        _, err := selected.Resolution() // This should start go routines to fire events via FireSubscriptionEvent
+        if err != nil {
+            return true, err
+        }
+        return true, nil
+
+    } else {
+
+        // This is the first execution goroutine.
+        // TODO: this may need to move for the subscription case..
+        this.data = &bytes.Buffer{}
+        defer func() { <-this.limiter }()
+        this.recursiveExecute(nil, rootFields)
+        this.Handler(json.RawMessage(this.data.Bytes()), this.errs)
+        return false, nil
     }
+}
+
+// This is called by subscription resolvers to send out a subscription event.
+func (this *Execution) FireSubscriptionEvent(value reflect.Value) {
+    if this.rootFields == nil {
+        panic("the FireSubscriptionEvent method should only be called when triggering events for subscription fields")
+    }
+
+    // Protect against a resolver firing concurrent events at us.. we only will process one at
+    // at time.
+    this.subMu.Lock()
+    defer this.subMu.Unlock()
+
+    selected := this.rootFields.First.Value.(*SelectionResolver)
+    selected.Resolution = func() (reflect.Value, error) {
+        return value, nil
+    }
+    this.data = &bytes.Buffer{}
+    this.errs = []*errors.QueryError{}
+    this.limiter = make(chan byte, this.MaxParallelism)
+    this.limiter <- 1
+    defer func() { <-this.limiter }()
+    this.recursiveExecute(nil, this.rootFields)
+    this.Handler(json.RawMessage(this.data.Bytes()), this.errs)
+}
+
+func (this *Execution) recursiveExecute(parentSelection *SelectionResolver, selectedFields *linkedmap.LinkedMap) { // (parentSelection *SelectionResolver, parentValue reflect.Value, parentType schema.Type, selections []query.Selection) ExecutionResult {
+
+    // Create resolvers for the the selections.  Creating resolvers can trigger async fetching of
+    // the field data.
+
+    defer func() {
+        if value := recover(); value != nil {
+            this.Logger.LogPanic(this.Context, value)
+            err := makePanicError(value)
+            err.Path = parentSelection.Path()
+            this.AddError(err)
+        }
+    }()
+
+    this.data.WriteByte('{')
+
+    writeComma := false
+    for entry := selectedFields.First; entry != nil; entry = entry.Next {
+        if writeComma {
+            this.data.WriteByte(',')
+        }
+        writeComma = true
+        selected := entry.Value.(*SelectionResolver)
+        field := selected.field
+
+        this.data.WriteByte('"')
+        this.data.WriteString(selected.field.Alias.Text)
+        this.data.WriteByte('"')
+        this.data.WriteByte(':')
+
+        resolver := selected.Resolution
+
+        childValue, err := resolver()
+        if err != nil {
+            this.AddError((&errors.QueryError{
+                Message:       err.Error(),
+                Path:          selected.Path(),
+                ResolverError: err,
+            }).WithStack())
+            continue
+        }
+
+        childType, nonNullType := unwrapNonNull(field.Schema.Field.Type)
+        if (childValue.Kind() == reflect.Ptr || childValue.Kind() == reflect.Interface) &&
+            childValue.IsNil() {
+            if nonNullType {
+                this.AddError((&errors.QueryError{
+                    Message: "ResolverFactory produced a nil value for a Non Null type",
+                    Path:    selected.Path(),
+                }).WithStack())
+            } else {
+                this.data.WriteString("null")
+            }
+            continue
+        }
+
+        // Are we a leaf node?
+        if selected.selections == nil {
+            this.writeLeaf(childValue, selected, childType)
+        } else {
+            switch childType := childType.(type) {
+            case *schema.List:
+                this.writeList(*childType, childValue, selected, func(elementType schema.Type, element reflect.Value) {
+                    selectedFields := linkedmap.CreateLinkedMap(len(this.Operation.Selections))
+                    this.resolveFields(selected, selectedFields, element, elementType, selected.selections)
+                    this.recursiveExecute(selected, selectedFields)
+                })
+            case *schema.Object, *schema.Interface, *schema.Union:
+                selectedFields := linkedmap.CreateLinkedMap(len(this.Operation.Selections))
+                this.resolveFields(selected, selectedFields, childValue, childType, selected.selections)
+                this.recursiveExecute(selected, selectedFields)
+            }
+        }
+    }
+    this.data.WriteByte('}')
 }
 
 func (this *Execution) skipByDirective(directives schema.DirectiveList) bool {
@@ -332,7 +341,7 @@ func (this *Execution) skipByDirective(directives schema.DirectiveList) bool {
     return false
 }
 
-func (this *Execution) writeList(listType schema.List, childValue reflect.Value, selectionResolver *selectionResolver, writeElement func(elementType schema.Type, element reflect.Value)) {
+func (this *Execution) writeList(listType schema.List, childValue reflect.Value, selectionResolver *SelectionResolver, writeElement func(elementType schema.Type, element reflect.Value)) {
 
     // Dereference pointers..
     for ; childValue.Kind() == reflect.Ptr; {
@@ -346,10 +355,10 @@ func (this *Execution) writeList(listType schema.List, childValue reflect.Value,
     switch childValue.Kind() {
     case reflect.Slice, reflect.Array:
         l := childValue.Len()
-        this.Out.WriteByte('[')
+        this.data.WriteByte('[')
         for i := 0; i < l; i++ {
             if i > 0 {
-                this.Out.WriteByte(',')
+                this.data.WriteByte(',')
             }
             element := childValue.Index(i)
             switch elementType := listType.OfType.(type) {
@@ -359,7 +368,7 @@ func (this *Execution) writeList(listType schema.List, childValue reflect.Value,
                 writeElement(elementType, element)
             }
         }
-        this.Out.WriteByte(']')
+        this.data.WriteByte(']')
     default:
         this.AddError((&errors.QueryError{
             Message: fmt.Sprintf("Resolved object was not an array, it was a: %s", childValue.Type().String()),
@@ -368,7 +377,7 @@ func (this *Execution) writeList(listType schema.List, childValue reflect.Value,
     }
 }
 
-func (this *Execution) writeLeaf(childValue reflect.Value, selectionResolver *selectionResolver, childType schema.Type) {
+func (this *Execution) writeLeaf(childValue reflect.Value, selectionResolver *SelectionResolver, childType schema.Type) {
     switch childType := childType.(type) {
     case *schema.NonNull:
         if childValue.Kind() == reflect.Ptr && childValue.Elem().IsNil() {
@@ -382,7 +391,7 @@ func (this *Execution) writeLeaf(childValue reflect.Value, selectionResolver *se
         if err != nil {
             panic(errors.Errorf("could not marshal %v: %s", childValue, err))
         }
-        this.Out.Write(data)
+        this.data.Write(data)
 
     case *schema.Enum:
 
@@ -391,9 +400,9 @@ func (this *Execution) writeLeaf(childValue reflect.Value, selectionResolver *se
             childValue = childValue.Elem()
         }
 
-        this.Out.WriteByte('"')
-        this.Out.WriteString(childValue.String())
-        this.Out.WriteByte('"')
+        this.data.WriteByte('"')
+        this.data.WriteString(childValue.String())
+        this.data.WriteByte('"')
 
     case *schema.List:
         this.writeList(*childType, childValue, selectionResolver, func(elementType schema.Type, element reflect.Value) {
@@ -408,7 +417,7 @@ func (this *Execution) writeLeaf(childValue reflect.Value, selectionResolver *se
 func (r *Execution) AddError(err *errors.QueryError) {
     if err != nil {
         r.Mu.Lock()
-        r.Errs = append(r.Errs, err)
+        r.errs = append(r.errs, err)
         r.Mu.Unlock()
     }
 }

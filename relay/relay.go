@@ -4,9 +4,9 @@ import (
     "context"
     "encoding/base64"
     "encoding/json"
-    "errors"
     "fmt"
     "github.com/chirino/graphql/customtypes"
+    "github.com/chirino/graphql/errors"
     "github.com/gorilla/websocket"
     "net/http"
     "strings"
@@ -41,7 +41,7 @@ func UnmarshalSpec(id customtypes.ID, v interface{}) error {
     }
     i := strings.IndexByte(string(s), ':')
     if i == -1 {
-        return errors.New("invalid graphql.ID")
+        return errors.Errorf("invalid graphql.ID")
     }
     return json.Unmarshal([]byte(s[i+1:]), v)
 }
@@ -86,6 +86,7 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
         return
     }
     conn.WriteJSON(OperationMessage{Type: "connection_ack"})
+    streams := map[interface{}]*graphql.ResponseStream{}
 
     for {
 
@@ -107,23 +108,55 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
             }
 
             ctx := withValue(withValue(r.Context(), "net/http.ResponseWriter", w), "*net/http.Request", r)
-            response := h.Engine.Execute(ctx, &request, nil)
+            stream, err := h.Engine.Execute(ctx, &request, nil)
 
-            data, err := json.Marshal(response)
             if err != nil {
-                fmt.Printf("could not marshal payload: %v\n", err)
+                r := graphql.EngineResponse{Errors: errors.AsArray(err)}
+                payload, err := json.Marshal(r)
+                if err != nil {
+                    panic(fmt.Sprintf("could not marshal payload: %v\n", err))
+                }
+                conn.WriteJSON(OperationMessage{Type: "error", Id: msg.Id, Payload: json.RawMessage(payload)})
                 return
             }
 
-            resultType := "data"
-            if len(response.Errors) > 0 {
-                resultType = "error"
+            // save it.. so that client can later cancel it...
+            streams[msg.Id] = stream
+
+            if stream.IsSubscription {
+                // Start a goroutine ot handle the events....
+                go func() {
+                    for {
+                        r := stream.Next()
+                        payload, err := json.Marshal(r)
+                        if err != nil {
+                            panic(fmt.Sprintf("could not marshal payload: %v\n", err))
+                        }
+                        conn.WriteJSON(OperationMessage{Type: "data", Id: msg.Id, Payload: json.RawMessage(payload)})
+                    }
+                }()
+
+            } else {
+
+                r := stream.Next()
+                payload, err := json.Marshal(r)
+                if err != nil {
+                    stream.Close()
+                    panic(fmt.Sprintf("could not marshal payload: %v\n", err))
+                }
+                conn.WriteJSON(OperationMessage{Type: "data", Id: msg.Id, Payload: json.RawMessage(payload)})
+                conn.WriteJSON(OperationMessage{Type: "complete", Id: msg.Id})
+                stream.Close()
             }
-            conn.WriteJSON(OperationMessage{Type: resultType, Id: msg.Id, Payload: json.RawMessage(data)})
-            conn.WriteJSON(OperationMessage{Type: "complete", Id: msg.Id})
 
         case "stop":
 
+            stream := streams[msg.Id]
+            if stream != nil {
+                stream.Close()
+                delete(streams, msg.Id)
+                conn.WriteJSON(OperationMessage{Type: "complete", Id: msg.Id})
+            }
         }
     }
 }
@@ -141,12 +174,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
         http.Error(w, err.Error(), http.StatusBadRequest)
         return
     }
-    var response *graphql.EngineResponse = nil
     // Attach the response and request to the context, in case a resolver wants to
     // work at the the http level.
     ctx := withValue(withValue(r.Context(), "net/http.ResponseWriter", w), "*net/http.Request", r)
-    response = h.Engine.Execute(ctx, &request, nil)
-    responseJSON, err := json.Marshal(response)
+    reponse := h.Engine.ExecuteOne(ctx, &request, nil)
+    responseJSON, err := json.Marshal(reponse)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return

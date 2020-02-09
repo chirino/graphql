@@ -41,7 +41,7 @@ func (s *Schema) WriteSchemaFormat(out io.StringWriter) {
 
     out.WriteString("schema {\n")
     for _, entry := range mapToSortedArray(s.EntryPoints) {
-        key := entry.Key.(string)
+        key := entry.Key.(OperationType)
         value := entry.Value.(NamedType)
         out.WriteString(fmt.Sprintf("  %s: %s\n", key, value.TypeName()))
     }

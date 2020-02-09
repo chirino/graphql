@@ -142,7 +142,7 @@ func (s *Schema) Exec(ctx context.Context, queryString string, operationName str
         OperationName: operationName,
         Variables:     variables,
     }
-    return s.Engine.Execute(ctx, &request, s.resolver)
+    return s.Engine.ExecuteOne(ctx, &request, s.resolver)
 }
 
 //func (s *Schema) exec(ctx context.Context, queryString string, operationName string, variables map[string]interface{}, res *resolvable.Schema) *Response {

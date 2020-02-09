@@ -315,7 +315,7 @@ func TestCustomAsyncResolvers(t *testing.T) {
     }
 
     benchmark := testing.Benchmark(func(b *testing.B) {
-        response := engine.Execute(context.TODO(), &graphql.EngineRequest{Query: "{f1,f2,f3,f4}"}, nil)
+        response := engine.ExecuteOne(context.TODO(), &graphql.EngineRequest{Query: "{f1,f2,f3,f4}"}, nil)
         assert.Equal(t, 0, len(response.Errors))
     })
     assert.True(t, benchmark.T.Seconds() > 3)
@@ -341,7 +341,7 @@ func TestCustomAsyncResolvers(t *testing.T) {
         engine.Resolver,
     }
     benchmark = testing.Benchmark(func(b *testing.B) {
-        response := engine.Execute(context.TODO(), &graphql.EngineRequest{Query: "{f1,f2,f3,f4}"}, nil)
+        response := engine.ExecuteOne(context.TODO(), &graphql.EngineRequest{Query: "{f1,f2,f3,f4}"}, nil)
         assert.Equal(t, 0, len(response.Errors))
     })
     assert.True(t, benchmark.T.Seconds() > 0)
@@ -424,9 +424,9 @@ type MyMutation struct {
     name string
 }
 
-func (m*MyMutation) SetName(args struct{ Name string }) string {
+func (m *MyMutation) SetName(args struct{ Name string }) string {
     m.name = args.Name
-    return "Hi "+m.name
+    return "Hi " + m.name
 }
 
 func TestMutationStringArgs(t *testing.T) {
@@ -469,4 +469,56 @@ type MyMutation {
     require.NoError(t, err)
     assert.Equal(t, `{"setName":"Hi Hiram"}`, result)
     assert.Equal(t, "Hiram", root.name)
+}
+
+type MySubscription struct {
+}
+
+func (m *MyMutation) Hello(ctx resolvers.ExecutionContext, args struct{ Duration int }) {
+    go func() {
+        counter := args.Duration
+        for {
+            select {
+            // Please use the context to know when the subscription is canceled.
+            case <-ctx.GetContext().Done():
+                return
+            case <-time.After(time.Duration(args.Duration) * time.Millisecond):
+                // every few duration ms.. fire a subscription event.
+                ctx.FireSubscriptionEvent(reflect.ValueOf(fmt.Sprintf("Hello: %d", counter)))
+                counter += args.Duration
+            }
+        }
+    }()
+}
+
+func TestSubscription(t *testing.T) {
+    engine := graphql.New()
+    root := &MyMutation{}
+    engine.Root = root
+
+    err := engine.Schema.Parse(`
+schema {
+    subscription: MySubscription
+}
+type MySubscription {
+	hello(duration: Int!): String
+}
+`)
+    require.NoError(t, err)
+
+    query, err := engine.Execute(context.Background(), &graphql.EngineRequest{Query: `subscription{ hello(duration:10) }`}, nil)
+    require.NoError(t, err)
+
+    next := query.Next()
+    assert.NoError(t, next.Error())
+    assert.Equal(t, `{"hello":"Hello: 10"}`, string(next.Data))
+
+    next = query.Next()
+    assert.NoError(t, next.Error())
+    assert.Equal(t, `{"hello":"Hello: 20"}`, string(next.Data))
+
+    query.Close() // close out the subscription...
+
+    next = query.Next()
+    assert.Nil(t, next)
 }

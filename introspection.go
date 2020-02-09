@@ -10,9 +10,9 @@ func (engine *Engine) GetSchemaIntrospectionJSON() ([]byte, error) {
     r := EngineRequest{
         Query: introspectionQuery,
     }
-    result := engine.Execute(context.Background(), &r, engine.Root)
-    if len(result.Errors) != 0 {
-        panic(result.Errors[0])
+    result := engine.ExecuteOne(context.Background(), &r, engine.Root)
+    if result.Error() != nil {
+        panic(result.Error())
     }
     return result.Data, nil
 }

@@ -84,11 +84,22 @@ func (l *Lexer) PeekKeyword(keyword string) bool {
     return l.next == scanner.Ident && l.sc.TokenText() == keyword
 }
 
-func (l *Lexer) ConsumeKeyword(keyword string) {
-    if l.next != scanner.Ident || l.sc.TokenText() != keyword {
-        l.SyntaxError(fmt.Sprintf("unexpected %q, expecting %q", l.sc.TokenText(), keyword))
+func (l *Lexer) ConsumeKeyword(keywords ...string) string {
+    if l.next != scanner.Ident || !isOneOf(l.sc.TokenText(), keywords...) {
+        l.SyntaxError(fmt.Sprintf("unexpected %q, expecting %q", l.sc.TokenText(), keywords))
     }
+    result := l.sc.TokenText()
     l.Consume()
+    return result
+}
+
+func isOneOf(one string, of...string) bool {
+    for _, v := range of {
+        if one == v {
+            return true
+        }
+    }
+    return false
 }
 
 func (l *Lexer) ConsumeLiteral() string {

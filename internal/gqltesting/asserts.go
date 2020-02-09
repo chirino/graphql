@@ -21,7 +21,7 @@ func AssertRequestString(t *testing.T, engine *graphql.Engine, req string, expec
 }
 
 func AssertRequest(t *testing.T, engine *graphql.Engine, request graphql.EngineRequest, expected string) {
-    response := engine.Execute(context.TODO(), &request, engine.Root)
+    response := engine.ExecuteOne(context.TODO(), &request, engine.Root)
     actual := jsonMarshal(t, response)
     assert.Equal(t, expected, actual)
 }

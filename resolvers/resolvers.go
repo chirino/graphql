@@ -8,6 +8,7 @@ import (
 )
 
 type ExecutionContext interface {
+    FireSubscriptionEvent(value reflect.Value)
     GetSchema() *schema.Schema
     GetContext() context.Context
     GetLimiter() *chan byte

@@ -28,7 +28,7 @@ type Schema struct {
     //
     // NOTE: The specification refers to this concept as "Root Operation Types".
     // TODO: Rename the `EntryPoints` field to `RootOperationTypes` to align with spec terminology.
-    EntryPoints map[string]NamedType
+    EntryPoints map[OperationType]NamedType
 
     // Types are the fundamental unit of any GraphQL schema.
     // There are six kinds of named types, and two wrapping types.
@@ -46,7 +46,7 @@ type Schema struct {
     // http://facebook.github.io/graphql/draft/#sec-Type-System.Directives
     DeclaredDirectives map[string]*DirectiveDecl
 
-    entryPointNames map[string]string
+    entryPointNames map[OperationType]string
     objects         []*Object
     unions          []*Union
     enums           []*Enum
@@ -327,7 +327,7 @@ type Field struct {
 // New initializes an instance of Schema.
 func New() *Schema {
     s := &Schema{
-        entryPointNames:    make(map[string]string),
+        entryPointNames:    make(map[OperationType]string),
         Types:              make(map[string]NamedType),
         DeclaredDirectives: make(map[string]*DirectiveDecl),
     }
@@ -364,7 +364,7 @@ func (s *Schema) Parse(schemaString string) error {
         }
     }
 
-    s.EntryPoints = make(map[string]NamedType)
+    s.EntryPoints = make(map[OperationType]NamedType)
     for key, name := range s.entryPointNames {
         t, ok := s.Types[name]
         if !ok {
@@ -538,7 +538,7 @@ func parseSchema(s *Schema, l *lexer.Lexer) {
             s.Directives = ParseDirectives(l)
             l.ConsumeToken('{')
             for l.Peek() != '}' {
-                name := l.ConsumeIdent()
+                name := OperationType(l.ConsumeKeyword(string(Query), string(Mutation), string(Subscription)))
                 l.ConsumeToken(':')
                 typ := l.ConsumeIdent()
                 s.entryPointNames[name] = typ

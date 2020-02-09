@@ -9,6 +9,34 @@ import (
 
 type multi []error
 
+func AsMulti(errs []*QueryError) error {
+    values := make([]error, len(errs))
+    for i, err := range errs {
+        values[i] = err
+    }
+    return Multi(values...)
+}
+
+func AsArray(args ...error) []*QueryError {
+    values := []*QueryError{}
+    for _, r := range args {
+        if r == nil {
+            continue
+        }
+        switch r := r.(type) {
+        case *QueryError:
+            values = append(values, r)
+        case multi:
+            values = append(values, AsArray(r...)...)
+        default:
+            values = append(values, &QueryError{
+                Message: r.Error(),
+            })
+        }
+    }
+    return values
+}
+
 func Multi(args ...error) error {
     values := []error{}
     for _, err := range args {

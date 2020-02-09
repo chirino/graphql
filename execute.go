@@ -1,7 +1,6 @@
 package graphql
 
 import (
-    "bytes"
     "context"
     "encoding/json"
     "fmt"
@@ -36,73 +35,6 @@ func (r *EngineResponse) Error() error {
     return errors.Multi(errs...)
 }
 
-// Execute the given request.
-func (engine *Engine) Execute(ctx context.Context, request *EngineRequest, root interface{}) *EngineResponse {
-
-    doc, qErr := query.Parse(request.Query)
-    if qErr != nil {
-        return &EngineResponse{Errors: []*errors.QueryError{qErr}}
-    }
-
-    validationFinish := engine.ValidationTracer.TraceValidation()
-    errs := validation.Validate(engine.Schema, doc, engine.MaxDepth)
-    validationFinish(errs)
-
-    if len(errs) != 0 {
-        return &EngineResponse{Errors: errs}
-    }
-
-    op, err := getOperation(doc, request.OperationName)
-    if err != nil {
-        return &EngineResponse{Errors: []*errors.QueryError{errors.Errorf("%s", err)}}
-    }
-
-    varTypes := make(map[string]*introspection.Type)
-    for _, v := range op.Vars {
-        t, err := schema.ResolveType(v.Type, engine.Schema.Resolve)
-        if err != nil {
-            return &EngineResponse{Errors: []*errors.QueryError{err}}
-        }
-        varTypes[v.Name.Text] = introspection.WrapType(t)
-    }
-
-    if root == nil {
-        root = engine.Root
-    }
-
-    traceContext, finish := engine.Tracer.TraceQuery(ctx, request.Query, request.OperationName, request.Variables, varTypes)
-    out := bytes.Buffer{}
-
-    r := exec.Execution{
-        Schema:    engine.Schema,
-        Tracer:    engine.Tracer,
-        Logger:    engine.Logger,
-        Resolver:  engine.Resolver,
-        Filter:    engine.Filter,
-        Doc:       doc,
-        Operation: op,
-        Vars:      request.Variables,
-        VarTypes:  varTypes,
-        Limiter:   make(chan byte, engine.MaxParallelism),
-        Context:   traceContext,
-        Root:      root,
-        Out:       &out,
-    }
-
-    errs = r.Execute()
-    finish(errs)
-
-    if len(errs) > 0 {
-        return &EngineResponse{
-            Errors: errs,
-        }
-    }
-
-    return &EngineResponse{
-        Data: out.Bytes(),
-    }
-}
-
 func getOperation(document *query.Document, operationName string) (*query.Operation, error) {
     if len(document.Operations) == 0 {
         return nil, fmt.Errorf("no operations in query document")
@@ -129,11 +61,10 @@ func (engine *Engine) Exec(ctx context.Context, result interface{}, query string
     for i := 0; i+1 < len(args); i += 2 {
         variables[args[i].(string)] = args[i+1]
     }
-
     request := EngineRequest{Query: query, Variables: variables}
-    response := engine.Execute(ctx, &request, engine.Root)
+    response := engine.ExecuteOne(ctx, &request, engine.Root)
 
-    if result != nil {
+    if result != nil && response != nil {
         switch result := result.(type) {
         case *[]byte:
             *result = response.Data
@@ -147,4 +78,114 @@ func (engine *Engine) Exec(ctx context.Context, result interface{}, query string
         }
     }
     return response.Error()
+}
+
+type ResponseStream struct {
+    Cancel          context.CancelFunc
+    Responses       chan *EngineResponse
+    IsSubscription  bool
+    ResponseCounter int
+}
+
+func (qr *ResponseStream) Next() *EngineResponse {
+    if !qr.IsSubscription && qr.ResponseCounter > 0 {
+        return nil
+    }
+    response := <-qr.Responses
+    if response != nil {
+        qr.ResponseCounter += 1
+    }
+    return response
+}
+
+func (qr *ResponseStream) Close() {
+    close(qr.Responses)
+    qr.Cancel()
+}
+
+// Execute the given request.
+func (engine *Engine) ExecuteOne(ctx context.Context, request *EngineRequest, root interface{}) *EngineResponse {
+    stream, err := engine.Execute(ctx, request, root)
+    if err != nil {
+        return &EngineResponse{
+            Errors: errors.AsArray(err),
+        }
+    }
+    defer stream.Close()
+    if stream.IsSubscription {
+        return &EngineResponse{
+            Errors: errors.AsArray(errors.Errorf("ExecuteOne method does not support getting results from subscriptions")),
+        }
+    }
+    return stream.Next()
+}
+
+func (engine *Engine) Execute(ctx context.Context, request *EngineRequest, root interface{}) (*ResponseStream, error) {
+    doc, qErr := query.Parse(request.Query)
+    if qErr != nil {
+        return nil, qErr
+    }
+
+    validationFinish := engine.ValidationTracer.TraceValidation()
+    errs := validation.Validate(engine.Schema, doc, engine.MaxDepth)
+    validationFinish(errs)
+    if len(errs) != 0 {
+        return nil, errors.AsMulti(errs)
+    }
+
+    op, err := getOperation(doc, request.OperationName)
+    if err != nil {
+        return nil, err
+    }
+
+    varTypes := make(map[string]*introspection.Type)
+    for _, v := range op.Vars {
+        t, err := schema.ResolveType(v.Type, engine.Schema.Resolve)
+        if err != nil {
+            return nil, err
+        }
+        varTypes[v.Name.Text] = introspection.WrapType(t)
+    }
+
+    cancelCtx, cancelFunc := context.WithCancel(ctx)
+    ctx = cancelCtx
+
+    traceContext, finish := engine.Tracer.TraceQuery(ctx, request.Query, request.OperationName, request.Variables, varTypes)
+    responses := make(chan *EngineResponse, 1)
+
+    r := exec.Execution{
+        Schema:         engine.Schema,
+        Tracer:         engine.Tracer,
+        Logger:         engine.Logger,
+        Resolver:       engine.Resolver,
+        Filter:         engine.Filter,
+        Doc:            doc,
+        Operation:      op,
+        Vars:           request.Variables,
+        VarTypes:       varTypes,
+        MaxParallelism: engine.MaxParallelism,
+        Root:           engine.Root,
+        Context:        traceContext,
+        Handler: func(d json.RawMessage, e []*errors.QueryError) {
+            responses <- &EngineResponse{
+                Data:   d,
+                Errors: e,
+            }
+        },
+    }
+
+    if root != nil {
+        r.Root = root
+    }
+
+    sub, err := r.Execute()
+    if err != nil {
+        return nil, err
+    }
+    finish(errs)
+    return &ResponseStream{
+        IsSubscription: sub,
+        Cancel:         cancelFunc,
+        Responses:      responses,
+    }, nil
 }

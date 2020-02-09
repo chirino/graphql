@@ -37,21 +37,13 @@ func (l FragmentList) Get(name string) *FragmentDecl {
 }
 
 type Operation struct {
-	Type       OperationType
+	Type       schema.OperationType
 	Name       lexer.Ident
 	Vars       schema.InputValueList
 	Selections []Selection
 	Directives schema.DirectiveList
 	Loc        errors.Location
 }
-
-type OperationType string
-
-const (
-	Query        OperationType = "QUERY"
-	Mutation                   = "MUTATION"
-	Subscription               = "SUBSCRIPTION"
-)
 
 type Fragment struct {
 	On         schema.TypeName
@@ -117,7 +109,7 @@ func parseDocument(l *lexer.Lexer) *Document {
 	l.Consume()
 	for l.Peek() != scanner.EOF {
 		if l.Peek() == '{' {
-			op := &Operation{Type: Query, Loc: l.Location()}
+			op := &Operation{Type: schema.Query, Loc: l.Location()}
 			op.Selections = parseSelectionSet(l)
 			d.Operations = append(d.Operations, op)
 			continue
@@ -126,15 +118,15 @@ func parseDocument(l *lexer.Lexer) *Document {
 		loc := l.Location()
 		switch x := l.ConsumeIdent(); x {
 		case "query":
-			op := parseOperation(l, Query)
+			op := parseOperation(l, schema.Query)
 			op.Loc = loc
 			d.Operations = append(d.Operations, op)
 
 		case "mutation":
-			d.Operations = append(d.Operations, parseOperation(l, Mutation))
+			d.Operations = append(d.Operations, parseOperation(l, schema.Mutation))
 
 		case "subscription":
-			d.Operations = append(d.Operations, parseOperation(l, Subscription))
+			d.Operations = append(d.Operations, parseOperation(l, schema.Subscription))
 
 		case "fragment":
 			frag := parseFragment(l)
@@ -148,7 +140,7 @@ func parseDocument(l *lexer.Lexer) *Document {
 	return d
 }
 
-func parseOperation(l *lexer.Lexer, opType OperationType) *Operation {
+func parseOperation(l *lexer.Lexer, opType schema.OperationType) *Operation {
 	op := &Operation{Type: opType}
 	op.Name.Loc = l.Location()
 	if l.Peek() == scanner.Ident {
