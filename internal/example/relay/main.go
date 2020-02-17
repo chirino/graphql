@@ -3,8 +3,8 @@ package main
 import (
     "fmt"
     "github.com/chirino/graphql"
+    "github.com/chirino/graphql/graphiql"
     "github.com/chirino/graphql/relay"
-    "github.com/friendsofgo/graphiql"
     "log"
     "net/http"
 )
@@ -35,8 +35,7 @@ func main() {
     http.Handle("/graphql", &relay.Handler{Engine: engine})
     fmt.Println("GraphQL service running at http://localhost:8080/graphql")
 
-    graphiql, _ := graphiql.NewGraphiqlHandler("/graphql")
-    http.Handle("/", graphiql)
+    http.Handle("/", graphiql.New("ws://localhost:8080/graphql", true))
     fmt.Println("GraphiQL UI running at http://localhost:8080/")
 
     log.Fatal(http.ListenAndServe(":8080", nil))

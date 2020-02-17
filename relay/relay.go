@@ -51,9 +51,9 @@ type Handler struct {
 }
 
 type OperationMessage struct {
-    Id      interface{}     `json:"id"`
-    Type    string          `json:"type"`
-    Payload json.RawMessage `json:"payload"`
+    Id      interface{}     `json:"id,omitempty"`
+    Type    string          `json:"type,omitempty"`
+    Payload json.RawMessage `json:"payload,omitempty"`
 }
 
 func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
@@ -101,7 +101,7 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
         case "start":
 
             var request graphql.EngineRequest
-            err := json.Unmarshal(msg.Payload, request)
+            err := json.Unmarshal(msg.Payload, &request)
             if err != nil {
                 fmt.Printf("could not read payload: %v\n", err)
                 return
@@ -120,10 +120,11 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
                 return
             }
 
-            // save it.. so that client can later cancel it...
-            streams[msg.Id] = stream
 
             if stream.IsSubscription {
+                // save it.. so that client can later cancel it...
+                streams[msg.Id] = stream
+
                 // Start a goroutine ot handle the events....
                 go func() {
                     for {
