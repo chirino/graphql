@@ -5,13 +5,13 @@ import (
     "encoding/base64"
     "encoding/json"
     "fmt"
+    graphql "github.com/chirino/graphql"
     "github.com/chirino/graphql/customtypes"
     "github.com/chirino/graphql/errors"
     "github.com/gorilla/websocket"
     "net/http"
     "strings"
-
-    graphql "github.com/chirino/graphql"
+    "sync"
 )
 
 func MarshalID(kind string, spec interface{}) customtypes.ID {
@@ -85,7 +85,17 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
         fmt.Printf("protocol violation: expected an init message, but received: %v\n", op.Type)
         return
     }
-    conn.WriteJSON(OperationMessage{Type: "connection_ack"})
+
+    // websocket connections do not support concurrent write access.. protect with a mutex.
+    mu := sync.Mutex{}
+    writeJSON := func ( json interface{} ) error {
+        mu.Lock()
+        err := conn.WriteJSON(json)
+        mu.Unlock()
+        return err
+    }
+
+    writeJSON(OperationMessage{Type: "connection_ack"})
     streams := map[interface{}]*graphql.ResponseStream{}
 
     for {
@@ -117,7 +127,7 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
                 if err != nil {
                     panic(fmt.Sprintf("could not marshal payload: %v\n", err))
                 }
-                conn.WriteJSON(OperationMessage{Type: "error", Id: msg.Id, Payload: json.RawMessage(payload)})
+                writeJSON(OperationMessage{Type: "error", Id: msg.Id, Payload: json.RawMessage(payload)})
                 return
             }
 
@@ -129,11 +139,15 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
                 go func() {
                     for {
                         r := stream.Next()
-                        payload, err := json.Marshal(r)
-                        if err != nil {
-                            panic(fmt.Sprintf("could not marshal payload: %v\n", err))
+                        if r != nil {
+                            payload, err := json.Marshal(r)
+                            if err != nil {
+                                panic(fmt.Sprintf("could not marshal payload: %v\n", err))
+                            }
+                            writeJSON(OperationMessage{Type: "data", Id: msg.Id, Payload: json.RawMessage(payload)})
+                        } else {
+                            writeJSON(OperationMessage{Type: "complete", Id: msg.Id})
                         }
-                        conn.WriteJSON(OperationMessage{Type: "data", Id: msg.Id, Payload: json.RawMessage(payload)})
                     }
                 }()
 
@@ -142,21 +156,20 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
                 r := stream.Next()
                 payload, err := json.Marshal(r)
                 if err != nil {
+                    fmt.Println(r)
                     stream.Close()
                     panic(fmt.Sprintf("could not marshal payload: %v\n", err))
                 }
-                conn.WriteJSON(OperationMessage{Type: "data", Id: msg.Id, Payload: json.RawMessage(payload)})
-                conn.WriteJSON(OperationMessage{Type: "complete", Id: msg.Id})
+                writeJSON(OperationMessage{Type: "data", Id: msg.Id, Payload: json.RawMessage(payload)})
+                writeJSON(OperationMessage{Type: "complete", Id: msg.Id})
                 stream.Close()
             }
 
         case "stop":
-
             stream := streams[msg.Id]
             if stream != nil {
                 stream.Close()
                 delete(streams, msg.Id)
-                conn.WriteJSON(OperationMessage{Type: "complete", Id: msg.Id})
             }
         }
     }

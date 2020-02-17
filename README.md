@@ -281,13 +281,29 @@ the GraphQL client which using the
 [subscriptions-transport-ws](https://github.com/apollographql/subscriptions-transport-ws)
 module to receive subscription events.
 
-Here's is a simple example that makes a `hello` subscription which takes a duration argument
-that controls how often a `Hello` event is generated and sent to the client:
+Below is a simple example that makes a `hello` subscription which takes a duration argument
+that controls how often a `Hello` event is generated and sent to the client.  
 
 ```go
-type MySubscription struct {
+package main
+
+import (
+    "fmt"
+    "github.com/chirino/graphql"
+    "github.com/chirino/graphql/graphiql"
+    "github.com/chirino/graphql/relay"
+    "github.com/chirino/graphql/resolvers"
+    "log"
+    "net/http"
+    "reflect"
+    "time"
+)
+
+type root struct {
+    Test string `json:"test"`
 }
-func (m *MySubscription) Hello(ctx resolvers.ExecutionContext, args struct{ Duration int }) {
+
+func (m *root) Hello(ctx resolvers.ExecutionContext, args struct{ Duration int }) {
     go func() {
         counter := args.Duration
         for {
@@ -304,17 +320,31 @@ func (m *MySubscription) Hello(ctx resolvers.ExecutionContext, args struct{ Dura
     }()
 }
 
-func createEgine() {
+func main() {
     engine := graphql.New()
-    engine.Root = &MySubscription{}    
-    engine.Schema.Parse(`
+    engine.Root = &root{ Test:"Hi!" }
+    err := engine.Schema.Parse(`
         schema {
+            query: MyQuery
             subscription: MySubscription
+        }
+        type MyQuery {
+            test: String
         }
         type MySubscription {
             hello(duration: Int!): String
         }
     `)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    http.Handle("/graphql", &relay.Handler{Engine: engine})
+    fmt.Println("GraphQL service running at http://localhost:8080/graphql")
+
+    http.Handle("/", graphiql.New("ws://localhost:8080/graphql", true))
+    fmt.Println("GraphiQL UI running at http://localhost:8080/")
+    log.Fatal(http.ListenAndServe(":8080", nil))
 }
 ```
 
