@@ -137,12 +137,13 @@ func (s *Schema) Exec(ctx context.Context, queryString string, operationName str
     if s.resolver == nil {
         panic("schema created without resolver, can not exec")
     }
-    request := graphql.EngineRequest{
+    return s.Engine.ExecuteOne(&graphql.EngineRequest{
+        Context:       ctx,
+        Root:          s.resolver,
         Query:         queryString,
         OperationName: operationName,
         Variables:     variables,
-    }
-    return s.Engine.ExecuteOne(ctx, &request, s.resolver)
+    })
 }
 
 //func (s *Schema) exec(ctx context.Context, queryString string, operationName string, variables map[string]interface{}, res *resolvable.Schema) *Response {

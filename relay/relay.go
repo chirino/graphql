@@ -108,7 +108,8 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
             }
 
             ctx := withValue(withValue(r.Context(), "net/http.ResponseWriter", w), "*net/http.Request", r)
-            stream, err := h.Engine.Execute(ctx, &request, nil)
+            request.Context = ctx
+            stream, err := h.Engine.Execute(&request)
 
             if err != nil {
                 r := graphql.EngineResponse{Errors: errors.AsArray(err)}
@@ -119,7 +120,6 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
                 conn.WriteJSON(OperationMessage{Type: "error", Id: msg.Id, Payload: json.RawMessage(payload)})
                 return
             }
-
 
             if stream.IsSubscription {
                 // save it.. so that client can later cancel it...
@@ -178,7 +178,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     // Attach the response and request to the context, in case a resolver wants to
     // work at the the http level.
     ctx := withValue(withValue(r.Context(), "net/http.ResponseWriter", w), "*net/http.Request", r)
-    reponse := h.Engine.ExecuteOne(ctx, &request, nil)
+    request.Context = ctx
+    reponse := h.Engine.ExecuteOne(&request)
     responseJSON, err := json.Marshal(reponse)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -1,20 +1,12 @@
 package graphql
 
-import (
-    "context"
-)
-
 // GetSchemaIntrospectionJSON returns the JSON that describes the Schema
 // in the introspection format expected by GraphiQL
 func (engine *Engine) GetSchemaIntrospectionJSON() ([]byte, error) {
-    r := EngineRequest{
+    result := engine.ExecuteOne(&EngineRequest{
         Query: introspectionQuery,
-    }
-    result := engine.ExecuteOne(context.Background(), &r, engine.Root)
-    if result.Error() != nil {
-        panic(result.Error())
-    }
-    return result.Data, nil
+    })
+    return result.Data, result.Error()
 }
 
 const introspectionQuery = `

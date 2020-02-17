@@ -1,7 +1,6 @@
 package gqltesting
 
 import (
-    "context"
     "encoding/json"
     "github.com/chirino/graphql"
     "github.com/stretchr/testify/assert"
@@ -21,7 +20,7 @@ func AssertRequestString(t *testing.T, engine *graphql.Engine, req string, expec
 }
 
 func AssertRequest(t *testing.T, engine *graphql.Engine, request graphql.EngineRequest, expected string) {
-    response := engine.ExecuteOne(context.TODO(), &request, engine.Root)
+    response := engine.ExecuteOne(&request)
     actual := jsonMarshal(t, response)
     assert.Equal(t, expected, actual)
 }
@@ -36,4 +35,3 @@ func jsonUnmarshal(t *testing.T, from string, target interface{}) {
     err := json.Unmarshal([]byte(from), target)
     assert.NoError(t, err)
 }
-

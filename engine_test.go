@@ -315,7 +315,7 @@ func TestCustomAsyncResolvers(t *testing.T) {
     }
 
     benchmark := testing.Benchmark(func(b *testing.B) {
-        response := engine.ExecuteOne(context.TODO(), &graphql.EngineRequest{Query: "{f1,f2,f3,f4}"}, nil)
+        response := engine.ExecuteOne(&graphql.EngineRequest{Query: "{f1,f2,f3,f4}"})
         assert.Equal(t, 0, len(response.Errors))
     })
     assert.True(t, benchmark.T.Seconds() > 3)
@@ -341,7 +341,7 @@ func TestCustomAsyncResolvers(t *testing.T) {
         engine.Resolver,
     }
     benchmark = testing.Benchmark(func(b *testing.B) {
-        response := engine.ExecuteOne(context.TODO(), &graphql.EngineRequest{Query: "{f1,f2,f3,f4}"}, nil)
+        response := engine.ExecuteOne(&graphql.EngineRequest{Query: "{f1,f2,f3,f4}"})
         assert.Equal(t, 0, len(response.Errors))
     })
     assert.True(t, benchmark.T.Seconds() > 0)
@@ -506,7 +506,7 @@ type MySubscription {
 `)
     require.NoError(t, err)
 
-    query, err := engine.Execute(context.Background(), &graphql.EngineRequest{Query: `subscription{ hello(duration:10) }`}, nil)
+    query, err := engine.Execute(&graphql.EngineRequest{Query: `subscription{ hello(duration:10) }`})
     require.NoError(t, err)
 
     next := query.Next()

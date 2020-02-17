@@ -13,6 +13,8 @@ import (
 )
 
 type EngineRequest struct {
+    Context       context.Context        `json:"-"`
+    Root          interface{}            `json:"-"`
     Query         string                 `json:"query"`
     OperationName string                 `json:"operationName"`
     Variables     map[string]interface{} `json:"variables"`
@@ -61,8 +63,11 @@ func (engine *Engine) Exec(ctx context.Context, result interface{}, query string
     for i := 0; i+1 < len(args); i += 2 {
         variables[args[i].(string)] = args[i+1]
     }
-    request := EngineRequest{Query: query, Variables: variables}
-    response := engine.ExecuteOne(ctx, &request, engine.Root)
+    response := engine.ExecuteOne(&EngineRequest{
+        Context:   ctx,
+        Query:     query,
+        Variables: variables,
+    })
 
     if result != nil && response != nil {
         switch result := result.(type) {
@@ -104,8 +109,8 @@ func (qr *ResponseStream) Close() {
 }
 
 // Execute the given request.
-func (engine *Engine) ExecuteOne(ctx context.Context, request *EngineRequest, root interface{}) *EngineResponse {
-    stream, err := engine.Execute(ctx, request, root)
+func (engine *Engine) ExecuteOne(request *EngineRequest) *EngineResponse {
+    stream, err := engine.Execute(request)
     if err != nil {
         return &EngineResponse{
             Errors: errors.AsArray(err),
@@ -120,7 +125,7 @@ func (engine *Engine) ExecuteOne(ctx context.Context, request *EngineRequest, ro
     return stream.Next()
 }
 
-func (engine *Engine) Execute(ctx context.Context, request *EngineRequest, root interface{}) (*ResponseStream, error) {
+func (engine *Engine) Execute(request *EngineRequest) (*ResponseStream, error) {
     doc, qErr := query.Parse(request.Query)
     if qErr != nil {
         return nil, qErr
@@ -147,6 +152,10 @@ func (engine *Engine) Execute(ctx context.Context, request *EngineRequest, root 
         varTypes[v.Name.Text] = introspection.WrapType(t)
     }
 
+    ctx := request.Context
+    if ctx == nil {
+        ctx = context.Background()
+    }
     cancelCtx, cancelFunc := context.WithCancel(ctx)
     ctx = cancelCtx
 
@@ -174,8 +183,8 @@ func (engine *Engine) Execute(ctx context.Context, request *EngineRequest, root 
         },
     }
 
-    if root != nil {
-        r.Root = root
+    if request.Root != nil {
+        r.Root = request.Root
     }
 
     sub, err := r.Execute()
