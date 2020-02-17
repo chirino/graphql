@@ -41,7 +41,7 @@ func (q *query) Hello() string { return "Hello, " + q.Name }
 
 func main() {
     engine := graphql.New()
-    engine.Root = &query{         
+    engine.Root = &query{
         Name: "World!",
     }
     err := engine.Schema.Parse(`
@@ -60,9 +60,8 @@ func main() {
     http.Handle("/graphql", &relay.Handler{Engine: engine})
     fmt.Println("GraphQL service running at http://localhost:8080/graphql")
 
-    graphiql, _ := graphiql.NewGraphiqlHandler("/graphql")
-    http.Handle("/graphiql", graphiql)
-    fmt.Println("GraphiQL UI running at http://localhost:8080/graphiql")
+    http.Handle("/", graphiql.New("ws://localhost:8080/graphql", true))
+    fmt.Println("GraphiQL UI running at http://localhost:8080/")
 
     log.Fatal(http.ListenAndServe(":8080", nil))
 }
@@ -86,8 +85,8 @@ be performed using the [`GraphQL schema language`](https://graphql.org/learn/sch
 engine. 
 * Step 5:  `log.Fatal(http.ListenAndServe(":8080", nil))`: Start the http server
 
-The example also starts a `http://localhost:8080/graphiql` which is optional. It gives you a nice UI interface
-to introspect your graphql endpoint and test it out.
+The example also starts a graphiql UI endpoint at `http://localhost:8080/` which is optional. It gives you a nice 
+UI interface to introspect your graphql endpoint and test it out.
 
 ### Schema Updates
 
@@ -274,6 +273,51 @@ func (this *MyHttpResolver) Resolve(request *resolvers.ResolveRequest) resolvers
 }
 ```
 
+### Subscription Resolvers
+
+Implementing graphql subscriptions require a special type of resolver which issue 
+`FireSubscriptionEvent` method calls when new event notifications need to be sent to 
+the GraphQL client which using the 
+[subscriptions-transport-ws](https://github.com/apollographql/subscriptions-transport-ws)
+module to receive subscription events.
+
+Here's is a simple example that makes a `hello` subscription which takes a duration argument
+that controls how often a `Hello` event is generated and sent to the client:
+
+```go
+type MySubscription struct {
+}
+func (m *MySubscription) Hello(ctx resolvers.ExecutionContext, args struct{ Duration int }) {
+    go func() {
+        counter := args.Duration
+        for {
+            select {
+            case <-ctx.GetContext().Done():
+                // We could close any resources held open for the subscription here.
+                return
+            case <-time.After(time.Duration(args.Duration) * time.Millisecond):
+                // every few duration ms.. fire a subscription event.
+                ctx.FireSubscriptionEvent(reflect.ValueOf(fmt.Sprintf("Hello: %d", counter)))
+                counter += args.Duration
+            }
+        }
+    }()
+}
+
+func createEgine() {
+    engine := graphql.New()
+    engine.Root = &MySubscription{}    
+    engine.Schema.Parse(`
+        schema {
+            subscription: MySubscription
+        }
+        type MySubscription {
+            hello(duration: Int!): String
+        }
+    `)
+}
+```
+
 ## License
 
 [BSD](./LICENSE)
@@ -290,8 +334,6 @@ func (this *MyHttpResolver) Resolve(request *resolvers.ResolveRequest) resolvers
 * setup ci jobs to validate PRs
 * provide better hooks to implement custom directives so you can do things like configuring/selecting resolvers
   using directives.  Or using directives to drive schema generation.
-* implement the GraphQL websocket interface
-* implement subscriptions
 * provide [dataloader](https://github.com/graphql/dataloader) functionality 
 
 ### Related Projects 
