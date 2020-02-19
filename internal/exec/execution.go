@@ -241,79 +241,90 @@ func (this *Execution) FireSubscriptionEvent(value reflect.Value) {
 
 func (this *Execution) recursiveExecute(parentSelection *SelectionResolver, selectedFields *linkedmap.LinkedMap) { // (parentSelection *SelectionResolver, parentValue reflect.Value, parentType schema.Type, selections []query.Selection) ExecutionResult {
 
-    // Create resolvers for the the selections.  Creating resolvers can trigger async fetching of
-    // the field data.
+    this.data.WriteByte('{')
+    writeComma := false
+    for entry := selectedFields.First; entry != nil; entry = entry.Next {
+
+        offset := this.data.Len()
+        if writeComma {
+            this.data.WriteByte(',')
+        }
+
+        // apply the resolver before the field is written, since it could
+        // fail, and we don't want to write field that resulted in a resolver error.
+        selected := entry.Value.(*SelectionResolver)
+        err := this.executeSelected(parentSelection, selected)
+        if err!=nil {
+            // undo any (likely partial) writes that we performed
+            this.data.Truncate(offset)
+            this.AddError(err)
+            continue
+        }
+        writeComma = true
+    }
+    this.data.WriteByte('}')
+}
+
+func (this *Execution) executeSelected(parentSelection *SelectionResolver, selected *SelectionResolver) (result *errors.QueryError) {
 
     defer func() {
         if value := recover(); value != nil {
             this.Logger.LogPanic(this.Context, value)
             err := makePanicError(value)
-            err.Path = parentSelection.Path()
-            this.AddError(err)
+            err.Path = selected.Path()
+            result = err
         }
     }()
 
-    this.data.WriteByte('{')
+    resolver := selected.Resolution
+    childValue, err := resolver()
+    if err != nil {
+        return (&errors.QueryError{
+            Message:       err.Error(),
+            Path:          selected.Path(),
+            ResolverError: err,
+        }).WithStack()
+    }
 
-    writeComma := false
-    for entry := selectedFields.First; entry != nil; entry = entry.Next {
-        if writeComma {
-            this.data.WriteByte(',')
-        }
-        writeComma = true
-        selected := entry.Value.(*SelectionResolver)
-        field := selected.field
+    field := selected.field
 
-        this.data.WriteByte('"')
-        this.data.WriteString(selected.field.Alias.Text)
-        this.data.WriteByte('"')
-        this.data.WriteByte(':')
+    this.data.WriteByte('"')
+    this.data.WriteString(selected.field.Alias.Text)
+    this.data.WriteByte('"')
+    this.data.WriteByte(':')
 
-        resolver := selected.Resolution
-
-        childValue, err := resolver()
-        if err != nil {
-            this.AddError((&errors.QueryError{
-                Message:       err.Error(),
-                Path:          selected.Path(),
-                ResolverError: err,
-            }).WithStack())
-            continue
-        }
-
-        childType, nonNullType := unwrapNonNull(field.Schema.Field.Type)
-        if (childValue.Kind() == reflect.Ptr || childValue.Kind() == reflect.Interface) &&
-            childValue.IsNil() {
-            if nonNullType {
-                this.AddError((&errors.QueryError{
-                    Message: "ResolverFactory produced a nil value for a Non Null type",
-                    Path:    selected.Path(),
-                }).WithStack())
-            } else {
-                this.data.WriteString("null")
-            }
-            continue
-        }
-
-        // Are we a leaf node?
-        if selected.selections == nil {
-            this.writeLeaf(childValue, selected, childType)
+    childType, nonNullType := unwrapNonNull(field.Schema.Field.Type)
+    if (childValue.Kind() == reflect.Ptr || childValue.Kind() == reflect.Interface) &&
+        childValue.IsNil() {
+        if nonNullType {
+            return (&errors.QueryError{
+                Message: "ResolverFactory produced a nil value for a Non Null type",
+                Path:    selected.Path(),
+            }).WithStack()
         } else {
-            switch childType := childType.(type) {
-            case *schema.List:
-                this.writeList(*childType, childValue, selected, func(elementType schema.Type, element reflect.Value) {
-                    selectedFields := linkedmap.CreateLinkedMap(len(this.Operation.Selections))
-                    this.resolveFields(selected, selectedFields, element, elementType, selected.selections)
-                    this.recursiveExecute(selected, selectedFields)
-                })
-            case *schema.Object, *schema.Interface, *schema.Union:
-                selectedFields := linkedmap.CreateLinkedMap(len(this.Operation.Selections))
-                this.resolveFields(selected, selectedFields, childValue, childType, selected.selections)
-                this.recursiveExecute(selected, selectedFields)
-            }
+            this.data.WriteString("null")
+            return
         }
     }
-    this.data.WriteByte('}')
+
+    // Are we a leaf node?
+    if selected.selections == nil {
+        this.writeLeaf(childValue, selected, childType)
+    } else {
+        switch childType := childType.(type) {
+        case *schema.List:
+            this.writeList(*childType, childValue, selected, func(elementType schema.Type, element reflect.Value) {
+                selectedFields := linkedmap.CreateLinkedMap(len(this.Operation.Selections))
+                this.resolveFields(selected, selectedFields, element, elementType, selected.selections)
+                this.recursiveExecute(selected, selectedFields)
+            })
+        case *schema.Object, *schema.Interface, *schema.Union:
+            selectedFields := linkedmap.CreateLinkedMap(len(this.Operation.Selections))
+            this.resolveFields(selected, selectedFields, childValue, childType, selected.selections)
+            this.recursiveExecute(selected, selectedFields)
+        }
+    }
+    return
 }
 
 func (this *Execution) skipByDirective(directives schema.DirectiveList) bool {
@@ -370,10 +381,9 @@ func (this *Execution) writeList(listType schema.List, childValue reflect.Value,
         }
         this.data.WriteByte(']')
     default:
-        this.AddError((&errors.QueryError{
-            Message: fmt.Sprintf("Resolved object was not an array, it was a: %s", childValue.Type().String()),
-            Path:    selectionResolver.Path(),
-        }).WithStack())
+        i := childValue.Interface()
+        fmt.Println(i)
+        panic(fmt.Sprintf("Resolved object was not an array, it was a: %s", childValue.Type().String()))
     }
 }
 

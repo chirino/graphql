@@ -37,6 +37,10 @@ func (r *EngineResponse) Error() error {
     return errors.Multi(errs...)
 }
 
+func (r *EngineResponse) String() string {
+    return fmt.Sprintf("{Data: %s, Errors: %v}", string(r.Data), r.Errors)
+}
+
 func getOperation(document *query.Document, operationName string) (*query.Operation, error) {
     if len(document.Operations) == 0 {
         return nil, fmt.Errorf("no operations in query document")
