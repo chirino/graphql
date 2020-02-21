@@ -11,14 +11,14 @@ import "reflect"
 type fieldResolver byte
 const FieldResolver = fieldResolver(0)
 
-func (this fieldResolver) Resolve(request *ResolveRequest) Resolution {
+func (this fieldResolver) Resolve(request *ResolveRequest, next Resolution) Resolution {
     parentValue := dereference(request.Parent)
     if parentValue.Kind() != reflect.Struct {
-        return nil
+        return next
     }
     childValue, found := getChildField(&parentValue, request.Field.Name)
     if !found {
-        return nil
+        return next
     }
     return func() (reflect.Value, error) {
         return *childValue, nil

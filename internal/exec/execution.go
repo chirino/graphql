@@ -30,7 +30,6 @@ type Execution struct {
     VarTypes  map[string]*introspection.Type
     Context   context.Context
     Resolver  resolvers.Resolver
-    Filter    resolvers.ResolutionFilter
     Mu        sync.Mutex
 
     subMu          sync.Mutex
@@ -125,7 +124,7 @@ func (this *Execution) resolveFields(parentSelectionResolver *SelectionResolver,
                     Selection:     field,
                     SelectionPath: sr.Path,
                 }
-                resolution := this.Resolver.Resolve(resolveRequest)
+                resolution := this.Resolver.Resolve(resolveRequest, nil)
 
                 if resolution == nil {
                     this.AddError((&errors.QueryError{
@@ -133,7 +132,7 @@ func (this *Execution) resolveFields(parentSelectionResolver *SelectionResolver,
                         Path:    append(parentSelectionResolver.Path(), field.Alias.Text),
                     }).WithStack())
                 } else {
-                    sr.Resolution = this.Filter.Filter(resolveRequest, resolution)
+                    sr.Resolution = resolution
                     selectionResolvers.Set(field.Alias.Text, sr)
                 }
             } else {
@@ -254,7 +253,7 @@ func (this *Execution) recursiveExecute(parentSelection *SelectionResolver, sele
         // fail, and we don't want to write field that resulted in a resolver error.
         selected := entry.Value.(*SelectionResolver)
         err := this.executeSelected(parentSelection, selected)
-        if err!=nil {
+        if err != nil {
             // undo any (likely partial) writes that we performed
             this.data.Truncate(offset)
             this.AddError(err)

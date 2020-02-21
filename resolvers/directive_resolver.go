@@ -4,51 +4,35 @@ import "github.com/chirino/graphql/schema"
 
 ///////////////////////////////////////////////////////////////////////
 //
-// directiveResolverFactory gets applied to fields that have a given directive
+// DirectiveResolver gets applied to fields or types that have a given
+// directive
 //
 ///////////////////////////////////////////////////////////////////////
 type DirectiveResolver struct {
     Directive string
-    Create    func(args schema.ArgumentList, request *ResolveRequest) Resolution
+    Create    func(request *ResolveRequest, next Resolution, args map[string]interface{}) Resolution
 }
 
-func (factory DirectiveResolver) Resolve(request *ResolveRequest) Resolution {
+func (factory DirectiveResolver) Resolve(request *ResolveRequest, next Resolution) Resolution {
+    if args := matchingArgList(request, factory.Directive); args != nil {
+        args := args.Value(nil)
+        return factory.Create(request, next, args)
+    }
+    return next
+}
+
+func matchingArgList(request *ResolveRequest, directive string) schema.ArgumentList {
     for _, d := range request.Field.Directives {
-        if d.Name.Text == factory.Directive {
-            return factory.Create(d.Args, request)
+        if d.Name.Text == directive {
+            return d.Args
+        }
+    }
+    if parentType, ok := request.ParentType.(schema.HasDirectives); ok {
+        for _, d := range parentType.GetDirectives() {
+            if d.Name.Text == directive {
+                return d.Args
+            }
         }
     }
     return nil
-}
-
-// ResolverFilter
-///////////////////////////////////////////////////////////////////////
-//
-// DirectiveFilter gets applied to fields that have a given directive
-//
-///////////////////////////////////////////////////////////////////////
-type DirectiveFilter struct {
-    Directive       string
-    DirectiveFilter func(args schema.ArgumentList, next Resolution) Resolution
-}
-
-func (factory DirectiveFilter) Filter(request *ResolveRequest, resolution Resolution) Resolution {
-    // Check to see if it's applied as a field level directive:
-    resolution = factory.filter(request.Field.Directives, resolution)
-
-    // Also check to see if it's applied as an object level directive:
-    switch t := request.Field.Type.(type) {
-    case *schema.Object:
-        resolution = factory.filter(t.Directives, resolution)
-    }
-    return resolution
-}
-
-func (factory DirectiveFilter) filter(directives schema.DirectiveList, resolution Resolution) Resolution {
-    for _, d := range directives {
-        if d.Name.Text == factory.Directive {
-            return factory.DirectiveFilter(d.Args, resolution)
-        }
-    }
-    return resolution
 }

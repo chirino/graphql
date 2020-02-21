@@ -261,7 +261,7 @@ func TestCustomTypeResolver(t *testing.T) {
     engine.Resolver = &resolvers.ResolverList{
         // First try out custom resolver...
         &resolvers.TypeResolver{
-            "Alien": resolvers.Func(func(request *resolvers.ResolveRequest) resolvers.Resolution {
+            "Alien": resolvers.Func(func(request *resolvers.ResolveRequest, next resolvers.Resolution) resolvers.Resolution {
                 // Only interested in changing result of shape...
                 if request.Field.Name == "shape" {
                     return func() (reflect.Value, error) {
@@ -269,7 +269,7 @@ func TestCustomTypeResolver(t *testing.T) {
                     }
 
                 }
-                return nil
+                return next
             }),
         },
 
@@ -304,7 +304,7 @@ func TestCustomAsyncResolvers(t *testing.T) {
     engine.Resolver = &resolvers.ResolverList{
         // First try out custom resolver...
         resolvers.Func(
-            func(request *resolvers.ResolveRequest) resolvers.Resolution {
+            func(request *resolvers.ResolveRequest, next resolvers.Resolution) resolvers.Resolution {
                 return func() (reflect.Value, error) {
                     time.Sleep(1 * time.Second)
                     return reflect.ValueOf(request.Field.Name), nil
@@ -330,7 +330,7 @@ func TestCustomAsyncResolvers(t *testing.T) {
     engine.Resolver = &resolvers.ResolverList{
         // First try out custom resolver...
         resolvers.Func(
-            func(request *resolvers.ResolveRequest) resolvers.Resolution {
+            func(request *resolvers.ResolveRequest, next resolvers.Resolution) resolvers.Resolution {
                 // Use request.RunAsync to signal that the resolution will run async:
                 return request.RunAsync(func() (reflect.Value, error) {
                     time.Sleep(1 * time.Second)

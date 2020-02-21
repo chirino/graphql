@@ -171,7 +171,6 @@ func (engine *Engine) Execute(request *EngineRequest) (*ResponseStream, error) {
         Tracer:         engine.Tracer,
         Logger:         engine.Logger,
         Resolver:       engine.Resolver,
-        Filter:         engine.Filter,
         Doc:            doc,
         Operation:      op,
         Vars:           request.Variables,

@@ -15,13 +15,13 @@ type methodResolver byte
 
 const MethodResolver = methodResolver(0)
 
-func (this methodResolver) Resolve(request *ResolveRequest) Resolution {
+func (this methodResolver) Resolve(request *ResolveRequest, next Resolution) Resolution {
     if !request.Parent.IsValid() {
         return nil
     }
     childMethod := getChildMethod(&request.Parent, request.Field.Name)
     if childMethod == nil {
-        return nil
+        return next
     }
 
     var structPacker *packer.StructPacker = nil

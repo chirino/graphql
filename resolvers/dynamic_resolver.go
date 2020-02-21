@@ -7,24 +7,24 @@ func DynamicResolverFactory() Resolver {
     return &dynamicResolver{}
 }
 
-func (this *dynamicResolver) Resolve(request *ResolveRequest) Resolution {
-    resolver := MetadataResolver.Resolve(request)
+func (this *dynamicResolver) Resolve(request *ResolveRequest, next Resolution) Resolution {
+    resolver := MetadataResolver.Resolve(request, next)
     if resolver != nil {
         return resolver
     }
-    resolver = MethodResolver.Resolve(request)
+    resolver = MethodResolver.Resolve(request, next)
     if resolver != nil {
         return resolver
     }
-    resolver = FieldResolver.Resolve(request)
+    resolver = FieldResolver.Resolve(request, next)
     if resolver != nil {
         return resolver
     }
-    resolver = MapResolver.Resolve(request)
+    resolver = MapResolver.Resolve(request, next)
     if resolver != nil {
         return resolver
     }
-    return nil
+    return next
 }
 
 

@@ -228,12 +228,35 @@ fields to the value `"bar"`:
 
 ```go
 type MyFooResolver struct{}
-func (this *MyFooResolver) Resolve(request *resolvers.ResolveRequest) resolvers.Resolution {
+func (this *MyFooResolver) Resolve(request *resolvers.ResolveRequest, prev resolvers.Resolution) resolvers.Resolution {
     if request.Field.Name!="foo" {
-        return nil // Lets only handle the foo fields:
+        return prev // Lets only handle the foo fields:
     }
     return func() (reflect.Value, error) {
         return reflect.ValueOf("bar"), nil
+    }
+}
+```
+
+### Resolver Middleware
+
+Notice that the `Resolve` method accepts a `next resolvers.Resolution` argument. If it is not nil,
+then it is the resolution for the field of a Resolver that was executed before your Resolver.  Your
+resolver can use this resolution to filter or transform the result of the field.  Here's an example of
+a resolver that adds a prefix to result:
+
+```go
+func (this *MyFooResolver) Resolve(request *resolvers.ResolveRequest, prev resolvers.Resolution) resolvers.Resolution {
+    if next == nil {
+        return nil
+    }
+    return func() (reflect.Value, error) {
+        value, err := next()
+        if err != nil {
+            return value, err
+        }
+        v := fmt.Sprintf("Hello %s", value.String())
+        return reflect.ValueOf(v), nil
     }
 }
 ```
@@ -245,10 +268,10 @@ each fetch is done in parallel.  You can enable async resolution in your custom 
 
 ```go
 type MyHttpResolver struct{}
-func (this *MyHttpResolver) Resolve(request *resolvers.ResolveRequest) resolvers.Resolution {
+func (this *MyHttpResolver) Resolve(request *resolvers.ResolveRequest, next resolvers.Resolution) resolvers.Resolution {
 
     if request.Field.Name!="google" {
-        return nil // Lets only handle the google field:
+        return next // Lets only handle the google field:
     }
 
     return request.RunAsync(func() (reflect.Value, error) {
@@ -347,6 +370,78 @@ func main() {
     log.Fatal(http.ListenAndServe(":8080", nil))
 }
 ```
+
+### Schema Document Directive Based Resolvers
+
+You can use directives defined on the GraphQL schema to attach and configure resolvers.  Full Example:
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/chirino/graphql"
+    "github.com/chirino/graphql/graphiql"
+    "github.com/chirino/graphql/relay"
+    "github.com/chirino/graphql/resolvers"
+    "log"
+    "net/http"
+    "reflect"
+)
+
+type query struct {
+    Name string `json:"name"`
+}
+
+func main() {
+    engine := graphql.New()
+    engine.Root = &query{
+        Name: "Hiram",
+    }
+    err := engine.Schema.Parse(`
+        directive @static(prefix: String) on FIELD
+        schema {
+            query: Query
+        }
+        type Query { 
+            name: String! @static(prefix: "Hello ")
+        }
+    `)
+
+    // Lets register a resolver that is applied to fields with the @static directive
+    engine.Resolver = resolvers.List(engine.Resolver, resolvers.DirectiveResolver{
+        Directive: "static",
+        Create: func(request *resolvers.ResolveRequest, next resolvers.Resolution, args map[string]interface{}) resolvers.Resolution {
+
+            // This resolver just filters the next result bu applying a prefix..
+            // so we need the next resolver to be valid.
+            if next == nil {
+                return nil
+            }
+            return func() (reflect.Value, error) {
+                value, err := next()
+                if err != nil {
+                    return value, err
+                }
+                v := fmt.Sprintf("%s%s", args["prefix"], value.String())
+                return reflect.ValueOf(v), nil
+            }
+        },
+    })
+
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    http.Handle("/graphql", &relay.Handler{Engine: engine})
+    fmt.Println("GraphQL service running at http://localhost:8080/graphql")
+
+    http.Handle("/", graphiql.New("ws://localhost:8080/graphql", true))
+    fmt.Println("GraphiQL UI running at http://localhost:8080/")
+
+    log.Fatal(http.ListenAndServe(":8080", nil))
+}
+````
 
 ## License
 

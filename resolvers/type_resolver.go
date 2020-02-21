@@ -6,14 +6,14 @@ func (this TypeResolver) Set(typeName string, factory Resolver) {
     this[typeName] = factory
 }
 
-func (this TypeResolver) Resolve(request *ResolveRequest) Resolution {
+func (this TypeResolver) Resolve(request *ResolveRequest, next Resolution) Resolution {
     if request.ParentType == nil {
-        return nil
+        return next
     }
     resolverFunc := this[request.ParentType.String()]
     if resolverFunc == nil {
-        return nil
+        return next
     }
-    return resolverFunc.Resolve(request)
+    return resolverFunc.Resolve(request, next)
 }
 

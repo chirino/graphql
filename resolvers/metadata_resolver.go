@@ -15,7 +15,7 @@ import (
 type metadataResolver byte
 const MetadataResolver = metadataResolver(0)
 
-func (this metadataResolver) Resolve(request *ResolveRequest) Resolution {
+func (this metadataResolver) Resolve(request *ResolveRequest, next Resolution) Resolution {
     s := request.Context.GetSchema()
     switch request.Field.Name {
     case "__typename":
@@ -54,5 +54,5 @@ func (this metadataResolver) Resolve(request *ResolveRequest) Resolution {
             return reflect.ValueOf(introspection.WrapType(t)), nil
         }
     }
-    return nil
+    return next
 }

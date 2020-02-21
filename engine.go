@@ -15,7 +15,6 @@ type Engine struct {
     ValidationTracer trace.ValidationTracer
     Logger           log.Logger
     Resolver         resolvers.Resolver
-    Filter           resolvers.ResolutionFilter
     Root             interface{}
 }
 
@@ -34,6 +33,5 @@ func New() *Engine {
         ValidationTracer: trace.NoopValidationTracer{},
         Logger:           &log.DefaultLogger{},
         Resolver:         resolvers.DynamicResolverFactory(),
-        Filter:           resolvers.NoFilter,
     }
 }

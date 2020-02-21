@@ -3,7 +3,7 @@ package resolvers
 ///////////////////////////////////////////////////////////////////////
 //
 // ResolverFactoryList uses a list of other resolvers to resolve
-// requests.  First resolver that matches wins.
+// requests.  Last resolver wins.
 //
 ///////////////////////////////////////////////////////////////////////
 type ResolverList []Resolver
@@ -17,12 +17,9 @@ func (this *ResolverList) Add(factory Resolver) {
     *this = append(*this, factory)
 }
 
-func (this *ResolverList) Resolve(request *ResolveRequest) Resolution {
+func (this *ResolverList) Resolve(request *ResolveRequest, next Resolution) Resolution {
     for _, f := range *this {
-        resolver := f.Resolve(request)
-        if resolver != nil {
-            return resolver
-        }
+        next = f.Resolve(request, next)
     }
-    return nil
+    return next
 }

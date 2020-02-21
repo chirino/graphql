@@ -29,17 +29,11 @@ type ResolveRequest struct {
 type Resolution func() (reflect.Value, error)
 
 type Resolver interface {
-    Resolve(request *ResolveRequest) Resolution
-}
-
-type ResolutionFilter interface {
-    Filter(request *ResolveRequest, next Resolution) Resolution
-}
-
-type noFilter byte
-
-const NoFilter = noFilter(0)
-
-func (noFilter) Filter(request *ResolveRequest, next Resolution) Resolution {
-    return next
+    // Resolve allows you to inspect a ResolveRequest to see if your resolver can resolve it.
+    // If you can resolve it, return a new Resolution that computes the value of the field.
+    // If you don't know how to resolve that request, return next.
+    //
+    // The next variable hold the Resolution of the previous resolver, this allows your resolver
+    // to filter it's results.  next may be nil if no resolution has been found yet.
+    Resolve(request *ResolveRequest, next Resolution) Resolution
 }
