@@ -114,7 +114,7 @@ func New(url string, ws bool) Handler {
       function graphQLFetcher(graphQLParams) {
           // This example expects a GraphQL server at the path /graphql.
           // Change this to point wherever you host your GraphQL server.
-          return fetch('{{ .Endpoint }}', {
+          return fetch('{{.URL}}', {
               method: 'post',
               headers: {
                   'Accept': 'application/json',
