@@ -1,8 +1,8 @@
 package schema_test
 
 import (
-    "github.com/chirino/graphql/internal/lexer"
-    "testing"
+	"github.com/chirino/graphql/internal/lexer"
+	"testing"
 
 	"github.com/chirino/graphql/schema"
 )

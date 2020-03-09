@@ -1,8 +1,8 @@
 package schema
 
 import (
-    "github.com/chirino/graphql/errors"
-    "github.com/chirino/graphql/internal/lexer"
+	"github.com/chirino/graphql/errors"
+	"github.com/chirino/graphql/internal/lexer"
 )
 
 func DeepestType(t Type) Type {

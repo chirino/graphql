@@ -9,17 +9,17 @@ package resolvers
 type ResolverList []Resolver
 
 func List(factories ...Resolver) *ResolverList {
-    list := ResolverList(factories)
-    return &list
+	list := ResolverList(factories)
+	return &list
 }
 
 func (this *ResolverList) Add(factory Resolver) {
-    *this = append(*this, factory)
+	*this = append(*this, factory)
 }
 
 func (this *ResolverList) Resolve(request *ResolveRequest, next Resolution) Resolution {
-    for _, f := range *this {
-        next = f.Resolve(request, next)
-    }
-    return next
+	for _, f := range *this {
+		next = f.Resolve(request, next)
+	}
+	return next
 }

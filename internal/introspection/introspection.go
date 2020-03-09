@@ -1,8 +1,8 @@
 package introspection
 
 import (
-    "github.com/chirino/graphql/internal/lexer"
-    "sort"
+	"github.com/chirino/graphql/internal/lexer"
+	"sort"
 
 	"github.com/chirino/graphql/schema"
 )

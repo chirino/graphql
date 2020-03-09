@@ -5,10 +5,10 @@ package starwars
 
 import (
 	"encoding/base64"
-    "fmt"
-    "github.com/chirino/graphql/customtypes"
-    "strconv"
-    "strings"
+	"fmt"
+	"github.com/chirino/graphql/customtypes"
+	"strconv"
+	"strings"
 )
 
 var Schema = `

@@ -17,8 +17,6 @@ type Literal interface {
 	WriteSchemaFormat(out io.StringWriter)
 }
 
-
-
 type BasicLit struct {
 	Type rune
 	Text string
@@ -49,7 +47,7 @@ func (lit *BasicLit) Evaluate(vars map[string]interface{}) interface{} {
 		return value
 
 	case scanner.BlockString:
-		return lit.Text[3:len(lit.Text)-3]
+		return lit.Text[3 : len(lit.Text)-3]
 
 	case scanner.Ident:
 		switch lit.Text {
@@ -209,7 +207,7 @@ func ParseLiteral(l *lexer.Lexer, constOnly bool) Literal {
 
 	default:
 		peek := l.Peek()
-		l.SyntaxError("invalid value: "+string(peek))
+		l.SyntaxError("invalid value: " + string(peek))
 		panic("unreachable")
 	}
 }

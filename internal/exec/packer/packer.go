@@ -188,7 +188,7 @@ func (b *Builder) MakeStructPacker(values schema.InputValueList, typ reflect.Typ
 			return nil, fmt.Errorf("field %q: %s", sf.Name, err)
 		}
 
-		fields[i] =fe
+		fields[i] = fe
 	}
 
 	p := &StructPacker{

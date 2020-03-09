@@ -3,10 +3,10 @@ package graphql
 // GetSchemaIntrospectionJSON returns the JSON that describes the Schema
 // in the introspection format expected by GraphiQL
 func (engine *Engine) GetSchemaIntrospectionJSON() ([]byte, error) {
-    result := engine.ExecuteOne(&EngineRequest{
-        Query: introspectionQuery,
-    })
-    return result.Data, result.Error()
+	result := engine.ExecuteOne(&EngineRequest{
+		Query: introspectionQuery,
+	})
+	return result.Data, result.Error()
 }
 
 const introspectionQuery = `

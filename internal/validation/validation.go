@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-
 	"github.com/chirino/graphql/errors"
 	"github.com/chirino/graphql/internal/query"
 	"github.com/chirino/graphql/schema"
@@ -258,7 +257,7 @@ func validateSelection(c *opContext, sel query.Selection, t schema.NamedType) {
 		c.fieldMap[sel] = fieldInfo{sf: f, parent: t}
 
 		sel.Schema = &query.FieldSchema{
-			Field: f,
+			Field:  f,
 			Parent: t,
 		}
 

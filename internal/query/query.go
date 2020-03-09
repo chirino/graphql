@@ -2,8 +2,8 @@ package query
 
 import (
 	"fmt"
-    "github.com/chirino/graphql/internal/lexer"
-    "github.com/chirino/graphql/schema"
+	"github.com/chirino/graphql/internal/lexer"
+	"github.com/chirino/graphql/schema"
 	"text/scanner"
 
 	"github.com/chirino/graphql/errors"

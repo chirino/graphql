@@ -1,74 +1,74 @@
 package deprecated_test
 
 import (
-    "context"
-    "github.com/chirino/graphql/customtypes"
-    "github.com/chirino/graphql/errors"
-    "github.com/chirino/graphql/internal/deprecated"
-    "testing"
-    "time"
+	"context"
+	"github.com/chirino/graphql/customtypes"
+	"github.com/chirino/graphql/errors"
+	"github.com/chirino/graphql/internal/deprecated"
+	"testing"
+	"time"
 
-    "github.com/chirino/graphql/internal/example/starwars"
-    "github.com/chirino/graphql/internal/gqltesting"
+	"github.com/chirino/graphql/internal/example/starwars"
+	"github.com/chirino/graphql/internal/gqltesting"
 )
 
 type helloWorldResolver1 struct{}
 
 func (r *helloWorldResolver1) Hello() string {
-    return "Hello world!"
+	return "Hello world!"
 }
 
 type helloWorldResolver2 struct{}
 
 func (r *helloWorldResolver2) Hello(ctx context.Context) (string, error) {
-    return "Hello world!", nil
+	return "Hello world!", nil
 }
 
 type helloSnakeResolver1 struct{}
 
 func (r *helloSnakeResolver1) HelloHTML() string {
-    return "Hello snake!"
+	return "Hello snake!"
 }
 
 func (r *helloSnakeResolver1) SayHello(args struct{ FullName string }) string {
-    return "Hello " + args.FullName + "!"
+	return "Hello " + args.FullName + "!"
 }
 
 type helloSnakeResolver2 struct{}
 
 func (r *helloSnakeResolver2) HelloHTML(ctx context.Context) (string, error) {
-    return "Hello snake!", nil
+	return "Hello snake!", nil
 }
 
 func (r *helloSnakeResolver2) SayHello(ctx context.Context, args struct{ FullName string }) (string, error) {
-    return "Hello " + args.FullName + "!", nil
+	return "Hello " + args.FullName + "!", nil
 }
 
 type theNumberResolver struct {
-    number int32
+	number int32
 }
 
 func (r *theNumberResolver) TheNumber() int32 {
-    return r.number
+	return r.number
 }
 
 func (r *theNumberResolver) ChangeTheNumber(args struct{ NewNumber int32 }) *theNumberResolver {
-    r.number = args.NewNumber
-    return r
+	r.number = args.NewNumber
+	return r
 }
 
 type timeResolver struct{}
 
 func (r *timeResolver) AddHour(args struct{ Time customtypes.Time }) customtypes.Time {
-    return customtypes.Time{Time: args.Time.Add(time.Hour)}
+	return customtypes.Time{Time: args.Time.Add(time.Hour)}
 }
 
 var starwarsSchema = deprecated.MustParseSchema(starwars.Schema, &starwars.Resolver{})
 
 func TestHelloWorld(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: deprecated.MustParseSchema(`
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 				}
@@ -77,20 +77,20 @@ func TestHelloWorld(t *testing.T) {
 					hello: String!
 				}
 			`, &helloWorldResolver1{}),
-            Query: `
+			Query: `
 				{
 					hello
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"hello": "Hello world!"
 				}
 			`,
-        },
+		},
 
-        {
-            Schema: deprecated.MustParseSchema(`
+		{
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 				}
@@ -99,24 +99,24 @@ func TestHelloWorld(t *testing.T) {
 					hello: String!
 				}
 			`, &helloWorldResolver2{}),
-            Query: `
+			Query: `
 				{
 					hello
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"hello": "Hello world!"
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 func TestHelloSnake(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: deprecated.MustParseSchema(`
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 				}
@@ -125,20 +125,20 @@ func TestHelloSnake(t *testing.T) {
 					hello_html: String!
 				}
 			`, &helloSnakeResolver1{}),
-            Query: `
+			Query: `
 				{
 					hello_html
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"hello_html": "Hello snake!"
 				}
 			`,
-        },
+		},
 
-        {
-            Schema: deprecated.MustParseSchema(`
+		{
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 				}
@@ -147,24 +147,24 @@ func TestHelloSnake(t *testing.T) {
 					hello_html: String!
 				}
 			`, &helloSnakeResolver2{}),
-            Query: `
+			Query: `
 				{
 					hello_html
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"hello_html": "Hello snake!"
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 func TestHelloSnakeArguments(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: deprecated.MustParseSchema(`
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 				}
@@ -173,20 +173,20 @@ func TestHelloSnakeArguments(t *testing.T) {
 					say_hello(full_name: String!): String!
 				}
 			`, &helloSnakeResolver1{}),
-            Query: `
+			Query: `
 				{
 					say_hello(full_name: "Rob Pike")
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"say_hello": "Hello Rob Pike!"
 				}
 			`,
-        },
+		},
 
-        {
-            Schema: deprecated.MustParseSchema(`
+		{
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 				}
@@ -195,25 +195,25 @@ func TestHelloSnakeArguments(t *testing.T) {
 					say_hello(full_name: String!): String!
 				}
 			`, &helloSnakeResolver2{}),
-            Query: `
+			Query: `
 				{
 					say_hello(full_name: "Rob Pike")
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"say_hello": "Hello Rob Pike!"
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 func TestBasic(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: starwarsSchema,
-            Query: `
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: starwarsSchema,
+			Query: `
 				{
 					hero {
 						id
@@ -224,7 +224,7 @@ func TestBasic(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"hero": {
 						"id": "2001",
@@ -243,15 +243,15 @@ func TestBasic(t *testing.T) {
 					}
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 func TestArguments(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: starwarsSchema,
-            Query: `
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: starwarsSchema,
+			Query: `
 				{
 					human(id: "1000") {
 						name
@@ -259,7 +259,7 @@ func TestArguments(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"human": {
 						"name": "Luke Skywalker",
@@ -267,11 +267,11 @@ func TestArguments(t *testing.T) {
 					}
 				}
 			`,
-        },
+		},
 
-        {
-            Schema: starwarsSchema,
-            Query: `
+		{
+			Schema: starwarsSchema,
+			Query: `
 				{
 					human(id: "1000") {
 						name
@@ -279,7 +279,7 @@ func TestArguments(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"human": {
 						"name": "Luke Skywalker",
@@ -287,15 +287,15 @@ func TestArguments(t *testing.T) {
 					}
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 func TestAliases(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: starwarsSchema,
-            Query: `
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: starwarsSchema,
+			Query: `
 				{
 					empireHero: hero(episode: EMPIRE) {
 						name
@@ -305,7 +305,7 @@ func TestAliases(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"empireHero": {
 						"name": "Luke Skywalker"
@@ -315,15 +315,15 @@ func TestAliases(t *testing.T) {
 					}
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 func TestFragments(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: starwarsSchema,
-            Query: `
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: starwarsSchema,
+			Query: `
 				{
 					leftComparison: hero(episode: EMPIRE) {
 						...comparisonFields
@@ -347,7 +347,7 @@ func TestFragments(t *testing.T) {
 					height
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"leftComparison": {
 						"name": "Luke Skywalker",
@@ -393,61 +393,61 @@ func TestFragments(t *testing.T) {
 					}
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 func TestVariables(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: starwarsSchema,
-            Query: `
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: starwarsSchema,
+			Query: `
 				query HeroNameAndFriends($episode: Episode) {
 					hero(episode: $episode) {
 						name
 					}
 				}
 			`,
-            Variables: map[string]interface{}{
-                "episode": "JEDI",
-            },
-            ExpectedResult: `
+			Variables: map[string]interface{}{
+				"episode": "JEDI",
+			},
+			ExpectedResult: `
 				{
 					"hero": {
 						"name": "R2-D2"
 					}
 				}
 			`,
-        },
+		},
 
-        {
-            Schema: starwarsSchema,
-            Query: `
+		{
+			Schema: starwarsSchema,
+			Query: `
 				query HeroNameAndFriends($episode: Episode) {
 					hero(episode: $episode) {
 						name
 					}
 				}
 			`,
-            Variables: map[string]interface{}{
-                "episode": "EMPIRE",
-            },
-            ExpectedResult: `
+			Variables: map[string]interface{}{
+				"episode": "EMPIRE",
+			},
+			ExpectedResult: `
 				{
 					"hero": {
 						"name": "Luke Skywalker"
 					}
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 func TestSkipDirective(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: starwarsSchema,
-            Query: `
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: starwarsSchema,
+			Query: `
 				query Hero($episode: Episode, $withoutFriends: Boolean!) {
 					hero(episode: $episode) {
 						name
@@ -457,22 +457,22 @@ func TestSkipDirective(t *testing.T) {
 					}
 				}
 			`,
-            Variables: map[string]interface{}{
-                "episode":        "JEDI",
-                "withoutFriends": true,
-            },
-            ExpectedResult: `
+			Variables: map[string]interface{}{
+				"episode":        "JEDI",
+				"withoutFriends": true,
+			},
+			ExpectedResult: `
 				{
 					"hero": {
 						"name": "R2-D2"
 					}
 				}
 			`,
-        },
+		},
 
-        {
-            Schema: starwarsSchema,
-            Query: `
+		{
+			Schema: starwarsSchema,
+			Query: `
 				query Hero($episode: Episode, $withoutFriends: Boolean!) {
 					hero(episode: $episode) {
 						name
@@ -482,11 +482,11 @@ func TestSkipDirective(t *testing.T) {
 					}
 				}
 			`,
-            Variables: map[string]interface{}{
-                "episode":        "JEDI",
-                "withoutFriends": false,
-            },
-            ExpectedResult: `
+			Variables: map[string]interface{}{
+				"episode":        "JEDI",
+				"withoutFriends": false,
+			},
+			ExpectedResult: `
 				{
 					"hero": {
 						"name": "R2-D2",
@@ -504,15 +504,15 @@ func TestSkipDirective(t *testing.T) {
 					}
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 func TestIncludeDirective(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: starwarsSchema,
-            Query: `
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: starwarsSchema,
+			Query: `
 				query Hero($episode: Episode, $withFriends: Boolean!) {
 					hero(episode: $episode) {
 						name
@@ -526,22 +526,22 @@ func TestIncludeDirective(t *testing.T) {
 					}
 				}
 			`,
-            Variables: map[string]interface{}{
-                "episode":     "JEDI",
-                "withFriends": false,
-            },
-            ExpectedResult: `
+			Variables: map[string]interface{}{
+				"episode":     "JEDI",
+				"withFriends": false,
+			},
+			ExpectedResult: `
 				{
 					"hero": {
 						"name": "R2-D2"
 					}
 				}
 			`,
-        },
+		},
 
-        {
-            Schema: starwarsSchema,
-            Query: `
+		{
+			Schema: starwarsSchema,
+			Query: `
 				query Hero($episode: Episode, $withFriends: Boolean!) {
 					hero(episode: $episode) {
 						name
@@ -555,11 +555,11 @@ func TestIncludeDirective(t *testing.T) {
 					}
 				}
 			`,
-            Variables: map[string]interface{}{
-                "episode":     "JEDI",
-                "withFriends": true,
-            },
-            ExpectedResult: `
+			Variables: map[string]interface{}{
+				"episode":     "JEDI",
+				"withFriends": true,
+			},
+			ExpectedResult: `
 				{
 					"hero": {
 						"name": "R2-D2",
@@ -577,28 +577,28 @@ func TestIncludeDirective(t *testing.T) {
 					}
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 type testDeprecatedDirectiveResolver struct{}
 
 func (r *testDeprecatedDirectiveResolver) A() int32 {
-    return 0
+	return 0
 }
 
 func (r *testDeprecatedDirectiveResolver) B() int32 {
-    return 0
+	return 0
 }
 
 func (r *testDeprecatedDirectiveResolver) C() int32 {
-    return 0
+	return 0
 }
 
 func TestDeprecatedDirective(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: deprecated.MustParseSchema(`
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 				}
@@ -609,7 +609,7 @@ func TestDeprecatedDirective(t *testing.T) {
 					c: Int! @deprecated(reason: "We don't like it")
 				}
 			`, &testDeprecatedDirectiveResolver{}),
-            Query: `
+			Query: `
 				{
 					__type(name: "Query") {
 						fields {
@@ -623,7 +623,7 @@ func TestDeprecatedDirective(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"__type": {
 						"fields": [
@@ -637,9 +637,9 @@ func TestDeprecatedDirective(t *testing.T) {
 					}
 				}
 			`,
-        },
-        {
-            Schema: deprecated.MustParseSchema(`
+		},
+		{
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 				}
@@ -653,7 +653,7 @@ func TestDeprecatedDirective(t *testing.T) {
 					C @deprecated(reason: "We don't like it")
 				}
 			`, &testDeprecatedDirectiveResolver{}),
-            Query: `
+			Query: `
 				{
 					__type(name: "Test") {
 						enumValues {
@@ -667,7 +667,7 @@ func TestDeprecatedDirective(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"__type": {
 						"enumValues": [
@@ -681,15 +681,15 @@ func TestDeprecatedDirective(t *testing.T) {
 					}
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 func TestInlineFragments(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: starwarsSchema,
-            Query: `
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: starwarsSchema,
+			Query: `
 				query HeroForEpisode($episode: Episode!) {
 					hero(episode: $episode) {
 						name
@@ -702,10 +702,10 @@ func TestInlineFragments(t *testing.T) {
 					}
 				}
 			`,
-            Variables: map[string]interface{}{
-                "episode": "JEDI",
-            },
-            ExpectedResult: `
+			Variables: map[string]interface{}{
+				"episode": "JEDI",
+			},
+			ExpectedResult: `
 				{
 					"hero": {
 						"name": "R2-D2",
@@ -713,11 +713,11 @@ func TestInlineFragments(t *testing.T) {
 					}
 				}
 			`,
-        },
+		},
 
-        {
-            Schema: starwarsSchema,
-            Query: `
+		{
+			Schema: starwarsSchema,
+			Query: `
 				query HeroForEpisode($episode: Episode!) {
 					hero(episode: $episode) {
 						name
@@ -730,10 +730,10 @@ func TestInlineFragments(t *testing.T) {
 					}
 				}
 			`,
-            Variables: map[string]interface{}{
-                "episode": "EMPIRE",
-            },
-            ExpectedResult: `
+			Variables: map[string]interface{}{
+				"episode": "EMPIRE",
+			},
+			ExpectedResult: `
 				{
 					"hero": {
 						"name": "Luke Skywalker",
@@ -741,15 +741,15 @@ func TestInlineFragments(t *testing.T) {
 					}
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 func TestTypeName(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: starwarsSchema,
-            Query: `
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: starwarsSchema,
+			Query: `
 				{
 					search(text: "an") {
 						__typename
@@ -765,7 +765,7 @@ func TestTypeName(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"search": [
 						{
@@ -783,11 +783,11 @@ func TestTypeName(t *testing.T) {
 					]
 				}
 			`,
-        },
+		},
 
-        {
-            Schema: starwarsSchema,
-            Query: `
+		{
+			Schema: starwarsSchema,
+			Query: `
 				{
 					human(id: "1000") {
 						__typename
@@ -795,7 +795,7 @@ func TestTypeName(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"human": {
 						"__typename": "Human",
@@ -803,15 +803,15 @@ func TestTypeName(t *testing.T) {
 					}
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 func TestConnections(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: starwarsSchema,
-            Query: `
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: starwarsSchema,
+			Query: `
 				{
 					hero {
 						name
@@ -832,7 +832,7 @@ func TestConnections(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"hero": {
 						"name": "R2-D2",
@@ -867,11 +867,11 @@ func TestConnections(t *testing.T) {
 					}
 				}
 			`,
-        },
+		},
 
-        {
-            Schema: starwarsSchema,
-            Query: `
+		{
+			Schema: starwarsSchema,
+			Query: `
 				{
 					hero {
 						name
@@ -909,7 +909,7 @@ func TestConnections(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"hero": {
 						"name": "R2-D2",
@@ -951,15 +951,15 @@ func TestConnections(t *testing.T) {
 					}
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 func TestMutation(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: starwarsSchema,
-            Query: `
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: starwarsSchema,
+			Query: `
 				{
 					reviews(episode: JEDI) {
 						stars
@@ -967,16 +967,16 @@ func TestMutation(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"reviews": []
 				}
 			`,
-        },
+		},
 
-        {
-            Schema: starwarsSchema,
-            Query: `
+		{
+			Schema: starwarsSchema,
+			Query: `
 				mutation CreateReviewForEpisode($ep: Episode!, $review: ReviewInput!) {
 					createReview(episode: $ep, review: $review) {
 						stars
@@ -984,14 +984,14 @@ func TestMutation(t *testing.T) {
 					}
 				}
 			`,
-            Variables: map[string]interface{}{
-                "ep": "JEDI",
-                "review": map[string]interface{}{
-                    "stars":      5,
-                    "commentary": "This is a great movie!",
-                },
-            },
-            ExpectedResult: `
+			Variables: map[string]interface{}{
+				"ep": "JEDI",
+				"review": map[string]interface{}{
+					"stars":      5,
+					"commentary": "This is a great movie!",
+				},
+			},
+			ExpectedResult: `
 				{
 					"createReview": {
 						"stars": 5,
@@ -999,11 +999,11 @@ func TestMutation(t *testing.T) {
 					}
 				}
 			`,
-        },
+		},
 
-        {
-            Schema: starwarsSchema,
-            Query: `
+		{
+			Schema: starwarsSchema,
+			Query: `
 				mutation CreateReviewForEpisode($ep: Episode!, $review: ReviewInput!) {
 					createReview(episode: $ep, review: $review) {
 						stars
@@ -1011,13 +1011,13 @@ func TestMutation(t *testing.T) {
 					}
 				}
 			`,
-            Variables: map[string]interface{}{
-                "ep": "EMPIRE",
-                "review": map[string]interface{}{
-                    "stars": float64(4),
-                },
-            },
-            ExpectedResult: `
+			Variables: map[string]interface{}{
+				"ep": "EMPIRE",
+				"review": map[string]interface{}{
+					"stars": float64(4),
+				},
+			},
+			ExpectedResult: `
 				{
 					"createReview": {
 						"stars": 4,
@@ -1025,11 +1025,11 @@ func TestMutation(t *testing.T) {
 					}
 				}
 			`,
-        },
+		},
 
-        {
-            Schema: starwarsSchema,
-            Query: `
+		{
+			Schema: starwarsSchema,
+			Query: `
 				{
 					reviews(episode: JEDI) {
 						stars
@@ -1037,7 +1037,7 @@ func TestMutation(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"reviews": [{
 						"stars": 5,
@@ -1045,15 +1045,15 @@ func TestMutation(t *testing.T) {
 					}]
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 func TestIntrospection(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: starwarsSchema,
-            Query: `
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: starwarsSchema,
+			Query: `
 				{
 					__schema {
 						types {
@@ -1062,7 +1062,7 @@ func TestIntrospection(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"__schema": {
 						"types": [
@@ -1097,11 +1097,11 @@ func TestIntrospection(t *testing.T) {
 					}
 				}
 			`,
-        },
+		},
 
-        {
-            Schema: starwarsSchema,
-            Query: `
+		{
+			Schema: starwarsSchema,
+			Query: `
 				{
 					__schema {
 						queryType {
@@ -1110,7 +1110,7 @@ func TestIntrospection(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"__schema": {
 						"queryType": {
@@ -1119,11 +1119,11 @@ func TestIntrospection(t *testing.T) {
 					}
 				}
 			`,
-        },
+		},
 
-        {
-            Schema: starwarsSchema,
-            Query: `
+		{
+			Schema: starwarsSchema,
+			Query: `
 				{
 					a: __type(name: "Droid") {
 						name
@@ -1157,7 +1157,7 @@ func TestIntrospection(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"a": {
 						"name": "Droid",
@@ -1200,11 +1200,11 @@ func TestIntrospection(t *testing.T) {
 					}
 				}
 			`,
-        },
+		},
 
-        {
-            Schema: starwarsSchema,
-            Query: `
+		{
+			Schema: starwarsSchema,
+			Query: `
 				{
 					__type(name: "Droid") {
 						name
@@ -1225,7 +1225,7 @@ func TestIntrospection(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"__type": {
 						"name": "Droid",
@@ -1297,11 +1297,11 @@ func TestIntrospection(t *testing.T) {
 					}
 				}
 			`,
-        },
+		},
 
-        {
-            Schema: starwarsSchema,
-            Query: `
+		{
+			Schema: starwarsSchema,
+			Query: `
 				{
 					__type(name: "Episode") {
 						enumValues {
@@ -1310,7 +1310,7 @@ func TestIntrospection(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"__type": {
 						"enumValues": [
@@ -1327,11 +1327,11 @@ func TestIntrospection(t *testing.T) {
 					}
 				}
 			`,
-        },
+		},
 
-        {
-            Schema: starwarsSchema,
-            Query: `
+		{
+			Schema: starwarsSchema,
+			Query: `
 				{
 					__schema {
 						directives {
@@ -1353,7 +1353,7 @@ func TestIntrospection(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
                 {
                   "__schema": {
                     "directives": [
@@ -1389,7 +1389,7 @@ func TestIntrospection(t *testing.T) {
                             }
                           }
                         ],
-                        "description": "\nDirects the executor to include this field or fragment only when the `+"`if`"+` argument is true.\n",
+                        "description": "\nDirects the executor to include this field or fragment only when the ` + "`if`" + ` argument is true.\n",
                         "locations": [
                           "FIELD",
                           "FRAGMENT_SPREAD",
@@ -1411,7 +1411,7 @@ func TestIntrospection(t *testing.T) {
                             }
                           }
                         ],
-                        "description": "\nDirects the executor to skip this field or fragment when the `+"`if`"+` argument is true.\n",
+                        "description": "\nDirects the executor to skip this field or fragment when the ` + "`if`" + ` argument is true.\n",
                         "locations": [
                           "FIELD",
                           "FRAGMENT_SPREAD",
@@ -1423,14 +1423,14 @@ func TestIntrospection(t *testing.T) {
                   }
                 }
 			`,
-        },
-    })
+		},
+	})
 }
 
 func TestMutationOrder(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: deprecated.MustParseSchema(`
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 					mutation: Mutation
@@ -1444,7 +1444,7 @@ func TestMutationOrder(t *testing.T) {
 					changeTheNumber(newNumber: Int!): Query
 				}
 			`, &theNumberResolver{}),
-            Query: `
+			Query: `
 				mutation {
 					first: changeTheNumber(newNumber: 1) {
 						theNumber
@@ -1457,7 +1457,7 @@ func TestMutationOrder(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"first": {
 						"theNumber": 1
@@ -1470,14 +1470,14 @@ func TestMutationOrder(t *testing.T) {
 					}
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 func TestTime(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: deprecated.MustParseSchema(`
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					query: Query
 				}
@@ -1488,35 +1488,35 @@ func TestTime(t *testing.T) {
 
 				scalar Time
 			`, &timeResolver{}),
-            Query: `
+			Query: `
 				query($t: Time!) {
 					a: addHour(time: $t)
 					b: addHour
 				}
 			`,
-            Variables: map[string]interface{}{
-                "t": time.Date(2000, 2, 3, 4, 5, 6, 0, time.UTC),
-            },
-            ExpectedResult: `
+			Variables: map[string]interface{}{
+				"t": time.Date(2000, 2, 3, 4, 5, 6, 0, time.UTC),
+			},
+			ExpectedResult: `
 				{
 					"a": "2000-02-03T05:05:06Z",
 					"b": "2001-02-03T05:05:06Z"
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 type resolverWithUnexportedMethod struct{}
 
 func (r *resolverWithUnexportedMethod) changeTheNumber(args struct{ NewNumber int32 }) int32 {
-    return args.NewNumber
+	return args.NewNumber
 }
 
 func TestUnexportedMethod(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: deprecated.MustParseSchema(`
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					mutation: Mutation
 				}
@@ -1525,28 +1525,28 @@ func TestUnexportedMethod(t *testing.T) {
 					changeTheNumber(newNumber: Int!): Int!
 				}
 			`, &resolverWithUnexportedMethod{}),
-            Query: `
+			Query: `
 				mutation {
 					changeTheNumber(newNumber: 1) 
 				}
 			`,
-            ExpectedErrors: []*errors.QueryError{
-                &errors.QueryError{Message: "No resolver found", Locations: []errors.Location(nil), Path: []string{"changeTheNumber"}, Rule: "", ResolverError: error(nil)},
-            },
-        },
-    })
+			ExpectedErrors: []*errors.QueryError{
+				&errors.QueryError{Message: "No resolver found", Locations: []errors.Location(nil), Path: []string{"changeTheNumber"}, Rule: "", ResolverError: error(nil)},
+			},
+		},
+	})
 }
 
 type resolverWithUnexportedField struct{}
 
 func (r *resolverWithUnexportedField) ChangeTheNumber(args struct{ newNumber int32 }) int32 {
-    return args.newNumber
+	return args.newNumber
 }
 
 func TestUnexportedField(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: deprecated.MustParseSchema(`
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: deprecated.MustParseSchema(`
 				schema {
 					mutation: Mutation
 				}
@@ -1555,108 +1555,108 @@ func TestUnexportedField(t *testing.T) {
 					changeTheNumber(newNumber: Int!): Int!
 				}
 			`, &resolverWithUnexportedField{}),
-            Query: `
+			Query: `
 				mutation {
 					changeTheNumber(newNumber: 1) 
 				}
 			`,
-            ExpectedErrors: []*errors.QueryError{
-                &errors.QueryError{Message: "No resolver found", Locations: []errors.Location(nil), Path: []string{"changeTheNumber"}, Rule: "", ResolverError: error(nil)},
-            },
-        },
-    })
+			ExpectedErrors: []*errors.QueryError{
+				&errors.QueryError{Message: "No resolver found", Locations: []errors.Location(nil), Path: []string{"changeTheNumber"}, Rule: "", ResolverError: error(nil)},
+			},
+		},
+	})
 }
 
 type Enum string
 
 const (
-    EnumOption1 Enum = "Option1"
-    EnumOption2 Enum = "Option2"
+	EnumOption1 Enum = "Option1"
+	EnumOption2 Enum = "Option2"
 )
 
 type inputResolver struct{}
 
 func (r *inputResolver) Int(args struct{ Value int32 }) int32 {
-    return args.Value
+	return args.Value
 }
 
 func (r *inputResolver) Float(args struct{ Value float64 }) float64 {
-    return args.Value
+	return args.Value
 }
 
 func (r *inputResolver) String(args struct{ Value string }) string {
-    return args.Value
+	return args.Value
 }
 
 func (r *inputResolver) Boolean(args struct{ Value bool }) bool {
-    return args.Value
+	return args.Value
 }
 
 func (r *inputResolver) Nullable(args struct{ Value *int32 }) *int32 {
-    return args.Value
+	return args.Value
 }
 
 func (r *inputResolver) List(args struct {
-    Value []*struct{ V int32 }
+	Value []*struct{ V int32 }
 }) []int32 {
-    l := make([]int32, len(args.Value))
-    for i, entry := range args.Value {
-        l[i] = entry.V
-    }
-    return l
+	l := make([]int32, len(args.Value))
+	for i, entry := range args.Value {
+		l[i] = entry.V
+	}
+	return l
 }
 
 func (r *inputResolver) NullableList(args struct {
-    Value *[]*struct{ V int32 }
+	Value *[]*struct{ V int32 }
 }) *[]*int32 {
-    if args.Value == nil {
-        return nil
-    }
-    l := make([]*int32, len(*args.Value))
-    for i, entry := range *args.Value {
-        if entry != nil {
-            l[i] = &entry.V
-        }
-    }
-    return &l
+	if args.Value == nil {
+		return nil
+	}
+	l := make([]*int32, len(*args.Value))
+	for i, entry := range *args.Value {
+		if entry != nil {
+			l[i] = &entry.V
+		}
+	}
+	return &l
 }
 
 func (r *inputResolver) EnumString(args struct{ Value string }) string {
-    return args.Value
+	return args.Value
 }
 
 func (r *inputResolver) NullableEnumString(args struct{ Value *string }) *string {
-    return args.Value
+	return args.Value
 }
 
 func (r *inputResolver) Enum(args struct{ Value Enum }) Enum {
-    return args.Value
+	return args.Value
 }
 
 func (r *inputResolver) NullableEnum(args struct{ Value *Enum }) *Enum {
-    return args.Value
+	return args.Value
 }
 
 type recursive struct {
-    Next *recursive
+	Next *recursive
 }
 
 func (r *inputResolver) Recursive(args struct{ Value *recursive }) int32 {
-    n := int32(0)
-    v := args.Value
-    for v != nil {
-        v = v.Next
-        n++
-    }
-    return n
+	n := int32(0)
+	v := args.Value
+	for v != nil {
+		v = v.Next
+		n++
+	}
+	return n
 }
 
 func (r *inputResolver) ID(args struct{ Value customtypes.ID }) customtypes.ID {
-    return args.Value
+	return args.Value
 }
 
 func TestInput(t *testing.T) {
-    coercionSchema := deprecated.MustParseSchema(`
+	coercionSchema := deprecated.MustParseSchema(`
 		schema {
 			query: Query
 		}
@@ -1690,10 +1690,10 @@ func TestInput(t *testing.T) {
 			Option2
 		}
 	`, &inputResolver{})
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: coercionSchema,
-            Query: `
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: coercionSchema,
+			Query: `
 				{
 					int(value: 42)
 					float1: float(value: 42)
@@ -1717,7 +1717,7 @@ func TestInput(t *testing.T) {
 					strID: id(value: "1234")
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"int": 42,
 					"float1": 42,
@@ -1741,15 +1741,15 @@ func TestInput(t *testing.T) {
 					"strID": "1234"
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 func TestComposedFragments(t *testing.T) {
-    gqltesting.RunTests(t, []*gqltesting.Test{
-        {
-            Schema: starwarsSchema,
-            Query: `
+	gqltesting.RunTests(t, []*gqltesting.Test{
+		{
+			Schema: starwarsSchema,
+			Query: `
 				{
 					composed: hero(episode: EMPIRE) {
 						name
@@ -1772,7 +1772,7 @@ func TestComposedFragments(t *testing.T) {
 					}
 				}
 			`,
-            ExpectedResult: `
+			ExpectedResult: `
 				{
 					"composed": {
 						"name": "Luke Skywalker",
@@ -1797,14 +1797,14 @@ func TestComposedFragments(t *testing.T) {
 					}
 				}
 			`,
-        },
-    })
+		},
+	})
 }
 
 func BenchmarkStarwarsQuery(b *testing.B) {
-    // Lets build a query that throws the kitchen skink at the query engine.
-    // (we grab a little bit of all the tests we have so far)
-    query := `
+	// Lets build a query that throws the kitchen skink at the query engine.
+	// (we grab a little bit of all the tests we have so far)
+	query := `
 	query HeroNameAndFriends($episode: Episode, $withoutFriends: Boolean!, $withFriends: Boolean!) {
 		hero {
 			id
@@ -1927,17 +1927,17 @@ func BenchmarkStarwarsQuery(b *testing.B) {
 		}
 	}	
 	`
-    variables := map[string]interface{}{
-        "episode":        "JEDI",
-        "withoutFriends": true,
-        "withFriends":    false,
-        "review": map[string]interface{}{
-            "stars":      5,
-            "commentary": "This is a great movie!",
-        },
-    }
+	variables := map[string]interface{}{
+		"episode":        "JEDI",
+		"withoutFriends": true,
+		"withFriends":    false,
+		"review": map[string]interface{}{
+			"stars":      5,
+			"commentary": "This is a great movie!",
+		},
+	}
 
-    for n := 0; n < b.N; n++ {
-        starwarsSchema.Exec(context.Background(), query, "", variables)
-    }
+	for n := 0; n < b.N; n++ {
+		starwarsSchema.Exec(context.Background(), query, "", variables)
+	}
 }

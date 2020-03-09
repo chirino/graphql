@@ -47,7 +47,7 @@ func RunTest(t *testing.T, test *Test) {
 
 	checkErrors(t, test.ExpectedErrors, result.Errors)
 
-	if( test.ExpectedResult != "" ) {
+	if test.ExpectedResult != "" {
 
 		// Verify JSON to avoid red herring errors.
 		got, err := formatJSON(result.Data)

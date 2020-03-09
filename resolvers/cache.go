@@ -10,7 +10,7 @@ type Cache struct {
 	mu    sync.Mutex
 }
 
-func (cache *Cache) GetOrElseUpdate(key interface{}, create func ()interface{}) (x interface{}) {
+func (cache *Cache) GetOrElseUpdate(key interface{}, create func() interface{}) (x interface{}) {
 	lastCacheMap, _ := cache.value.Load().(map[interface{}]interface{})
 	value, found := lastCacheMap[key]
 	if found {

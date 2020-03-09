@@ -7,15 +7,15 @@
 package resolvers
 
 import (
-    "reflect"
-    "sort"
-    "strings"
-    "unicode"
+	"reflect"
+	"sort"
+	"strings"
+	"unicode"
 )
 
 var childFieldTypeCache Cache
 
-func getChildField(parent *reflect.Value, fieldName string) (*reflect.Value, bool){
+func getChildField(parent *reflect.Value, fieldName string) (*reflect.Value, bool) {
 	parentType := parent.Type()
 	// use a cache to make subsequent lookups cheap
 	fields := childFieldTypeCache.GetOrElseUpdate(parentType, func() interface{} {
@@ -33,7 +33,6 @@ func getChildField(parent *reflect.Value, fieldName string) (*reflect.Value, boo
 	child := fieldByIndex(*parent, field.index)
 	return &child, true
 }
-
 
 func typeFields(t reflect.Type) []field {
 	// Anonymous fields to explore at the current level and the next.
@@ -117,11 +116,11 @@ func typeFields(t reflect.Type) []field {
 						name = sf.Name
 					}
 					fields = append(fields, field{
-						name:      name,
-						tag:       tagged,
-						index:     index,
-						typ:       ft,
-						quoted:    quoted,
+						name:   name,
+						tag:    tagged,
+						index:  index,
+						typ:    ft,
+						quoted: quoted,
 					})
 					if count[f.typ] > 1 {
 						// If there were multiple instances, add a second,
@@ -226,12 +225,12 @@ func (o tagOptions) Contains(optionName string) bool {
 }
 
 type field struct {
-	name      string
+	name string
 
-	tag       bool
-	index     []int
-	typ       reflect.Type
-	quoted    bool
+	tag    bool
+	index  []int
+	typ    reflect.Type
+	quoted bool
 }
 
 // dominantField looks through the fields, all of which are known to

@@ -34,7 +34,6 @@ func TestJaegerTracing(t *testing.T) {
 		return
 	}
 
-
 	svcName := t.Name() + "-" + ksuid.New().String()
 	queryURL := fmt.Sprintf(
 		"%s?lookback=1h&limit=1&service=%s",
@@ -67,7 +66,7 @@ func TestJaegerTracing(t *testing.T) {
 		type Query {
 			hello: String
 		}`)
-	if ! assert.NoError(t, err) {
+	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
 	engine.Tracer = trace.OpenTracingTracer{}
@@ -78,7 +77,6 @@ func TestJaegerTracing(t *testing.T) {
 	gqltesting.AssertRequestString(t, engine,
 		`{"query":"{ hello }"}`,
 		`{"data":{"hello":"World"}}`,
-
 	)
 
 	time.Sleep(1 * time.Second)
@@ -86,7 +84,7 @@ func TestJaegerTracing(t *testing.T) {
 
 }
 
-func assertTraceCount(t *testing.T, queryURL string, count int)  {
+func assertTraceCount(t *testing.T, queryURL string, count int) {
 	data := map[string]interface{}{}
 	httpGetJson(t, queryURL, &data)
 	datas := data["data"].([]interface{})

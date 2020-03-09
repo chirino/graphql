@@ -1,19 +1,19 @@
 package schema_test
 
 import (
-    "bytes"
-    "github.com/chirino/graphql/internal/example/starwars"
-    "github.com/chirino/graphql/schema"
-    "github.com/stretchr/testify/assert"
-    "testing"
+	"bytes"
+	"github.com/chirino/graphql/internal/example/starwars"
+	"github.com/chirino/graphql/schema"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestWriteSchemaFormatForStarwars(t *testing.T) {
-    s := schema.New()
-    s.Parse(starwars.Schema)
-    buf := &bytes.Buffer{}
-    s.WriteSchemaFormat(buf)
-    assert.Equal(t, `"A character from the Star Wars universe"
+	s := schema.New()
+	s.Parse(starwars.Schema)
+	buf := &bytes.Buffer{}
+	s.WriteSchemaFormat(buf)
+	assert.Equal(t, `"A character from the Star Wars universe"
 interface Character {
   "The ID of the character"
   id:ID!
@@ -145,8 +145,8 @@ schema {
 }
 
 func TestWriteSchemaFormatEdgeCases(t *testing.T) {
-    s := schema.New()
-    s.Parse(`
+	s := schema.New()
+	s.Parse(`
 """
 Multi
 Line Description
@@ -167,9 +167,9 @@ type Query @db_table(name:"Hello") {
 }
 
 `)
-    buf := &bytes.Buffer{}
-    s.WriteSchemaFormat(buf)
-    assert.Equal(t, `"""
+	buf := &bytes.Buffer{}
+	s.WriteSchemaFormat(buf)
+	assert.Equal(t, `"""
 Multi
 Line Description
 """

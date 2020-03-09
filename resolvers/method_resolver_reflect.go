@@ -7,9 +7,9 @@
 package resolvers
 
 import (
-    "context"
-    "reflect"
-    "strings"
+	"context"
+	"reflect"
+	"strings"
 )
 
 var childMethodTypeCache Cache
@@ -24,9 +24,9 @@ type methodInfo struct {
 
 func getChildMethod(parent *reflect.Value, fieldName string) *methodInfo {
 
-	var key struct{
+	var key struct {
 		parentType reflect.Type
-		fieldName string
+		fieldName  string
 	}
 
 	key.parentType = parent.Type()
@@ -72,7 +72,7 @@ func typeMethods(t reflect.Type) map[string]*methodInfo {
 			in = in[1:]
 		}
 
-		if len(in) > 0 && ( in[0].Kind() == reflect.Struct || ( in[0].Kind() == reflect.Ptr && in[0].Elem().Kind()== reflect.Struct )) {
+		if len(in) > 0 && (in[0].Kind() == reflect.Struct || (in[0].Kind() == reflect.Ptr && in[0].Elem().Kind() == reflect.Struct)) {
 			methodInfo.argumentsType = &in[0]
 			in = in[1:]
 		}
@@ -88,7 +88,7 @@ func typeMethods(t reflect.Type) map[string]*methodInfo {
 		methodInfo.hasError = typeMethod.Type.NumOut() == 2
 		if methodInfo.hasError {
 			if typeMethod.Type.Out(1) != errorType {
-				continue;
+				continue
 			}
 		}
 		methods[strings.ToLower(typeMethod.Name)] = &methodInfo
@@ -97,10 +97,8 @@ func typeMethods(t reflect.Type) map[string]*methodInfo {
 	return methods
 }
 func unwrapIfPtr(t reflect.Type) reflect.Type {
-	if (t.Kind() == reflect.Ptr) {
+	if t.Kind() == reflect.Ptr {
 		return t.Elem()
 	}
-	return t;
+	return t
 }
-
-

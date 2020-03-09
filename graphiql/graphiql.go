@@ -1,15 +1,15 @@
 package graphiql
 
 import (
-    "bytes"
-    "html/template"
-    "net/http"
+	"bytes"
+	"html/template"
+	"net/http"
 )
 
 type Handler string
 
 func New(url string, ws bool) Handler {
-    html := `
+	html := `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -150,26 +150,26 @@ func New(url string, ws bool) Handler {
 </body>
 </html>
 `
-    parse, err := template.New("index.html").Parse(html)
-    if err != nil {
-        panic(err)
-    }
-    buf := &bytes.Buffer{}
-    type Options struct {
-        WebSocket bool
-        URL       string
-    }
-    err = parse.Execute(buf, Options{
-        WebSocket: ws,
-        URL:       url,
-    })
-    if err != nil {
-        panic(err)
-    }
-    return Handler(buf.String())
+	parse, err := template.New("index.html").Parse(html)
+	if err != nil {
+		panic(err)
+	}
+	buf := &bytes.Buffer{}
+	type Options struct {
+		WebSocket bool
+		URL       string
+	}
+	err = parse.Execute(buf, Options{
+		WebSocket: ws,
+		URL:       url,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return Handler(buf.String())
 }
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-    w.Header().Set("Content-Type", "text/html")
-    w.Write([]byte(h))
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(h))
 }
