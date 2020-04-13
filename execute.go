@@ -1,15 +1,15 @@
 package graphql
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"github.com/chirino/graphql/errors"
-	"github.com/chirino/graphql/internal/exec"
-	"github.com/chirino/graphql/internal/introspection"
-	"github.com/chirino/graphql/internal/query"
-	"github.com/chirino/graphql/internal/validation"
-	"github.com/chirino/graphql/schema"
+    "context"
+    "encoding/json"
+    "fmt"
+    "github.com/chirino/graphql/errors"
+    "github.com/chirino/graphql/internal/exec"
+    "github.com/chirino/graphql/internal/introspection"
+    "github.com/chirino/graphql/internal/validation"
+    "github.com/chirino/graphql/query"
+    "github.com/chirino/graphql/schema"
 )
 
 type EngineRequest struct {

@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/chirino/graphql/errors"
-	"github.com/chirino/graphql/internal/query"
+    "github.com/chirino/graphql/query"
 	"github.com/chirino/graphql/schema"
 )
 

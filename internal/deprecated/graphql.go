@@ -1,14 +1,14 @@
 package deprecated
 
 import (
-	"context"
-	"github.com/chirino/graphql"
+    "context"
+    "github.com/chirino/graphql"
 
-	"github.com/chirino/graphql/errors"
-	"github.com/chirino/graphql/internal/query"
-	"github.com/chirino/graphql/internal/validation"
-	"github.com/chirino/graphql/log"
-	"github.com/chirino/graphql/trace"
+    "github.com/chirino/graphql/errors"
+    "github.com/chirino/graphql/internal/validation"
+    "github.com/chirino/graphql/log"
+    "github.com/chirino/graphql/query"
+    "github.com/chirino/graphql/trace"
 )
 
 // ParseSchema parses a GraphQL schema and attaches the given root resolver. It returns an error if

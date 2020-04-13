@@ -7,6 +7,10 @@ type Directive struct {
 	Args ArgumentList
 }
 
+func (s *Directive) String() string {
+	return FormatterToString(s)
+}
+
 func ParseDirectives(l *lexer.Lexer) DirectiveList {
 	var directives DirectiveList
 	for l.Peek() == '@' {

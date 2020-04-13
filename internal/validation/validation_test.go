@@ -1,17 +1,17 @@
 package validation_test
 
 import (
-	"os"
-	"reflect"
-	"sort"
-	"testing"
+    "os"
+    "reflect"
+    "sort"
+    "testing"
 
-	"encoding/json"
+    "encoding/json"
 
-	"github.com/chirino/graphql/errors"
-	"github.com/chirino/graphql/internal/query"
-	"github.com/chirino/graphql/internal/validation"
-	"github.com/chirino/graphql/schema"
+    "github.com/chirino/graphql/errors"
+    "github.com/chirino/graphql/internal/validation"
+    "github.com/chirino/graphql/query"
+    "github.com/chirino/graphql/schema"
 )
 
 type Test struct {

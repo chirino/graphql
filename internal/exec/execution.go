@@ -1,21 +1,21 @@
 package exec
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
-	"fmt"
-	"github.com/chirino/graphql/errors"
-	"github.com/chirino/graphql/internal/exec/packer"
-	"github.com/chirino/graphql/internal/introspection"
-	"github.com/chirino/graphql/internal/linkedmap"
-	"github.com/chirino/graphql/internal/query"
-	"github.com/chirino/graphql/log"
-	"github.com/chirino/graphql/resolvers"
-	"github.com/chirino/graphql/schema"
-	"github.com/chirino/graphql/trace"
-	"reflect"
-	"sync"
+    "bytes"
+    "context"
+    "encoding/json"
+    "fmt"
+    "github.com/chirino/graphql/errors"
+    "github.com/chirino/graphql/internal/exec/packer"
+    "github.com/chirino/graphql/internal/introspection"
+    "github.com/chirino/graphql/internal/linkedmap"
+    "github.com/chirino/graphql/log"
+    "github.com/chirino/graphql/query"
+    "github.com/chirino/graphql/resolvers"
+    "github.com/chirino/graphql/schema"
+    "github.com/chirino/graphql/trace"
+    "reflect"
+    "sync"
 )
 
 type Execution struct {

@@ -117,7 +117,10 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			ctx := withValue(withValue(r.Context(), "net/http.ResponseWriter", w), "*net/http.Request", r)
+			ctx := r.Context()
+			ctx = context.WithValue(ctx, "net/http.ResponseWriter", w)
+			ctx = context.WithValue(ctx, "*net/http.Request", r)
+
 			request.Context = ctx
 			stream, err := h.Engine.Execute(&request)
 
@@ -177,7 +180,7 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	upgrade := r.Header.Get("Upgrade")
+	upgrade := strings.ToLower(r.Header.Get("Upgrade"))
 	if upgrade == "websocket" {
 		h.Upgrade(w, r)
 		return
@@ -190,7 +193,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	// Attach the response and request to the context, in case a resolver wants to
 	// work at the the http level.
-	ctx := withValue(withValue(r.Context(), "net/http.ResponseWriter", w), "*net/http.Request", r)
+	ctx := r.Context()
+	ctx = context.WithValue(ctx, "net/http.ResponseWriter", w)
+	ctx = context.WithValue(ctx, "*net/http.Request", r)
+
 	request.Context = ctx
 	reponse := h.Engine.ExecuteOne(&request)
 	responseJSON, err := json.Marshal(reponse)
@@ -200,8 +206,4 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(responseJSON)
-}
-
-func withValue(ctx context.Context, key string, v interface{}) context.Context {
-	return context.WithValue(ctx, key, v)
 }

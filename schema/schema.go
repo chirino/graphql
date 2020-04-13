@@ -58,10 +58,20 @@ type HasDirectives interface {
 	GetDirectives() DirectiveList
 }
 
+type Formatter interface {
+	WriteSchemaFormat(out io.StringWriter)
+}
+
+func FormatterToString(s Formatter) string {
+	buf := &bytes.Buffer{}
+	s.WriteSchemaFormat(buf)
+	return buf.String()
+}
+
 type Type interface {
 	Kind() string
 	String() string
-	WriteSchemaFormat(out io.StringWriter)
+	Formatter
 }
 
 type List struct {
@@ -286,9 +296,7 @@ func (t *InputValue) Kind() string { return "INPUT_FIELD_DEFINITION" }
 func (t *EnumValue) Kind() string  { return "ENUM_VALUE" }
 
 func (s *Schema) String() string {
-	buf := &bytes.Buffer{}
-	s.WriteSchemaFormat(buf)
-	return buf.String()
+	return FormatterToString(s)
 }
 func (t *Field) String() string       { return t.Name }
 func (t *List) String() string        { return "[" + t.OfType.String() + "]" }
