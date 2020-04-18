@@ -353,6 +353,7 @@ func New() *Schema {
 		entryPointNames:    make(map[OperationType]string),
 		Types:              make(map[string]NamedType),
 		DeclaredDirectives: make(map[string]*DirectiveDecl),
+		EntryPoints:        make(map[OperationType]NamedType),
 	}
 	for n, t := range Meta.Types {
 		s.Types[n] = t
@@ -392,7 +393,6 @@ func (s *Schema) ResolveTypes() error {
 		}
 	}
 
-	s.EntryPoints = make(map[OperationType]NamedType)
 	for key, name := range s.entryPointNames {
 		t, ok := s.Types[name]
 		if !ok {
@@ -451,7 +451,7 @@ func (s *Schema) ResolveTypes() error {
 func (s *Schema) VisitDirective(directiveDecl *DirectiveDecl, visitor func(directive *Directive, parents ...HasDirectives) error) error {
 
 	var searchSchema, searchScalar, searchObject, searchField, searchArgument, searchInterface, searchUnion,
-		searchEnum, searchEnumValue, searchInputObject, searchInputField bool
+	searchEnum, searchEnumValue, searchInputObject, searchInputField bool
 
 	for _, loc := range directiveDecl.Locs {
 		switch loc {
