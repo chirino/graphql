@@ -372,6 +372,11 @@ func (s *Schema) Parse(schemaString string) error {
 		return err
 	}
 
+	return s.ResolveTypes()
+}
+
+func (s *Schema) ResolveTypes() error {
+
 	for _, t := range s.Types {
 		if err := resolveNamedType(s, t); err != nil {
 			return err
