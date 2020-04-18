@@ -3,7 +3,7 @@ package schema
 import "github.com/chirino/graphql/internal/lexer"
 
 type Directive struct {
-	Name lexer.Ident
+	Name Ident
 	Args ArgumentList
 }
 
@@ -16,7 +16,7 @@ func ParseDirectives(l *lexer.Lexer) DirectiveList {
 	for l.Peek() == '@' {
 		l.ConsumeToken('@')
 		d := &Directive{}
-		d.Name = l.ConsumeIdentWithLoc()
+		d.Name = Ident(l.ConsumeIdentWithLoc())
 		d.Name.Loc.Column--
 		if l.Peek() == '(' {
 			d.Args = ParseArguments(l)

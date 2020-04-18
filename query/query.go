@@ -38,7 +38,7 @@ func (l FragmentList) Get(name string) *FragmentDecl {
 
 type Operation struct {
 	Type       schema.OperationType
-	Name       lexer.Ident
+	Name       schema.Ident
 	Vars       schema.InputValueList
 	Selections []Selection
 	Directives schema.DirectiveList
@@ -52,7 +52,7 @@ type Fragment struct {
 
 type FragmentDecl struct {
 	Fragment
-	Name       lexer.Ident
+	Name       schema.Ident
 	Directives schema.DirectiveList
 	Loc        errors.Location
 }
@@ -62,8 +62,8 @@ type Selection interface {
 }
 
 type Field struct {
-	Alias           lexer.Ident
-	Name            lexer.Ident
+	Alias           schema.Ident
+	Name            schema.Ident
 	Arguments       schema.ArgumentList
 	Directives      schema.DirectiveList
 	Selections      []Selection
@@ -83,7 +83,7 @@ type InlineFragment struct {
 }
 
 type FragmentSpread struct {
-	Name       lexer.Ident
+	Name       schema.Ident
 	Directives schema.DirectiveList
 	Loc        errors.Location
 }
@@ -144,7 +144,7 @@ func parseOperation(l *lexer.Lexer, opType schema.OperationType) *Operation {
 	op := &Operation{Type: opType}
 	op.Name.Loc = l.Location()
 	if l.Peek() == scanner.Ident {
-		op.Name = l.ConsumeIdentWithLoc()
+		op.Name = schema.Ident(l.ConsumeIdentWithLoc())
 	}
 	op.Directives = schema.ParseDirectives(l)
 	if l.Peek() == '(' {
@@ -164,7 +164,7 @@ func parseOperation(l *lexer.Lexer, opType schema.OperationType) *Operation {
 
 func parseFragment(l *lexer.Lexer) *FragmentDecl {
 	f := &FragmentDecl{}
-	f.Name = l.ConsumeIdentWithLoc()
+	f.Name = schema.Ident(l.ConsumeIdentWithLoc())
 	l.ConsumeKeyword("on")
 	f.On = schema.TypeName{Ident: l.ConsumeIdentWithLoc()}
 	f.Directives = schema.ParseDirectives(l)
@@ -191,11 +191,11 @@ func parseSelection(l *lexer.Lexer) Selection {
 
 func parseField(l *lexer.Lexer) *Field {
 	f := &Field{}
-	f.Alias = l.ConsumeIdentWithLoc()
+	f.Alias = schema.Ident(l.ConsumeIdentWithLoc())
 	f.Name = f.Alias
 	if l.Peek() == ':' {
 		l.ConsumeToken(':')
-		f.Name = l.ConsumeIdentWithLoc()
+		f.Name = schema.Ident(l.ConsumeIdentWithLoc())
 	}
 	if l.Peek() == '(' {
 		f.Arguments = schema.ParseArguments(l)
@@ -216,7 +216,7 @@ func parseSpread(l *lexer.Lexer) Selection {
 
 	f := &InlineFragment{Loc: loc}
 	if l.Peek() == scanner.Ident {
-		ident := l.ConsumeIdentWithLoc()
+		ident := schema.Ident(l.ConsumeIdentWithLoc())
 		if ident.Text != "on" {
 			fs := &FragmentSpread{
 				Name: ident,

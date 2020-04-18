@@ -1,7 +1,6 @@
 package introspection
 
 import (
-	"github.com/chirino/graphql/internal/lexer"
 	"sort"
 
 	"github.com/chirino/graphql/schema"
@@ -206,7 +205,7 @@ func (r *Field) Description() *string {
 	return Description(r.field.Desc)
 }
 
-func Description(desc *lexer.Description) *string {
+func Description(desc *schema.Description) *string {
 	if desc == nil || desc.Text == "" {
 		return nil
 	}

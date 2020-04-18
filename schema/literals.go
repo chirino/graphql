@@ -103,7 +103,7 @@ type ObjectLit struct {
 }
 
 type ObjectLitField struct {
-	Name  lexer.Ident
+	Name  Ident
 	Value Literal
 }
 
@@ -197,7 +197,7 @@ func ParseLiteral(l *lexer.Lexer, constOnly bool) Literal {
 		l.ConsumeToken('{')
 		var fields []*ObjectLitField
 		for l.Peek() != '}' {
-			name := l.ConsumeIdentWithLoc()
+			name := Ident(l.ConsumeIdentWithLoc())
 			l.ConsumeToken(':')
 			value := ParseLiteral(l, constOnly)
 			fields = append(fields, &ObjectLitField{name, value})

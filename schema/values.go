@@ -6,12 +6,22 @@ import (
 	"github.com/chirino/graphql/internal/lexer"
 )
 
+type Ident lexer.Ident
+type Description lexer.Description
+
+func (d *Description) String() string {
+	if d == nil {
+		return ""
+	}
+	return d.Text
+}
+
 // http://facebook.github.io/graphql/draft/#InputValueDefinition
 type InputValue struct {
-	Name       lexer.Ident
+	Name       Ident
 	Type       Type
 	Default    Literal
-	Desc       *lexer.Description
+	Desc       *Description
 	Loc        errors.Location
 	TypeLoc    errors.Location
 	Directives DirectiveList
@@ -31,8 +41,8 @@ func (l InputValueList) Get(name string) *InputValue {
 func ParseInputValue(l *lexer.Lexer) *InputValue {
 	p := &InputValue{}
 	p.Loc = l.Location()
-	p.Desc = l.ConsumeDescription()
-	p.Name = l.ConsumeIdentWithLoc()
+	p.Desc = toDescription(l.ConsumeDescription())
+	p.Name = Ident(l.ConsumeIdentWithLoc())
 	l.ConsumeToken(':')
 	p.TypeLoc = l.Location()
 	p.Type = ParseType(l)
@@ -44,8 +54,16 @@ func ParseInputValue(l *lexer.Lexer) *InputValue {
 	return p
 }
 
+func toDescription(description *lexer.Description) *Description {
+	if description == nil {
+		return nil
+	}
+	d := Description(*description)
+	return &d
+}
+
 type Argument struct {
-	Name  lexer.Ident
+	Name  Ident
 	Value Literal
 }
 
@@ -92,7 +110,7 @@ func ParseArguments(l *lexer.Lexer) ArgumentList {
 	var args ArgumentList
 	l.ConsumeToken('(')
 	for l.Peek() != ')' {
-		name := l.ConsumeIdentWithLoc()
+		name := Ident(l.ConsumeIdentWithLoc())
 		l.ConsumeToken(':')
 		value := ParseLiteral(l, false)
 		args = append(args, Argument{Name: name, Value: value})

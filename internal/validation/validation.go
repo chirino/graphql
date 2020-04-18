@@ -2,7 +2,6 @@ package validation
 
 import (
 	"fmt"
-	"github.com/chirino/graphql/internal/lexer"
 	"github.com/chirino/graphql/internal/scanner"
 	"math"
 	"reflect"
@@ -241,7 +240,7 @@ func validateSelection(c *opContext, sel query.Selection, t schema.NamedType) {
 				Name: "__type",
 				Args: schema.InputValueList{
 					&schema.InputValue{
-						Name: lexer.Ident{Text: "name"},
+						Name: schema.Ident{Text: "name"},
 						Type: &schema.NonNull{OfType: c.schema.Types["String"]},
 					},
 				},
@@ -610,13 +609,13 @@ func validateDirectives(c *opContext, loc string, directives schema.DirectiveLis
 
 type nameSet map[string]errors.Location
 
-func validateName(c *context, set nameSet, name lexer.Ident, rule string, kind string) {
+func validateName(c *context, set nameSet, name schema.Ident, rule string, kind string) {
 	validateNameCustomMsg(c, set, name, rule, func() string {
 		return fmt.Sprintf("There can be only one %s named %q.", kind, name.Text)
 	})
 }
 
-func validateNameCustomMsg(c *context, set nameSet, name lexer.Ident, rule string, msg func() string) {
+func validateNameCustomMsg(c *context, set nameSet, name schema.Ident, rule string, msg func() string) {
 	if loc, ok := set[name.Text]; ok {
 		c.addErrMultiLoc([]errors.Location{loc, name.Loc}, rule, msg())
 		return
