@@ -166,7 +166,7 @@ func parseFragment(l *lexer.Lexer) *FragmentDecl {
 	f := &FragmentDecl{}
 	f.Name = schema.Ident(l.ConsumeIdentWithLoc())
 	l.ConsumeKeyword("on")
-	f.On = schema.TypeName{Ident: l.ConsumeIdentWithLoc()}
+	f.On = schema.TypeName{Ident: schema.Ident(l.ConsumeIdentWithLoc())}
 	f.Directives = schema.ParseDirectives(l)
 	f.Selections = parseSelectionSet(l)
 	return f
@@ -225,7 +225,7 @@ func parseSpread(l *lexer.Lexer) Selection {
 			fs.Directives = schema.ParseDirectives(l)
 			return fs
 		}
-		f.On = schema.TypeName{Ident: l.ConsumeIdentWithLoc()}
+		f.On = schema.TypeName{Ident: schema.Ident(l.ConsumeIdentWithLoc())}
 	}
 	f.Directives = schema.ParseDirectives(l)
 	f.Selections = parseSelectionSet(l)

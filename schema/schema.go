@@ -83,7 +83,7 @@ type NonNull struct {
 }
 
 type TypeName struct {
-	lexer.Ident
+	Ident
 }
 
 // Resolve a named type in the schema by its name.

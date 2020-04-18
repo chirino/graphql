@@ -43,7 +43,7 @@ func parseNullType(l *lexer.Lexer) Type {
 		return &List{OfType: ofType}
 	}
 
-	return &TypeName{Ident: l.ConsumeIdentWithLoc()}
+	return &TypeName{Ident: Ident(l.ConsumeIdentWithLoc())}
 }
 
 type Resolver func(name string) Type
