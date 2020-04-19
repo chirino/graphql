@@ -1,26 +1,27 @@
 package exec
 
 import (
-    "bytes"
-    "context"
-    "encoding/json"
-    "fmt"
-    "github.com/chirino/graphql/errors"
-    "github.com/chirino/graphql/internal/exec/packer"
-    "github.com/chirino/graphql/internal/introspection"
-    "github.com/chirino/graphql/internal/linkedmap"
-    "github.com/chirino/graphql/log"
-    "github.com/chirino/graphql/query"
-    "github.com/chirino/graphql/resolvers"
-    "github.com/chirino/graphql/schema"
-    "github.com/chirino/graphql/trace"
-    "reflect"
-    "sync"
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/chirino/graphql/errors"
+	"github.com/chirino/graphql/internal/exec/packer"
+	"github.com/chirino/graphql/internal/introspection"
+	"github.com/chirino/graphql/internal/linkedmap"
+	"github.com/chirino/graphql/log"
+	"github.com/chirino/graphql/query"
+	"github.com/chirino/graphql/resolvers"
+	"github.com/chirino/graphql/schema"
+	"github.com/chirino/graphql/trace"
+	"reflect"
+	"sync"
 )
 
 type Execution struct {
-	Schema    *schema.Schema
+	Query     string
 	Vars      map[string]interface{}
+	Schema    *schema.Schema
 	Doc       *query.Document
 	Operation *query.Operation
 	limiter   chan byte
@@ -38,6 +39,22 @@ type Execution struct {
 	errs           []*errors.QueryError
 	MaxParallelism int
 	Handler        func(data json.RawMessage, errors []*errors.QueryError)
+}
+
+func (this *Execution) GetQuery() string {
+	return this.Query
+}
+
+func (this *Execution) GetVars() map[string]interface{} {
+	return this.Vars
+}
+
+func (this *Execution) GetDocument() *query.Document {
+	return this.Doc
+}
+
+func (this *Execution) GetOperation() *query.Operation {
+	return this.Operation
 }
 
 func (this *Execution) GetSchema() *schema.Schema {
@@ -264,6 +281,8 @@ func (this *Execution) recursiveExecute(parentSelection *SelectionResolver, sele
 	this.data.WriteByte('}')
 }
 
+var rawMessageType = reflect.TypeOf(resolvers.RawMessage{})
+
 func (this *Execution) executeSelected(parentSelection *SelectionResolver, selected *SelectionResolver) (result *errors.QueryError) {
 
 	defer func() {
@@ -283,6 +302,16 @@ func (this *Execution) executeSelected(parentSelection *SelectionResolver, selec
 			Path:          selected.Path(),
 			ResolverError: err,
 		}).WithStack()
+	}
+
+	if childValue.Type() == rawMessageType {
+		message := childValue.Interface().(resolvers.RawMessage)
+		// if it's wrapped, then unwrap...
+		if message[0] == '{' {
+			message = message[1 : len(message)-1]
+		}
+		this.data.Write(message)
+		return
 	}
 
 	field := selected.field

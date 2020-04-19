@@ -85,6 +85,9 @@ func (t *Object) WriteSchemaFormat(out io.StringWriter) {
 		t.Directives.WriteSchemaFormat(out)
 	}
 	out.WriteString(" {\n")
+	sort.Slice(t.Fields, func(i, j int) bool {
+		return t.Fields[i].Name < t.Fields[j].Name
+	})
 	for _, f := range t.Fields {
 		i := &indent{}
 		f.WriteSchemaFormat(i)
@@ -107,6 +110,10 @@ func (t *Interface) WriteSchemaFormat(out io.StringWriter) {
 	out.WriteString("interface ")
 	out.WriteString(t.Name)
 	out.WriteString(" {\n")
+
+	sort.Slice(t.Fields, func(i, j int) bool {
+		return t.Fields[i].Name < t.Fields[j].Name
+	})
 	for _, f := range t.Fields {
 		i := &indent{}
 		f.WriteSchemaFormat(i)
@@ -148,6 +155,10 @@ func (t *InputObject) WriteSchemaFormat(out io.StringWriter) {
 	out.WriteString("input ")
 	out.WriteString(t.Name)
 	out.WriteString(" {\n")
+
+	sort.Slice(t.Fields, func(i, j int) bool {
+		return t.Fields[i].Name.Text < t.Fields[j].Name.Text
+	})
 	for _, f := range t.Fields {
 		i := &indent{}
 		f.WriteSchemaFormat(i)
@@ -265,9 +276,12 @@ func (lit *ListLit) WriteSchemaFormat(out io.StringWriter) {
 func (lit *NullLit) WriteSchemaFormat(out io.StringWriter) {
 	out.WriteString("null")
 }
-func (lit *ObjectLit) WriteSchemaFormat(out io.StringWriter) {
+func (t *ObjectLit) WriteSchemaFormat(out io.StringWriter) {
 	out.WriteString("{")
-	for i, v := range lit.Fields {
+	sort.Slice(t.Fields, func(i, j int) bool {
+		return t.Fields[i].Name.Text < t.Fields[j].Name.Text
+	})
+	for i, v := range t.Fields {
 		if i != 0 {
 			out.WriteString(", ")
 		}

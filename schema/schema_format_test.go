@@ -2,10 +2,11 @@ package schema_test
 
 import (
 	"bytes"
+	"testing"
+
 	"github.com/chirino/graphql/internal/example/starwars"
 	"github.com/chirino/graphql/schema"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestWriteSchemaFormatForStarwars(t *testing.T) {
@@ -15,29 +16,29 @@ func TestWriteSchemaFormatForStarwars(t *testing.T) {
 	s.WriteSchemaFormat(buf)
 	assert.Equal(t, `"A character from the Star Wars universe"
 interface Character {
-  "The ID of the character"
-  id:ID!
-  "The name of the character"
-  name:String!
+  "The movies this character appears in"
+  appearsIn:[Episode!]!
   "The friends of the character, or an empty list if they have none"
   friends:[Character]
   "The friends of the character exposed as a connection with edges"
   friendsConnection(first:Int, after:ID):FriendsConnection!
-  "The movies this character appears in"
-  appearsIn:[Episode!]!
+  "The ID of the character"
+  id:ID!
+  "The name of the character"
+  name:String!
 }
 "An autonomous mechanical character in the Star Wars universe"
 type Droid implements Character  {
-  "The ID of the droid"
-  id:ID!
-  "What others call this droid"
-  name:String!
+  "The movies this droid appears in"
+  appearsIn:[Episode!]!
   "This droid's friends, or an empty list if they have none"
   friends:[Character]
   "The friends of the droid exposed as a connection with edges"
   friendsConnection(first:Int, after:ID):FriendsConnection!
-  "The movies this droid appears in"
-  appearsIn:[Episode!]!
+  "The ID of the droid"
+  id:ID!
+  "What others call this droid"
+  name:String!
   "This droid's primary function"
   primaryFunction:String
 }
@@ -52,14 +53,14 @@ enum Episode {
 }
 "A connection object for a character's friends"
 type FriendsConnection {
-  "The total number of friends"
-  totalCount:Int!
   "The edges for each of the character's friends."
   edges:[FriendsEdge]
   "A list of the friends, as a convenience when edges are not needed."
   friends:[Character]
   "Information for paginating this connection"
   pageInfo:PageInfo!
+  "The total number of friends"
+  totalCount:Int!
 }
 "An edge object for a character's friends"
 type FriendsEdge {
@@ -70,20 +71,20 @@ type FriendsEdge {
 }
 "A humanoid creature from the Star Wars universe"
 type Human implements Character  {
-  "The ID of the human"
-  id:ID!
-  "What this human calls themselves"
-  name:String!
-  "Height in the preferred unit, default is meters"
-  height(unit:LengthUnit=METER):Float!
-  "Mass in kilograms, or null if unknown"
-  mass:Float
+  "The movies this human appears in"
+  appearsIn:[Episode!]!
   "This human's friends, or an empty list if they have none"
   friends:[Character]
   "The friends of the human exposed as a connection with edges"
   friendsConnection(first:Int, after:ID):FriendsConnection!
-  "The movies this human appears in"
-  appearsIn:[Episode!]!
+  "Height in the preferred unit, default is meters"
+  height(unit:LengthUnit=METER):Float!
+  "The ID of the human"
+  id:ID!
+  "Mass in kilograms, or null if unknown"
+  mass:Float
+  "What this human calls themselves"
+  name:String!
   "A list of starships this person has piloted, or an empty list if none"
   starships:[Starship]
 }
@@ -100,42 +101,42 @@ type Mutation {
 }
 "Information for paginating this connection"
 type PageInfo {
-  startCursor:ID
   endCursor:ID
   hasNextPage:Boolean!
+  startCursor:ID
 }
 "The query type, represents all of the entry points into our object graph"
 type Query {
-  hero(episode:Episode=NEWHOPE):Character
-  reviews(episode:Episode!):[Review]!
-  search(text:String!):[SearchResult]!
   character(id:ID!):Character
   droid(id:ID!):Droid
+  hero(episode:Episode=NEWHOPE):Character
   human(id:ID!):Human
+  reviews(episode:Episode!):[Review]!
+  search(text:String!):[SearchResult]!
   starship(id:ID!):Starship
 }
 "Represents a review for a movie"
 type Review {
-  "The number of stars this review gave, 1-5"
-  stars:Int!
   "Comment about the movie"
   commentary:String
+  "The number of stars this review gave, 1-5"
+  stars:Int!
 }
 "The input object sent when someone is creating a new review"
 input ReviewInput {
-  "0-5 stars"
-  stars:Int!
   "Comment about the movie, optional"
   commentary:String
+  "0-5 stars"
+  stars:Int!
 }
 union SearchResult = Human | Droid | Starship
 type Starship {
   "The ID of the starship"
   id:ID!
-  "The name of the starship"
-  name:String!
   "Length of the starship, along the longest axis"
   length(unit:LengthUnit=METER):Float!
+  "The name of the starship"
+  name:String!
 }
 schema {
   mutation: Mutation
@@ -175,8 +176,8 @@ Line Description
 """
 directive @db_table(name:String) on OBJECT
 type Query @db_table(name:"Hello") {
-  hi:Revision
   args(a:String=null, b:Int=5, c:String="Hi", d:[String]=["a", "b"]):String
+  hi:Revision
 }
 scalar Revision
 schema {

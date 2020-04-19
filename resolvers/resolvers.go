@@ -2,7 +2,8 @@ package resolvers
 
 import (
 	"context"
-    "github.com/chirino/graphql/query"
+	"encoding/json"
+	"github.com/chirino/graphql/query"
 	"github.com/chirino/graphql/schema"
 	"reflect"
 )
@@ -13,6 +14,10 @@ type ExecutionContext interface {
 	GetContext() context.Context
 	GetLimiter() *chan byte
 	HandlePanic(selectionPath []string) error
+	GetQuery() string
+	GetDocument() *query.Document
+	GetOperation() *query.Operation
+	GetVars() map[string]interface{}
 }
 
 type ResolveRequest struct {
@@ -37,3 +42,6 @@ type Resolver interface {
 	// to filter it's results.  next may be nil if no resolution has been found yet.
 	Resolve(request *ResolveRequest, next Resolution) Resolution
 }
+
+// When RawMessage is the result of a Resolution, for a field, no sub field resolution performed.
+type RawMessage json.RawMessage

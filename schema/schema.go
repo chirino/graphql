@@ -451,7 +451,7 @@ func (s *Schema) ResolveTypes() error {
 func (s *Schema) VisitDirective(directiveDecl *DirectiveDecl, visitor func(directive *Directive, parents ...HasDirectives) error) error {
 
 	var searchSchema, searchScalar, searchObject, searchField, searchArgument, searchInterface, searchUnion,
-	searchEnum, searchEnumValue, searchInputObject, searchInputField bool
+		searchEnum, searchEnumValue, searchInputObject, searchInputField bool
 
 	for _, loc := range directiveDecl.Locs {
 		switch loc {

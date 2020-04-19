@@ -1,15 +1,15 @@
 package graphql
 
 import (
-    "context"
-    "encoding/json"
-    "fmt"
-    "github.com/chirino/graphql/errors"
-    "github.com/chirino/graphql/internal/exec"
-    "github.com/chirino/graphql/internal/introspection"
-    "github.com/chirino/graphql/internal/validation"
-    "github.com/chirino/graphql/query"
-    "github.com/chirino/graphql/schema"
+	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/chirino/graphql/errors"
+	"github.com/chirino/graphql/internal/exec"
+	"github.com/chirino/graphql/internal/introspection"
+	"github.com/chirino/graphql/internal/validation"
+	"github.com/chirino/graphql/query"
+	"github.com/chirino/graphql/schema"
 )
 
 type EngineRequest struct {
@@ -167,13 +167,14 @@ func (engine *Engine) Execute(request *EngineRequest) (*ResponseStream, error) {
 	responses := make(chan *EngineResponse, 1)
 
 	r := exec.Execution{
+		Query:          request.Query,
+		Vars:           request.Variables,
 		Schema:         engine.Schema,
 		Tracer:         engine.Tracer,
 		Logger:         engine.Logger,
 		Resolver:       engine.Resolver,
 		Doc:            doc,
 		Operation:      op,
-		Vars:           request.Variables,
 		VarTypes:       varTypes,
 		MaxParallelism: engine.MaxParallelism,
 		Root:           engine.Root,
