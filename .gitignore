@@ -2,3 +2,4 @@
 /internal/validation/testdata/node_modules
 /vendor
 /.idea
+/*.iml
