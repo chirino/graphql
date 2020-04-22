@@ -187,10 +187,22 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var request graphql.EngineRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+
+	switch r.Method {
+	case http.MethodGet:
+		request.Query = r.URL.Query().Get("query")
+		request.Variables = json.RawMessage(r.URL.Query().Get("variables"))
+		request.OperationName = r.URL.Query().Get("operationName")
+	case http.MethodPost:
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	default:
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
 	// Attach the response and request to the context, in case a resolver wants to
 	// work at the the http level.
 	ctx := r.Context()
