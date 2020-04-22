@@ -59,6 +59,7 @@ type FragmentDecl struct {
 
 type Selection interface {
 	isSelection()
+	Location() errors.Location
 }
 
 type Field struct {
@@ -91,6 +92,10 @@ type FragmentSpread struct {
 func (Field) isSelection()          {}
 func (InlineFragment) isSelection() {}
 func (FragmentSpread) isSelection() {}
+
+func (t Field) Location() errors.Location          { return t.Name.Loc }
+func (t InlineFragment) Location() errors.Location { return t.Loc }
+func (t FragmentSpread) Location() errors.Location { return t.Loc }
 
 func Parse(queryString string) (*Document, *errors.QueryError) {
 	l := lexer.NewLexer(queryString)
