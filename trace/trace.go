@@ -15,13 +15,13 @@ type TraceQueryFinishFunc func([]*errors.QueryError)
 type TraceFieldFinishFunc func(*errors.QueryError)
 
 type Tracer interface {
-	TraceQuery(ctx context.Context, queryString string, operationName string, variables map[string]interface{}, varTypes map[string]*introspection.Type) (context.Context, TraceQueryFinishFunc)
+	TraceQuery(ctx context.Context, queryString string, operationName string, variables interface{}, varTypes map[string]*introspection.Type) (context.Context, TraceQueryFinishFunc)
 	TraceField(ctx context.Context, label, typeName, fieldName string, trivial bool, args map[string]interface{}) (context.Context, TraceFieldFinishFunc)
 }
 
 type OpenTracingTracer struct{}
 
-func (OpenTracingTracer) TraceQuery(ctx context.Context, queryString string, operationName string, variables map[string]interface{}, varTypes map[string]*introspection.Type) (context.Context, TraceQueryFinishFunc) {
+func (OpenTracingTracer) TraceQuery(ctx context.Context, queryString string, operationName string, variables interface{}, varTypes map[string]*introspection.Type) (context.Context, TraceQueryFinishFunc) {
 	span, spanCtx := opentracing.StartSpanFromContext(ctx, "GraphQL request")
 	span.SetTag("graphql.query", queryString)
 
@@ -29,7 +29,7 @@ func (OpenTracingTracer) TraceQuery(ctx context.Context, queryString string, ope
 		span.SetTag("graphql.operationName", operationName)
 	}
 
-	if len(variables) != 0 {
+	if variables != nil {
 		span.LogFields(log.Object("graphql.variables", variables))
 	}
 
@@ -71,7 +71,7 @@ func noop(*errors.QueryError) {}
 
 type NoopTracer struct{}
 
-func (NoopTracer) TraceQuery(ctx context.Context, queryString string, operationName string, variables map[string]interface{}, varTypes map[string]*introspection.Type) (context.Context, TraceQueryFinishFunc) {
+func (NoopTracer) TraceQuery(ctx context.Context, queryString string, operationName string, variables interface{}, varTypes map[string]*introspection.Type) (context.Context, TraceQueryFinishFunc) {
 	return ctx, func(errs []*errors.QueryError) {}
 }
 
