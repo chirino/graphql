@@ -1,6 +1,8 @@
 package schema
 
-import "github.com/chirino/graphql/internal/lexer"
+import (
+	"github.com/chirino/graphql/internal/lexer"
+)
 
 type Directive struct {
 	Name Ident
