@@ -32,10 +32,20 @@ func (a Location) Before(b Location) bool {
 	return a.Line < b.Line || (a.Line == b.Line && a.Column < b.Column)
 }
 
+func New(msg string) *QueryError {
+	return &QueryError{
+		Message: msg,
+	}
+}
 func Errorf(format string, a ...interface{}) *QueryError {
 	return (&QueryError{
 		Message: fmt.Sprintf(format, a...),
 	}).WithStack()
+}
+
+func (e *QueryError) WithLocations(locations ...Location) *QueryError {
+	e.Locations = locations
+	return e
 }
 
 func (err *QueryError) WithStack() *QueryError {
