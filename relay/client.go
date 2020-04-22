@@ -2,6 +2,7 @@ package relay
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -34,7 +35,11 @@ func (client *Client) Post(request *graphql.EngineRequest) *graphql.EngineRespon
 		}
 	}
 
-	req, err := http.NewRequestWithContext(request.Context, http.MethodPost, client.URL, bytes.NewReader(body))
+	ctx := request.Context
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, client.URL, bytes.NewReader(body))
 	if err != nil {
 		return &graphql.EngineResponse{
 			Errors: errors.AsArray(err),
