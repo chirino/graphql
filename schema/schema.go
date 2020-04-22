@@ -3,11 +3,11 @@ package schema
 import (
 	"bytes"
 	"fmt"
-	"github.com/chirino/graphql/internal/lexer"
 	"io"
 	"text/scanner"
 
 	"github.com/chirino/graphql/errors"
+	"github.com/chirino/graphql/internal/lexer"
 )
 
 // Schema represents a GraphQL service's collective type system capabilities.
@@ -481,7 +481,6 @@ func (s *Schema) RenameTypes(renamer func(string) string) {
 }
 
 /**
- * VisitDirective allows you
  */
 func (s *Schema) VisitDirective(directiveDecl *DirectiveDecl, visitor func(directive *Directive, parents ...HasDirectives) error) error {
 
@@ -549,19 +548,21 @@ func (s *Schema) VisitDirective(directiveDecl *DirectiveDecl, visitor func(direc
 				if err != nil {
 					return err
 				}
-				if searchField {
-					for _, f := range t.Fields {
-						err := process(f.GetDirectives(), f, t, s)
+			}
+			if searchField {
+				for _, f := range t.Fields {
+					err := process(f.GetDirectives(), f, t, s)
+					if err != nil {
+						return err
+					}
+				}
+			}
+			if searchArgument {
+				for _, f := range t.Fields {
+					for _, a := range f.Args {
+						err := process(a.GetDirectives(), a, f, t, s)
 						if err != nil {
 							return err
-						}
-						if searchArgument {
-							for _, a := range f.Args {
-								err := process(a.GetDirectives(), a, f, t, s)
-								if err != nil {
-									return err
-								}
-							}
 						}
 					}
 				}
@@ -573,9 +574,19 @@ func (s *Schema) VisitDirective(directiveDecl *DirectiveDecl, visitor func(direc
 				if err != nil {
 					return err
 				}
-				if searchField {
-					for _, f := range t.Fields {
-						err := process(f.GetDirectives(), f, t, s)
+			}
+			if searchField {
+				for _, f := range t.Fields {
+					err := process(f.GetDirectives(), f, t, s)
+					if err != nil {
+						return err
+					}
+				}
+			}
+			if searchArgument {
+				for _, f := range t.Fields {
+					for _, a := range f.Args {
+						err := process(a.GetDirectives(), a, f, t, s)
 						if err != nil {
 							return err
 						}
@@ -597,12 +608,12 @@ func (s *Schema) VisitDirective(directiveDecl *DirectiveDecl, visitor func(direc
 				if err != nil {
 					return err
 				}
-				if searchEnumValue {
-					for _, f := range t.Values {
-						err := process(f.GetDirectives(), f, t, s)
-						if err != nil {
-							return err
-						}
+			}
+			if searchEnumValue {
+				for _, f := range t.Values {
+					err := process(f.GetDirectives(), f, t, s)
+					if err != nil {
+						return err
 					}
 				}
 			}
@@ -613,12 +624,12 @@ func (s *Schema) VisitDirective(directiveDecl *DirectiveDecl, visitor func(direc
 				if err != nil {
 					return err
 				}
-				if searchInputField {
-					for _, f := range t.Fields {
-						err := process(f.GetDirectives(), f, t, s)
-						if err != nil {
-							return err
-						}
+			}
+			if searchInputField {
+				for _, f := range t.Fields {
+					err := process(f.GetDirectives(), f, t, s)
+					if err != nil {
+						return err
 					}
 				}
 			}
