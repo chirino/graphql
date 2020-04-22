@@ -446,6 +446,40 @@ func (s *Schema) ResolveTypes() error {
 	return nil
 }
 
+func (s *Schema) RenameTypes(renamer func(string) string) {
+	newTypes := make(map[string]NamedType, len(s.Types))
+	for oldName, t := range s.Types {
+
+		// Don't rename built in types.
+		if Meta.Types[oldName] != nil {
+			continue
+		}
+
+		newName := renamer(oldName)
+		switch t := t.(type) {
+		case *Object:
+			t.Name = newName
+			newTypes[newName] = t
+		case *Enum:
+			t.Name = newName
+			newTypes[newName] = t
+		case *Union:
+			t.Name = newName
+			newTypes[newName] = t
+		case *Interface:
+			t.Name = newName
+			newTypes[newName] = t
+		case *InputObject:
+			t.Name = newName
+			newTypes[newName] = t
+		case *Scalar:
+			t.Name = newName
+			newTypes[newName] = t
+		}
+	}
+	s.Types = newTypes
+}
+
 /**
  * VisitDirective allows you
  */
