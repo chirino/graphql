@@ -5,8 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"sync"
+
 	"github.com/chirino/graphql/errors"
-	"github.com/chirino/graphql/internal/exec/packer"
+	"github.com/chirino/graphql/exec"
 	"github.com/chirino/graphql/internal/introspection"
 	"github.com/chirino/graphql/internal/linkedmap"
 	"github.com/chirino/graphql/log"
@@ -14,8 +17,6 @@ import (
 	"github.com/chirino/graphql/resolvers"
 	"github.com/chirino/graphql/schema"
 	"github.com/chirino/graphql/trace"
-	"reflect"
-	"sync"
 )
 
 type Execution struct {
@@ -356,28 +357,11 @@ func (this *Execution) executeSelected(parentSelection *SelectionResolver, selec
 }
 
 func (this *Execution) skipByDirective(directives schema.DirectiveList) bool {
-	if d := directives.Get("skip"); d != nil {
-		p := packer.ValuePacker{ValueType: reflect.TypeOf(false)}
-		v, err := p.Pack(d.Args.MustGet("if").Evaluate(this.Vars))
-		if err != nil {
-			this.AddError(errors.Errorf("%s", err))
-		}
-		if err == nil && v.Bool() {
-			return true
-		}
+	skip, err := exec.SkipByDirective(directives, this.Vars)
+	if err != nil {
+		this.AddError(err)
 	}
-
-	if d := directives.Get("include"); d != nil {
-		p := packer.ValuePacker{ValueType: reflect.TypeOf(false)}
-		v, err := p.Pack(d.Args.MustGet("if").Evaluate(this.Vars))
-		if err != nil {
-			this.AddError(errors.Errorf("%s", err))
-		}
-		if err == nil && !v.Bool() {
-			return true
-		}
-	}
-	return false
+	return skip
 }
 
 func (this *Execution) writeList(listType schema.List, childValue reflect.Value, selectionResolver *SelectionResolver, writeElement func(elementType schema.Type, element reflect.Value)) {
@@ -452,10 +436,19 @@ func (this *Execution) writeLeaf(childValue reflect.Value, selectionResolver *Se
 	}
 }
 
-func (r *Execution) AddError(err *errors.QueryError) {
+func (r *Execution) AddError(err error) {
 	if err != nil {
+		var qe *errors.QueryError = nil
+		switch err := err.(type) {
+		case *errors.QueryError:
+			qe = err
+		default:
+			qe = &errors.QueryError{
+				Message: err.Error(),
+			}
+		}
 		r.Mu.Lock()
-		r.errs = append(r.errs, err)
+		r.errs = append(r.errs, qe)
 		r.Mu.Unlock()
 	}
 }
