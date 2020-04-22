@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
+
 	"github.com/chirino/graphql/errors"
 	"github.com/chirino/graphql/internal/exec"
 	"github.com/chirino/graphql/internal/introspection"
@@ -13,20 +15,41 @@ import (
 )
 
 type EngineRequest struct {
-	Context       context.Context        `json:"-"`
-	Root          interface{}            `json:"-"`
-	Query         string                 `json:"query"`
-	OperationName string                 `json:"operationName"`
-	Variables     map[string]interface{} `json:"variables"`
+	Context       context.Context `json:"-"`
+	Query         string          `json:"query,omitempty"`
+	OperationName string          `json:"operationName,omitempty"`
+	// Variables can be set to a json.RawMessage or a map[string]interface{}
+	Variables interface{} `json:"variables,omitempty"`
+}
+
+func (r *EngineRequest) UnmarshalVariables() (map[string]interface{}, error) {
+	if r.Variables == nil {
+		return nil, nil
+	}
+	switch variables := r.Variables.(type) {
+	case map[string]interface{}:
+		return variables, nil
+	case json.RawMessage:
+		if len(variables) == 0 {
+			return nil, nil
+		}
+		x := map[string]interface{}{}
+		err := json.Unmarshal(variables, &x)
+		if err != nil {
+			return nil, err
+		}
+		return x, nil
+	}
+	return nil, fmt.Errorf("unsupported type: %s", reflect.TypeOf(r.Variables))
 }
 
 // Response represents a typical response of a GraphQL server. It may be encoded to JSON directly or
 // it may be further processed to a custom response type, for example to include custom error data.
 // Errors are intentionally serialized first based on the advice in https://github.com/facebook/graphql/commit/7b40390d48680b15cb93e02d46ac5eb249689876#diff-757cea6edf0288677a9eea4cfc801d87R107
 type EngineResponse struct {
-	Data       json.RawMessage        `json:"data,omitempty"`
-	Errors     []*errors.QueryError   `json:"errors,omitempty"`
-	Extensions map[string]interface{} `json:"extensions,omitempty"`
+	Data       json.RawMessage      `json:"data,omitempty"`
+	Errors     []*errors.QueryError `json:"errors,omitempty"`
+	Extensions interface{}          `json:"extensions,omitempty"`
 }
 
 func (r *EngineResponse) Error() error {
@@ -112,6 +135,9 @@ func (qr *ResponseStream) Close() {
 	qr.Cancel()
 }
 
+type StandardAPI func(request *EngineRequest) *EngineResponse
+type StreamingAPI func(request *EngineRequest) (*ResponseStream, error)
+
 // Execute the given request.
 func (engine *Engine) ExecuteOne(request *EngineRequest) *EngineResponse {
 	stream, err := engine.Execute(request)
@@ -166,9 +192,14 @@ func (engine *Engine) Execute(request *EngineRequest) (*ResponseStream, error) {
 	traceContext, finish := engine.Tracer.TraceQuery(ctx, request.Query, request.OperationName, request.Variables, varTypes)
 	responses := make(chan *EngineResponse, 1)
 
+	variables, err := request.UnmarshalVariables()
+	if err != nil {
+		return nil, err
+	}
+
 	r := exec.Execution{
 		Query:          request.Query,
-		Vars:           request.Variables,
+		Vars:           variables,
 		Schema:         engine.Schema,
 		Tracer:         engine.Tracer,
 		Logger:         engine.Logger,
@@ -185,10 +216,6 @@ func (engine *Engine) Execute(request *EngineRequest) (*ResponseStream, error) {
 				Errors: e,
 			}
 		},
-	}
-
-	if request.Root != nil {
-		r.Root = request.Root
 	}
 
 	sub, err := r.Execute()
