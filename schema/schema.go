@@ -71,6 +71,7 @@ func FormatterToString(s Formatter) string {
 type Type interface {
 	Kind() string
 	String() string
+	AddIfMissing(to *Schema, from *Schema)
 	Formatter
 }
 
