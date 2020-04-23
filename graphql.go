@@ -11,7 +11,7 @@ import (
 	"github.com/chirino/graphql/schema"
 )
 
-type EngineRequest struct {
+type Request struct {
 	Context       context.Context `json:"-"`
 	Query         string          `json:"query,omitempty"`
 	OperationName string          `json:"operationName,omitempty"`
@@ -21,33 +21,64 @@ type EngineRequest struct {
 
 // Response represents a typical response of a GraphQL server. It may be encoded to JSON directly or
 // it may be further processed to a custom response type, for example to include custom error data.
-type EngineResponse struct {
+type Response struct {
 	Data       json.RawMessage      `json:"data,omitempty"`
 	Errors     []*errors.QueryError `json:"errors,omitempty"`
 	Extensions interface{}          `json:"extensions,omitempty"`
 }
 
-type ResponseStream struct {
-	Cancel          context.CancelFunc
-	Responses       chan *EngineResponse
-	IsSubscription  bool
-	ResponseCounter int
+type Handler interface {
+	ServeGraphQL(request *Request) *Response
+}
+type ServeGraphQLFunc func(request *Request) *Response
+
+func (f ServeGraphQLFunc) ServeGraphQL(request *Request) *Response {
+	return f(request)
 }
 
-type StandardAPI func(request *EngineRequest) *EngineResponse
-type StreamingAPI func(request *EngineRequest) (*ResponseStream, error)
+func GetSchema(serveGraphQL ServeGraphQLFunc) (*schema.Schema, error) {
+	json, err := GetSchemaIntrospectionJSON(serveGraphQL)
+	if err != nil {
+		return nil, err
+	}
+	return introspection.NewSchema(json)
+}
 
-func GetSchema(api StandardAPI) (*schema.Schema, error) {
-	resp := api(&EngineRequest{
+func GetSchemaIntrospectionJSON(serveGraphQL ServeGraphQLFunc) ([]byte, error) {
+	result := serveGraphQL(&Request{
 		Query: introspection.Query,
 	})
-	if resp.Error() != nil {
-		return nil, resp.Error()
-	}
-	return introspection.NewSchema(resp.Data)
+	return result.Data, result.Error()
 }
 
-func (r *EngineRequest) UnmarshalVariables() (map[string]interface{}, error) {
+func Exec(serveGraphQL ServeGraphQLFunc, ctx context.Context, result interface{}, query string, args ...interface{}) error {
+	variables := map[string]interface{}{}
+	for i := 0; i+1 < len(args); i += 2 {
+		variables[args[i].(string)] = args[i+1]
+	}
+	response := serveGraphQL(&Request{
+		Context:   ctx,
+		Query:     query,
+		Variables: variables,
+	})
+
+	if result != nil && response != nil {
+		switch result := result.(type) {
+		case *[]byte:
+			*result = response.Data
+		case *string:
+			*result = string(response.Data)
+		default:
+			err := json.Unmarshal(response.Data, result)
+			if err != nil {
+				return errors.Multi(err, response.Error())
+			}
+		}
+	}
+	return response.Error()
+}
+
+func (r *Request) UnmarshalVariables() (map[string]interface{}, error) {
 	if r.Variables == nil {
 		return nil, nil
 	}
@@ -68,7 +99,7 @@ func (r *EngineRequest) UnmarshalVariables() (map[string]interface{}, error) {
 	return nil, fmt.Errorf("unsupported type: %s", reflect.TypeOf(r.Variables))
 }
 
-func (r *EngineResponse) Error() error {
+func (r *Response) Error() error {
 	errs := []error{}
 	for _, err := range r.Errors {
 		errs = append(errs, err)
@@ -76,22 +107,6 @@ func (r *EngineResponse) Error() error {
 	return errors.Multi(errs...)
 }
 
-func (r *EngineResponse) String() string {
+func (r *Response) String() string {
 	return fmt.Sprintf("{Data: %s, Errors: %v}", string(r.Data), r.Errors)
-}
-
-func (qr *ResponseStream) Next() *EngineResponse {
-	if !qr.IsSubscription && qr.ResponseCounter > 0 {
-		return nil
-	}
-	response := <-qr.Responses
-	if response != nil {
-		qr.ResponseCounter += 1
-	}
-	return response
-}
-
-func (qr *ResponseStream) Close() {
-	close(qr.Responses)
-	qr.Cancel()
 }

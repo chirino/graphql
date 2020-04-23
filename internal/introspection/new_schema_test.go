@@ -13,7 +13,7 @@ import (
 func TestGetSchema(t *testing.T) {
 	engine := graphql.New()
 	engine.Schema.Parse(starwars.Schema)
-	s, err := graphql.GetSchema(engine.ExecuteOne)
+	s, err := graphql.GetSchema(engine.ServeGraphQL)
 	require.NoError(t, err)
 
 	// Lets modify the type of description so that they display the same...

@@ -133,12 +133,12 @@ func (s *Schema) Validate(queryString string) []*errors.QueryError {
 // Exec executes the given query with the schema's resolver. It panics if the schema was created
 // without a resolver. If the context get cancelled, no further resolvers will be called and a
 // the context error will be returned as soon as possible (not immediately).
-func (s *Schema) Exec(ctx context.Context, queryString string, operationName string, variables map[string]interface{}) *graphql.EngineResponse {
+func (s *Schema) Exec(ctx context.Context, queryString string, operationName string, variables map[string]interface{}) *graphql.Response {
 	if s.resolver == nil {
 		panic("schema created without resolver, can not exec")
 	}
 	s.Engine.Root = s.resolver
-	return s.Engine.ExecuteOne(&graphql.EngineRequest{
+	return s.Engine.ServeGraphQL(&graphql.Request{
 		Context:       ctx,
 		Query:         queryString,
 		OperationName: operationName,

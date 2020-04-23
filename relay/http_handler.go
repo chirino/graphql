@@ -5,13 +5,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	graphql "github.com/chirino/graphql"
-	"github.com/chirino/graphql/customtypes"
-	"github.com/chirino/graphql/errors"
-	"github.com/gorilla/websocket"
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/chirino/graphql"
+	"github.com/chirino/graphql/customtypes"
+	"github.com/chirino/graphql/errors"
+	"github.com/gorilla/websocket"
 )
 
 func MarshalID(kind string, spec interface{}) customtypes.ID {
@@ -47,7 +48,15 @@ func UnmarshalSpec(id customtypes.ID, v interface{}) error {
 }
 
 type Handler struct {
+
+	// Engine points at the graphql.Engine requests will be issued against.
+	//
+	// Deprecated: Engine exists for historical compatibility  and should not be used.
+	// set HandlerFunc or StreamingHandlerFunc instead.
 	Engine *graphql.Engine
+
+	ServeGraphQL       graphql.ServeGraphQLFunc
+	ServeGraphQLStream graphql.ServeGraphQLStreamFunc
 }
 
 type OperationMessage struct {
@@ -56,7 +65,7 @@ type OperationMessage struct {
 	Payload json.RawMessage `json:"payload,omitempty"`
 }
 
-func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
+func upgrade(streamingHandlerFunc graphql.ServeGraphQLStreamFunc, w http.ResponseWriter, r *http.Request) {
 
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
@@ -110,7 +119,7 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
 		switch msg.Type {
 		case "start":
 
-			var request graphql.EngineRequest
+			var request graphql.Request
 			err := json.Unmarshal(msg.Payload, &request)
 			if err != nil {
 				fmt.Printf("could not read payload: %v\n", err)
@@ -122,10 +131,10 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
 			ctx = context.WithValue(ctx, "*net/http.Request", r)
 
 			request.Context = ctx
-			stream, err := h.Engine.Execute(&request)
+			stream, err := streamingHandlerFunc(&request)
 
 			if err != nil {
-				r := graphql.EngineResponse{Errors: errors.AsArray(err)}
+				r := graphql.Response{Errors: errors.AsArray(err)}
 				payload, err := json.Marshal(r)
 				if err != nil {
 					panic(fmt.Sprintf("could not marshal payload: %v\n", err))
@@ -180,13 +189,29 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	upgrade := strings.ToLower(r.Header.Get("Upgrade"))
-	if upgrade == "websocket" {
-		h.Upgrade(w, r)
-		return
+	handlerFunc := h.ServeGraphQL
+	streamingHandlerFunc := h.ServeGraphQLStream
+
+	if streamingHandlerFunc == nil && h.Engine != nil {
+		streamingHandlerFunc = h.Engine.ServeGraphQLStream
+	}
+	if handlerFunc == nil && streamingHandlerFunc != nil {
+		handlerFunc = streamingHandlerFunc.ServeGraphQL
 	}
 
-	var request graphql.EngineRequest
+	if handlerFunc == nil {
+		panic("either HandlerFunc or StreamingHandlerFunc must be configured")
+	}
+
+	if streamingHandlerFunc != nil {
+		u := strings.ToLower(r.Header.Get("Upgrade"))
+		if u == "websocket" {
+			upgrade(streamingHandlerFunc, w, r)
+			return
+		}
+	}
+
+	var request graphql.Request
 
 	switch r.Method {
 	case http.MethodGet:
@@ -210,8 +235,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx = context.WithValue(ctx, "*net/http.Request", r)
 
 	request.Context = ctx
-	reponse := h.Engine.ExecuteOne(&request)
-	responseJSON, err := json.Marshal(reponse)
+	response := handlerFunc(&request)
+	responseJSON, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

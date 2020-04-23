@@ -16,13 +16,12 @@ type Client struct {
 }
 
 func NewClient(url string) *Client {
-	client := &Client{
+	return &Client{
 		URL: url,
 	}
-	return client
 }
 
-func (client *Client) Post(request *graphql.EngineRequest) *graphql.EngineResponse {
+func (client *Client) ServeGraphQL(request *graphql.Request) *graphql.Response {
 	c := client.HTTPClient
 	if c == nil {
 		c = &http.Client{}
@@ -30,7 +29,7 @@ func (client *Client) Post(request *graphql.EngineRequest) *graphql.EngineRespon
 
 	body, err := json.Marshal(request)
 	if err != nil {
-		return &graphql.EngineResponse{
+		return &graphql.Response{
 			Errors: errors.AsArray(err),
 		}
 	}
@@ -41,29 +40,29 @@ func (client *Client) Post(request *graphql.EngineRequest) *graphql.EngineRespon
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, client.URL, bytes.NewReader(body))
 	if err != nil {
-		return &graphql.EngineResponse{
+		return &graphql.Response{
 			Errors: errors.AsArray(err),
 		}
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.Do(req)
 	if err != nil {
-		return &graphql.EngineResponse{
+		return &graphql.Response{
 			Errors: errors.AsArray(err),
 		}
 	}
 	defer resp.Body.Close()
 
 	if !(200 <= resp.StatusCode && resp.StatusCode < 300) {
-		return &graphql.EngineResponse{
+		return &graphql.Response{
 			Errors: errors.AsArray(errors.Errorf("http status code: %d", resp.StatusCode)),
 		}
 	}
 
-	engineResponse := graphql.EngineResponse{}
+	engineResponse := graphql.Response{}
 	err = json.NewDecoder(resp.Body).Decode(&engineResponse)
 	if err != nil {
-		return &graphql.EngineResponse{
+		return &graphql.Response{
 			Errors: errors.AsArray(err),
 		}
 	}

@@ -8,19 +8,19 @@ import (
 )
 
 func AssertQuery(t *testing.T, engine *graphql.Engine, query string, expected string) {
-	request := graphql.EngineRequest{}
+	request := graphql.Request{}
 	request.Query = query
 	AssertRequest(t, engine, request, expected)
 }
 
 func AssertRequestString(t *testing.T, engine *graphql.Engine, req string, expected string) {
-	request := graphql.EngineRequest{}
+	request := graphql.Request{}
 	jsonUnmarshal(t, req, &request)
 	AssertRequest(t, engine, request, expected)
 }
 
-func AssertRequest(t *testing.T, engine *graphql.Engine, request graphql.EngineRequest, expected string) {
-	response := engine.ExecuteOne(&request)
+func AssertRequest(t *testing.T, engine *graphql.Engine, request graphql.Request, expected string) {
+	response := engine.ServeGraphQL(&request)
 	actual := jsonMarshal(t, response)
 	assert.Equal(t, expected, actual)
 }

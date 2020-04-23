@@ -20,7 +20,7 @@ func TestEngineAPIServeHTTP(t *testing.T) {
 
 	require.NoError(t, err)
 	engine.Root = &starwars.Resolver{}
-	h := relay.Handler{Engine: engine}
+	h := relay.Handler{ServeGraphQLStream: engine.ServeGraphQLStream}
 
 	h.ServeHTTP(w, r)
 

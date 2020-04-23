@@ -18,7 +18,7 @@ func init() {
 }
 
 func main() {
-	http.Handle("/query", &relay.Handler{Engine: schema.Engine})
+	http.Handle("/query", &relay.Handler{ServeGraphQLStream: schema.Engine.ServeGraphQLStream})
 	graphiql, _ := graphiql.NewGraphiqlHandler("/query")
 	http.Handle("/", graphiql)
 

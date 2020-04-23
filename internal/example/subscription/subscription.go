@@ -52,7 +52,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	http.Handle("/graphql", &relay.Handler{Engine: engine})
+	http.Handle("/graphql", &relay.Handler{ServeGraphQLStream: engine.ServeGraphQLStream})
 	fmt.Println("GraphQL service running at http://localhost:8080/graphql")
 
 	http.Handle("/", graphiql.New("ws://localhost:8080/graphql", true))

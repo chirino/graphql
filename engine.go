@@ -45,57 +45,19 @@ func New() *Engine {
 }
 
 func (engine *Engine) GetSchemaIntrospectionJSON() ([]byte, error) {
-	result := engine.ExecuteOne(&EngineRequest{
-		Query: introspection.Query,
-	})
-	return result.Data, result.Error()
+	return GetSchemaIntrospectionJSON(engine.ServeGraphQL)
 }
 
 func (engine *Engine) Exec(ctx context.Context, result interface{}, query string, args ...interface{}) error {
-	variables := map[string]interface{}{}
-	for i := 0; i+1 < len(args); i += 2 {
-		variables[args[i].(string)] = args[i+1]
-	}
-	response := engine.ExecuteOne(&EngineRequest{
-		Context:   ctx,
-		Query:     query,
-		Variables: variables,
-	})
-
-	if result != nil && response != nil {
-		switch result := result.(type) {
-		case *[]byte:
-			*result = response.Data
-		case *string:
-			*result = string(response.Data)
-		default:
-			err := json.Unmarshal(response.Data, result)
-			if err != nil {
-				return errors.Multi(err, response.Error())
-			}
-		}
-	}
-	return response.Error()
+	return Exec(engine.ServeGraphQL, ctx, result, query, args...)
 }
 
-// Execute the given request.
-func (engine *Engine) ExecuteOne(request *EngineRequest) *EngineResponse {
-	stream, err := engine.Execute(request)
-	if err != nil {
-		return &EngineResponse{
-			Errors: errors.AsArray(err),
-		}
-	}
-	defer stream.Close()
-	if stream.IsSubscription {
-		return &EngineResponse{
-			Errors: errors.AsArray(errors.Errorf("ExecuteOne method does not support getting results from subscriptions")),
-		}
-	}
-	return stream.Next()
+func (engine *Engine) ServeGraphQL(request *Request) *Response {
+	return ServeGraphQLStreamFunc(engine.ServeGraphQLStream).ServeGraphQL(request)
 }
 
-func (engine *Engine) Execute(request *EngineRequest) (*ResponseStream, error) {
+func (engine *Engine) ServeGraphQLStream(request *Request) (*ResponseStream, error) {
+
 	doc, qErr := query.Parse(request.Query)
 	if qErr != nil {
 		return nil, qErr
@@ -130,7 +92,7 @@ func (engine *Engine) Execute(request *EngineRequest) (*ResponseStream, error) {
 	ctx = cancelCtx
 
 	traceContext, finish := engine.Tracer.TraceQuery(ctx, request.Query, request.OperationName, request.Variables, varTypes)
-	responses := make(chan *EngineResponse, 1)
+	responses := make(chan *Response, 1)
 
 	variables, err := request.UnmarshalVariables()
 	if err != nil {
@@ -151,7 +113,7 @@ func (engine *Engine) Execute(request *EngineRequest) (*ResponseStream, error) {
 		Root:           engine.Root,
 		Context:        traceContext,
 		Handler: func(d json.RawMessage, e []*errors.QueryError) {
-			responses <- &EngineResponse{
+			responses <- &Response{
 				Data:   d,
 				Errors: e,
 			}
