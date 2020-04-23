@@ -48,19 +48,19 @@ func TestParseObjectDef(t *testing.T) {
 	tests := []testCase{{
 		description: "Parses type inheriting single interface",
 		definition:  "Hello implements World { field: String }",
-		expected:    &Object{Name: "Hello", interfaceNames: []string{"World"}},
+		expected:    &Object{Name: "Hello", InterfaceNames: []string{"World"}},
 	}, {
 		description: "Parses type inheriting multiple interfaces",
 		definition:  "Hello implements Wo & rld { field: String }",
-		expected:    &Object{Name: "Hello", interfaceNames: []string{"Wo", "rld"}},
+		expected:    &Object{Name: "Hello", InterfaceNames: []string{"Wo", "rld"}},
 	}, {
 		description: "Parses type inheriting multiple interfaces with leading ampersand",
 		definition:  "Hello implements & Wo & rld { field: String }",
-		expected:    &Object{Name: "Hello", interfaceNames: []string{"Wo", "rld"}},
+		expected:    &Object{Name: "Hello", InterfaceNames: []string{"Wo", "rld"}},
 	}, {
 		description: "Allows legacy SDL interfaces",
 		definition:  "Hello implements Wo, rld { field: String }",
-		expected:    &Object{Name: "Hello", interfaceNames: []string{"Wo", "rld"}},
+		expected:    &Object{Name: "Hello", InterfaceNames: []string{"Wo", "rld"}},
 	}}
 
 	for _, test := range tests {
@@ -139,16 +139,16 @@ func compareObjects(t *testing.T, expected, actual *Object) {
 		t.Errorf("wrong object name: want %q, got %q", expected.Name, actual.Name)
 	}
 
-	if len(expected.interfaceNames) != len(actual.interfaceNames) {
+	if len(expected.InterfaceNames) != len(actual.InterfaceNames) {
 		t.Fatalf(
 			"wrong number of interface names: want %s, got %s",
-			expected.interfaceNames,
-			actual.interfaceNames,
+			expected.InterfaceNames,
+			actual.InterfaceNames,
 		)
 	}
 
-	for i, expectedName := range expected.interfaceNames {
-		actualName := actual.interfaceNames[i]
+	for i, expectedName := range expected.InterfaceNames {
+		actualName := actual.InterfaceNames[i]
 		if expectedName != actualName {
 			t.Errorf("wrong interface name: want %q, got %q", expectedName, actualName)
 		}

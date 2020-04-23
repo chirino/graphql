@@ -47,10 +47,7 @@ type Schema struct {
 	// http://facebook.github.io/graphql/draft/#sec-Type-System.Directives
 	DeclaredDirectives map[string]*DirectiveDecl
 
-	entryPointNames map[OperationType]string
-	objects         []*Object
-	unions          []*Union
-	enums           []*Enum
+	EntryPointNames map[OperationType]string
 }
 
 type HasDirectives interface {
@@ -129,7 +126,7 @@ type Object struct {
 	Desc       *Description
 	Directives DirectiveList
 
-	interfaceNames []string
+	InterfaceNames []string
 }
 
 // Interface types represent a list of named fields and their arguments.
@@ -197,7 +194,7 @@ type Union struct {
 	Name          string
 	PossibleTypes []*Object // NOTE: the spec refers to this as `UnionMemberTypes`.
 	Desc          *Description
-	typeNames     []string
+	TypeNames     []string
 	Directives    DirectiveList
 }
 
@@ -351,7 +348,7 @@ type Field struct {
 // New initializes an instance of Schema.
 func New() *Schema {
 	s := &Schema{
-		entryPointNames:    make(map[OperationType]string),
+		EntryPointNames:    make(map[OperationType]string),
 		Types:              make(map[string]NamedType),
 		DeclaredDirectives: make(map[string]*DirectiveDecl),
 		EntryPoints:        make(map[OperationType]NamedType),
@@ -379,9 +376,21 @@ func (s *Schema) Parse(schemaString string) error {
 
 func (s *Schema) ResolveTypes() error {
 
+	objects := []*Object{}
+	unions := []*Union{}
+	enums := []*Enum{}
+
 	for _, t := range s.Types {
 		if err := resolveNamedType(s, t); err != nil {
 			return err
+		}
+		switch t := t.(type) {
+		case *Object:
+			objects = append(objects, t)
+		case *Union:
+			unions = append(unions, t)
+		case *Enum:
+			enums = append(enums, t)
 		}
 	}
 	for _, d := range s.DeclaredDirectives {
@@ -394,7 +403,7 @@ func (s *Schema) ResolveTypes() error {
 		}
 	}
 
-	for key, name := range s.entryPointNames {
+	for key, name := range s.EntryPointNames {
 		t, ok := s.Types[name]
 		if !ok {
 			if !ok {
@@ -404,9 +413,9 @@ func (s *Schema) ResolveTypes() error {
 		s.EntryPoints[key] = t
 	}
 
-	for _, obj := range s.objects {
-		obj.Interfaces = make([]*Interface, len(obj.interfaceNames))
-		for i, intfName := range obj.interfaceNames {
+	for _, obj := range objects {
+		obj.Interfaces = make([]*Interface, len(obj.InterfaceNames))
+		for i, intfName := range obj.InterfaceNames {
 			t, ok := s.Types[intfName]
 			if !ok {
 				return errors.Errorf("interface %q not found", intfName)
@@ -420,9 +429,9 @@ func (s *Schema) ResolveTypes() error {
 		}
 	}
 
-	for _, union := range s.unions {
-		union.PossibleTypes = make([]*Object, len(union.typeNames))
-		for i, name := range union.typeNames {
+	for _, union := range unions {
+		union.PossibleTypes = make([]*Object, len(union.TypeNames))
+		for i, name := range union.TypeNames {
 			t, ok := s.Types[name]
 			if !ok {
 				return errors.Errorf("object type %q not found", name)
@@ -435,7 +444,7 @@ func (s *Schema) ResolveTypes() error {
 		}
 	}
 
-	for _, enum := range s.enums {
+	for _, enum := range enums {
 		for _, value := range enum.Values {
 			if err := resolveDirectives(s, value.Directives); err != nil {
 				return err
@@ -718,7 +727,7 @@ func parseSchema(s *Schema, l *lexer.Lexer) {
 				name := OperationType(l.ConsumeKeyword(string(Query), string(Mutation), string(Subscription)))
 				l.ConsumeToken(':')
 				typ := l.ConsumeIdent()
-				s.entryPointNames[name] = typ
+				s.EntryPointNames[name] = typ
 			}
 			l.ConsumeToken('}')
 
@@ -740,7 +749,6 @@ func parseSchema(s *Schema, l *lexer.Lexer) {
 						existing := s.Types[obj.Name]
 						if existing == nil {
 							s.Types[obj.Name] = obj
-							s.objects = append(s.objects, obj)
 						} else {
 							existing, ok := existing.(*Object)
 							if !ok {
@@ -753,7 +761,7 @@ func parseSchema(s *Schema, l *lexer.Lexer) {
 							} else if obj.Desc != nil {
 								existing.Desc.Text += "\n" + obj.Desc.Text
 							}
-							existing.interfaceNames = append(existing.interfaceNames, obj.interfaceNames...)
+							existing.InterfaceNames = append(existing.InterfaceNames, obj.InterfaceNames...)
 							existing.Interfaces = append(existing.Interfaces, obj.Interfaces...)
 						}
 					case "drop":
@@ -772,8 +780,8 @@ func parseSchema(s *Schema, l *lexer.Lexer) {
 							existing.Interfaces = existing.Interfaces.Select(func(d *Interface) bool {
 								return obj.Interfaces.Get(d.Name) == nil
 							})
-							existing.interfaceNames = StringListSelect(existing.interfaceNames, func(d string) bool {
-								return StringListGet(obj.interfaceNames, d) == nil
+							existing.InterfaceNames = StringListSelect(existing.InterfaceNames, func(d string) bool {
+								return StringListGet(obj.InterfaceNames, d) == nil
 							})
 						}
 					default:
@@ -785,7 +793,6 @@ func parseSchema(s *Schema, l *lexer.Lexer) {
 						existing := s.Types[obj.Name]
 						if existing == nil {
 							s.Types[obj.Name] = obj
-							s.objects = append(s.objects, obj)
 						}
 					default:
 						panic(`@graphql if value must be: "missing"`)
@@ -796,7 +803,6 @@ func parseSchema(s *Schema, l *lexer.Lexer) {
 
 			} else {
 				s.Types[obj.Name] = obj
-				s.objects = append(s.objects, obj)
 			}
 
 		case "interface":
@@ -808,13 +814,11 @@ func parseSchema(s *Schema, l *lexer.Lexer) {
 			union := parseUnionDef(l)
 			union.Desc = desc
 			s.Types[union.Name] = union
-			s.unions = append(s.unions, union)
 
 		case "enum":
 			enum := parseEnumDef(l)
 			enum.Desc = desc
 			s.Types[enum.Name] = enum
-			s.enums = append(s.enums, enum)
 
 		case "input":
 			input := parseInputDef(l)
@@ -850,7 +854,7 @@ func parseObjectDef(l *lexer.Lexer) *Object {
 			l.ConsumeToken('&')
 		}
 		for {
-			object.interfaceNames = append(object.interfaceNames, l.ConsumeIdent())
+			object.InterfaceNames = append(object.InterfaceNames, l.ConsumeIdent())
 			if l.Peek() == '&' {
 				l.ConsumeToken('&')
 			} else if l.Peek() == '@' || l.Peek() == '{' {
@@ -882,10 +886,10 @@ func parseUnionDef(l *lexer.Lexer) *Union {
 	union := &Union{Name: l.ConsumeIdent()}
 	union.Directives = ParseDirectives(l)
 	l.ConsumeToken('=')
-	union.typeNames = []string{l.ConsumeIdent()}
+	union.TypeNames = []string{l.ConsumeIdent()}
 	for l.Peek() == '|' {
 		l.ConsumeToken('|')
-		union.typeNames = append(union.typeNames, l.ConsumeIdent())
+		union.TypeNames = append(union.TypeNames, l.ConsumeIdent())
 	}
 
 	return union

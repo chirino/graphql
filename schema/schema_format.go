@@ -127,7 +127,7 @@ func (t *Union) WriteSchemaFormat(out io.StringWriter) {
 	out.WriteString("union ")
 	out.WriteString(t.Name)
 	out.WriteString(" = ")
-	for i, f := range t.typeNames {
+	for i, f := range t.TypeNames {
 		if i != 0 {
 			out.WriteString(" | ")
 		}
