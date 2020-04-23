@@ -2,9 +2,10 @@ package query
 
 import (
 	"fmt"
+	"text/scanner"
+
 	"github.com/chirino/graphql/internal/lexer"
 	"github.com/chirino/graphql/schema"
-	"text/scanner"
 
 	"github.com/chirino/graphql/errors"
 )
@@ -235,4 +236,25 @@ func parseSpread(l *lexer.Lexer) Selection {
 	f.Directives = schema.ParseDirectives(l)
 	f.Selections = parseSelectionSet(l)
 	return f
+}
+
+func (d *Document) GetOperation(operationName string) (*Operation, error) {
+	if len(d.Operations) == 0 {
+		return nil, fmt.Errorf("no operations in query document")
+	}
+
+	if operationName == "" {
+		if len(d.Operations) > 1 {
+			return nil, fmt.Errorf("more than one operation in query document and no operation name given")
+		}
+		for _, op := range d.Operations {
+			return op, nil // return the one and only operation
+		}
+	}
+
+	op := d.Operations.Get(operationName)
+	if op == nil {
+		return nil, fmt.Errorf("no operation with name %q", operationName)
+	}
+	return op, nil
 }
