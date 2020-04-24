@@ -29,7 +29,7 @@ type FieldSelection struct {
 }
 
 func (c FieldSelectionContext) Apply(selections []query.Selection) (result []FieldSelection, errs []*qerrors.QueryError) {
-
+	c.OnType = schema.DeepestType(c.OnType)
 	selectedFieldAliases := map[string]bool{}
 	for _, selection := range selections {
 		switch selection := selection.(type) {
