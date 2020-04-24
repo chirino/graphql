@@ -22,9 +22,10 @@ type Request struct {
 // Response represents a typical response of a GraphQL server. It may be encoded to JSON directly or
 // it may be further processed to a custom response type, for example to include custom error data.
 type Response struct {
-	Data       json.RawMessage      `json:"data,omitempty"`
-	Errors     []*errors.QueryError `json:"errors,omitempty"`
-	Extensions interface{}          `json:"extensions,omitempty"`
+	Data       json.RawMessage        `json:"data,omitempty"`
+	Errors     []*errors.QueryError   `json:"errors,omitempty"`
+	Extensions interface{}            `json:"extensions,omitempty"`
+	Details    map[string]interface{} `json:"-"`
 }
 
 type Handler interface {
@@ -78,7 +79,7 @@ func Exec(serveGraphQL ServeGraphQLFunc, ctx context.Context, result interface{}
 	return response.Error()
 }
 
-func (r *Request) UnmarshalVariables() (map[string]interface{}, error) {
+func (r *Request) VariablesAsMap() (map[string]interface{}, error) {
 	if r.Variables == nil {
 		return nil, nil
 	}
@@ -95,6 +96,19 @@ func (r *Request) UnmarshalVariables() (map[string]interface{}, error) {
 			return nil, err
 		}
 		return x, nil
+	}
+	return nil, fmt.Errorf("unsupported type: %s", reflect.TypeOf(r.Variables))
+}
+
+func (r *Request) VariablesAsJson() (json.RawMessage, error) {
+	if r.Variables == nil {
+		return nil, nil
+	}
+	switch variables := r.Variables.(type) {
+	case map[string]interface{}:
+		return json.Marshal(variables)
+	case json.RawMessage:
+		return variables, nil
 	}
 	return nil, fmt.Errorf("unsupported type: %s", reflect.TypeOf(r.Variables))
 }

@@ -94,7 +94,7 @@ func (engine *Engine) ServeGraphQLStream(request *Request) (*ResponseStream, err
 	traceContext, finish := engine.Tracer.TraceQuery(ctx, request.Query, request.OperationName, request.Variables, varTypes)
 	responses := make(chan *Response, 1)
 
-	variables, err := request.UnmarshalVariables()
+	variables, err := request.VariablesAsMap()
 	if err != nil {
 		return nil, err
 	}
