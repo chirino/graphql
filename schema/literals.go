@@ -14,7 +14,7 @@ type Literal interface {
 	Evaluate(vars map[string]interface{}) interface{}
 	String() string
 	Location() errors.Location
-	WriteSchemaFormat(out io.StringWriter)
+	WriteTo(out io.StringWriter)
 }
 
 type BasicLit struct {

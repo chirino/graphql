@@ -37,18 +37,20 @@ func (l FragmentList) Get(name string) *FragmentDecl {
 	return nil
 }
 
+type SelectionList []Selection
+
 type Operation struct {
 	Type       schema.OperationType
 	Name       schema.Ident
 	Vars       schema.InputValueList
-	Selections []Selection
+	Selections SelectionList
 	Directives schema.DirectiveList
 	Loc        errors.Location
 }
 
 type Fragment struct {
 	On         schema.TypeName
-	Selections []Selection
+	Selections SelectionList
 }
 
 type FragmentDecl struct {
@@ -59,6 +61,7 @@ type FragmentDecl struct {
 }
 
 type Selection interface {
+	schema.Formatter
 	isSelection()
 	Location() errors.Location
 }
@@ -68,7 +71,7 @@ type Field struct {
 	Name            schema.Ident
 	Arguments       schema.ArgumentList
 	Directives      schema.DirectiveList
-	Selections      []Selection
+	Selections      SelectionList
 	SelectionSetLoc errors.Location
 	Schema          *FieldSchema
 }
@@ -98,7 +101,7 @@ func (t Field) Location() errors.Location          { return t.Name.Loc }
 func (t InlineFragment) Location() errors.Location { return t.Loc }
 func (t FragmentSpread) Location() errors.Location { return t.Loc }
 
-func Parse(queryString string) (*Document, *errors.QueryError) {
+func Parse(queryString string) (*Document, error) {
 	l := lexer.NewLexer(queryString)
 
 	var doc *Document
@@ -178,7 +181,7 @@ func parseFragment(l *lexer.Lexer) *FragmentDecl {
 	return f
 }
 
-func parseSelectionSet(l *lexer.Lexer) []Selection {
+func parseSelectionSet(l *lexer.Lexer) SelectionList {
 	var sels []Selection
 	l.ConsumeToken('{')
 	for l.Peek() != '}' {

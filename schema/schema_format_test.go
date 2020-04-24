@@ -13,7 +13,7 @@ func TestWriteSchemaFormatForStarwars(t *testing.T) {
 	s := schema.New()
 	s.Parse(starwars.Schema)
 	buf := &bytes.Buffer{}
-	s.WriteSchemaFormat(buf)
+	s.WriteTo(buf)
 	assert.Equal(t, `"A character from the Star Wars universe"
 interface Character {
   "The movies this character appears in"
@@ -169,7 +169,7 @@ type Query @db_table(name:"Hello") {
 
 `)
 	buf := &bytes.Buffer{}
-	s.WriteSchemaFormat(buf)
+	s.WriteTo(buf)
 	assert.Equal(t, `"""
 Multi
 Line Description

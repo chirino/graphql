@@ -11,18 +11,18 @@ import (
 	"strings"
 )
 
-func (t *List) WriteSchemaFormat(out io.StringWriter)    { panic("unsupported") }
-func (t *NonNull) WriteSchemaFormat(out io.StringWriter) { panic("unsupported") }
-func (*TypeName) WriteSchemaFormat(out io.StringWriter)  { panic("unsupported") }
+func (t *List) WriteTo(out io.StringWriter)    { panic("unsupported") }
+func (t *NonNull) WriteTo(out io.StringWriter) { panic("unsupported") }
+func (*TypeName) WriteTo(out io.StringWriter)  { panic("unsupported") }
 
-func (s *Schema) WriteSchemaFormat(out io.StringWriter) {
+func (s *Schema) WriteTo(out io.StringWriter) {
 
 	for _, entry := range mapToSortedArray(s.DeclaredDirectives) {
 		value := entry.Value.(*DirectiveDecl)
 		if isBuiltIn(value) {
 			continue
 		}
-		value.WriteSchemaFormat(out)
+		value.WriteTo(out)
 	}
 
 	for _, entry := range mapToSortedArray(s.Types) {
@@ -30,7 +30,7 @@ func (s *Schema) WriteSchemaFormat(out io.StringWriter) {
 		if isBuiltIn(value) {
 			continue
 		}
-		value.WriteSchemaFormat(out)
+		value.WriteTo(out)
 	}
 
 	out.WriteString("schema {\n")
@@ -42,18 +42,18 @@ func (s *Schema) WriteSchemaFormat(out io.StringWriter) {
 	out.WriteString("}\n")
 }
 
-func (t *Scalar) WriteSchemaFormat(out io.StringWriter) {
+func (t *Scalar) WriteTo(out io.StringWriter) {
 	writeDescription(out, t.Desc)
 	out.WriteString("scalar ")
 	out.WriteString(t.Name)
 	out.WriteString("\n")
 }
 
-func (t *DirectiveDecl) WriteSchemaFormat(out io.StringWriter) {
+func (t *DirectiveDecl) WriteTo(out io.StringWriter) {
 	writeDescription(out, t.Desc)
 	out.WriteString("directive @")
 	out.WriteString(t.Name)
-	t.Args.WriteSchemaFormat(out)
+	t.Args.WriteTo(out)
 	out.WriteString(" on ")
 	for i, loc := range t.Locs {
 		if i != 0 {
@@ -64,7 +64,7 @@ func (t *DirectiveDecl) WriteSchemaFormat(out io.StringWriter) {
 	out.WriteString("\n")
 }
 
-func (t *Object) WriteSchemaFormat(out io.StringWriter) {
+func (t *Object) WriteTo(out io.StringWriter) {
 	writeDescription(out, t.Desc)
 	out.WriteString("type ")
 	out.WriteString(t.Name)
@@ -78,11 +78,11 @@ func (t *Object) WriteSchemaFormat(out io.StringWriter) {
 			out.WriteString(intf.Name)
 		}
 		out.WriteString(" ")
-		t.Directives.WriteSchemaFormat(out)
+		t.Directives.WriteTo(out)
 	}
 	if len(t.Directives) > 0 {
 		out.WriteString(" ")
-		t.Directives.WriteSchemaFormat(out)
+		t.Directives.WriteTo(out)
 	}
 	out.WriteString(" {\n")
 	sort.Slice(t.Fields, func(i, j int) bool {
@@ -90,7 +90,7 @@ func (t *Object) WriteSchemaFormat(out io.StringWriter) {
 	})
 	for _, f := range t.Fields {
 		i := &indent{}
-		f.WriteSchemaFormat(i)
+		f.WriteTo(i)
 		i.WriteString("\n")
 		i.Done(out)
 	}
@@ -105,7 +105,7 @@ func (i indent) Done(out io.StringWriter) {
 	out.WriteString(text.Indent(i.String(), "  "))
 }
 
-func (t *Interface) WriteSchemaFormat(out io.StringWriter) {
+func (t *Interface) WriteTo(out io.StringWriter) {
 	writeDescription(out, t.Desc)
 	out.WriteString("interface ")
 	out.WriteString(t.Name)
@@ -116,41 +116,41 @@ func (t *Interface) WriteSchemaFormat(out io.StringWriter) {
 	})
 	for _, f := range t.Fields {
 		i := &indent{}
-		f.WriteSchemaFormat(i)
+		f.WriteTo(i)
 		i.WriteString("\n")
 		i.Done(out)
 	}
 	out.WriteString("}\n")
 }
-func (t *Union) WriteSchemaFormat(out io.StringWriter) {
+func (t *Union) WriteTo(out io.StringWriter) {
 	writeDescription(out, t.Desc)
 	out.WriteString("union ")
 	out.WriteString(t.Name)
 	out.WriteString(" = ")
-	for i, f := range t.TypeNames {
+	for i, f := range t.PossibleTypes {
 		if i != 0 {
 			out.WriteString(" | ")
 		}
-		out.WriteString(f)
+		out.WriteString(f.Name)
 	}
 	out.WriteString("\n")
 }
 
-func (t *Enum) WriteSchemaFormat(out io.StringWriter) {
+func (t *Enum) WriteTo(out io.StringWriter) {
 	writeDescription(out, t.Desc)
 	out.WriteString("enum ")
 	out.WriteString(t.Name)
 	out.WriteString(" {\n")
 	for _, f := range t.Values {
 		i := &indent{}
-		f.WriteSchemaFormat(i)
+		f.WriteTo(i)
 		i.WriteString("\n")
 		i.Done(out)
 	}
 	out.WriteString("}\n")
 }
 
-func (t *InputObject) WriteSchemaFormat(out io.StringWriter) {
+func (t *InputObject) WriteTo(out io.StringWriter) {
 	writeDescription(out, t.Desc)
 	out.WriteString("input ")
 	out.WriteString(t.Name)
@@ -161,65 +161,65 @@ func (t *InputObject) WriteSchemaFormat(out io.StringWriter) {
 	})
 	for _, f := range t.Fields {
 		i := &indent{}
-		f.WriteSchemaFormat(i)
+		f.WriteTo(i)
 		i.WriteString("\n")
 		i.Done(out)
 	}
 	out.WriteString("}\n")
 }
 
-func (t *EnumValue) WriteSchemaFormat(out io.StringWriter) {
+func (t *EnumValue) WriteTo(out io.StringWriter) {
 	writeDescription(out, t.Desc)
 	out.WriteString(t.Name)
-	t.Directives.WriteSchemaFormat(out)
+	t.Directives.WriteTo(out)
 }
 
-func (t *Field) WriteSchemaFormat(out io.StringWriter) {
+func (t *Field) WriteTo(out io.StringWriter) {
 	writeDescription(out, t.Desc)
 	out.WriteString(t.Name)
-	t.Args.WriteSchemaFormat(out)
+	t.Args.WriteTo(out)
 	out.WriteString(":")
 	out.WriteString(t.Type.String())
-	t.Directives.WriteSchemaFormat(out)
+	t.Directives.WriteTo(out)
 }
 
-func (t DirectiveList) WriteSchemaFormat(out io.StringWriter) {
+func (t DirectiveList) WriteTo(out io.StringWriter) {
 	if len(t) > 0 {
 		for i, d := range t {
 			if i != 0 {
 				out.WriteString(", ")
 			}
-			d.WriteSchemaFormat(out)
+			d.WriteTo(out)
 		}
 	}
 }
 
-func (t *Directive) WriteSchemaFormat(out io.StringWriter) {
+func (t *Directive) WriteTo(out io.StringWriter) {
 	out.WriteString("@")
 	out.WriteString(t.Name.Text)
-	t.Args.WriteSchemaFormat(out)
+	t.Args.WriteTo(out)
 }
 
-func (t ArgumentList) WriteSchemaFormat(out io.StringWriter) {
+func (t ArgumentList) WriteTo(out io.StringWriter) {
 	if len(t) > 0 {
 		out.WriteString("(")
 		for i, v := range t {
 			if i != 0 {
 				out.WriteString(", ")
 			}
-			v.WriteSchemaFormat(out)
+			v.WriteTo(out)
 		}
 		out.WriteString(")")
 	}
 }
 
-func (t *Argument) WriteSchemaFormat(out io.StringWriter) {
+func (t *Argument) WriteTo(out io.StringWriter) {
 	out.WriteString(t.Name.Text)
 	out.WriteString(":")
-	t.Value.WriteSchemaFormat(out)
+	t.Value.WriteTo(out)
 }
 
-func (t InputValueList) WriteSchemaFormat(out io.StringWriter) {
+func (t InputValueList) WriteTo(out io.StringWriter) {
 	if len(t) > 0 {
 		indented := false
 		out.WriteString("(")
@@ -229,7 +229,7 @@ func (t InputValueList) WriteSchemaFormat(out io.StringWriter) {
 			}
 
 			b := bytes.Buffer{}
-			v.WriteSchemaFormat(&b)
+			v.WriteTo(&b)
 			arg := b.String()
 
 			if strings.Contains(arg, "\n") {
@@ -249,34 +249,34 @@ func (t InputValueList) WriteSchemaFormat(out io.StringWriter) {
 	}
 }
 
-func (t *InputValue) WriteSchemaFormat(out io.StringWriter) {
+func (t *InputValue) WriteTo(out io.StringWriter) {
 	writeDescription(out, t.Desc)
 	out.WriteString(t.Name.Text)
 	out.WriteString(":")
 	out.WriteString(t.Type.String())
 	if t.Default != nil {
 		out.WriteString("=")
-		t.Default.WriteSchemaFormat(out)
+		t.Default.WriteTo(out)
 	}
 }
 
-func (lit *BasicLit) WriteSchemaFormat(out io.StringWriter) {
+func (lit *BasicLit) WriteTo(out io.StringWriter) {
 	out.WriteString(lit.Text)
 }
-func (lit *ListLit) WriteSchemaFormat(out io.StringWriter) {
+func (lit *ListLit) WriteTo(out io.StringWriter) {
 	out.WriteString("[")
 	for i, v := range lit.Entries {
 		if i != 0 {
 			out.WriteString(", ")
 		}
-		v.WriteSchemaFormat(out)
+		v.WriteTo(out)
 	}
 	out.WriteString("]")
 }
-func (lit *NullLit) WriteSchemaFormat(out io.StringWriter) {
+func (lit *NullLit) WriteTo(out io.StringWriter) {
 	out.WriteString("null")
 }
-func (t *ObjectLit) WriteSchemaFormat(out io.StringWriter) {
+func (t *ObjectLit) WriteTo(out io.StringWriter) {
 	out.WriteString("{")
 	sort.Slice(t.Fields, func(i, j int) bool {
 		return t.Fields[i].Name.Text < t.Fields[j].Name.Text
@@ -287,11 +287,11 @@ func (t *ObjectLit) WriteSchemaFormat(out io.StringWriter) {
 		}
 		out.WriteString(v.Name.Text)
 		out.WriteString(": ")
-		v.Value.WriteSchemaFormat(out)
+		v.Value.WriteTo(out)
 	}
 	out.WriteString("}")
 }
-func (lit *Variable) WriteSchemaFormat(out io.StringWriter) {
+func (lit *Variable) WriteTo(out io.StringWriter) {
 	out.WriteString("$")
 	out.WriteString(lit.Name)
 }

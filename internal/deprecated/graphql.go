@@ -124,7 +124,7 @@ func Logger(logger log.Logger) SchemaOpt {
 func (s *Schema) Validate(queryString string) []*errors.QueryError {
 	doc, qErr := query.Parse(queryString)
 	if qErr != nil {
-		return []*errors.QueryError{qErr}
+		return []*errors.QueryError{qErr.(*errors.QueryError)}
 	}
 
 	return validation.Validate(s.Engine.Schema, doc, s.Engine.MaxDepth)

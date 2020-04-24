@@ -57,12 +57,12 @@ type HasDirectives interface {
 }
 
 type Formatter interface {
-	WriteSchemaFormat(out io.StringWriter)
+	WriteTo(out io.StringWriter)
 }
 
 func FormatterToString(s Formatter) string {
 	buf := &bytes.Buffer{}
-	s.WriteSchemaFormat(buf)
+	s.WriteTo(buf)
 	return buf.String()
 }
 
