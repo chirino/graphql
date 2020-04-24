@@ -147,6 +147,10 @@ func (r *Type) PossibleTypes() *[]*Type {
 		return nil
 	}
 
+	sort.Slice(possibleTypes, func(i, j int) bool {
+		return possibleTypes[i].Name < possibleTypes[j].Name
+	})
+
 	l := make([]*Type, len(possibleTypes))
 	for i, intf := range possibleTypes {
 		l[i] = &Type{intf}

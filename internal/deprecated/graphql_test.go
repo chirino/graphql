@@ -1175,10 +1175,10 @@ func TestIntrospection(t *testing.T) {
 						"interfaces": null,
 						"possibleTypes": [
 							{
-								"name": "Human"
+								"name": "Droid"
 							},
 							{
-								"name": "Droid"
+								"name": "Human"
 							}
 						]
 					},
@@ -1188,10 +1188,10 @@ func TestIntrospection(t *testing.T) {
 						"interfaces": null,
 						"possibleTypes": [
 							{
-								"name": "Human"
+								"name": "Droid"
 							},
 							{
-								"name": "Droid"
+								"name": "Human"
 							},
 							{
 								"name": "Starship"

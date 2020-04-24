@@ -129,7 +129,7 @@ input ReviewInput {
   "0-5 stars"
   stars:Int!
 }
-union SearchResult = Human | Droid | Starship
+union SearchResult = Droid | Human | Starship
 type Starship {
   "The ID of the starship"
   id:ID!

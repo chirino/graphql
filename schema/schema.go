@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"sort"
 	"text/scanner"
 
 	"github.com/chirino/graphql/errors"
@@ -413,6 +414,9 @@ func (s *Schema) ResolveTypes() error {
 		s.EntryPoints[key] = t
 	}
 
+	sort.Slice(objects, func(i, j int) bool {
+		return objects[i].Name < objects[j].Name
+	})
 	for _, obj := range objects {
 		obj.Interfaces = make([]*Interface, len(obj.InterfaceNames))
 		for i, intfName := range obj.InterfaceNames {
@@ -442,6 +446,9 @@ func (s *Schema) ResolveTypes() error {
 			}
 			union.PossibleTypes[i] = obj
 		}
+		sort.Slice(union.PossibleTypes, func(i, j int) bool {
+			return union.PossibleTypes[i].Name < union.PossibleTypes[j].Name
+		})
 	}
 
 	for _, enum := range enums {
