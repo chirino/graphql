@@ -1,10 +1,12 @@
 package relay_test
 
 import (
-	"github.com/stretchr/testify/require"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/chirino/graphql"
 	"github.com/chirino/graphql/internal/example/starwars"
@@ -24,18 +26,8 @@ func TestEngineAPIServeHTTP(t *testing.T) {
 
 	h.ServeHTTP(w, r)
 
-	if w.Code != 200 {
-		t.Fatalf("Expected status code 200, got %d.", w.Code)
-	}
-
-	contentType := w.Header().Get("Content-Type")
-	if contentType != "application/json" {
-		t.Fatalf("Invalid content-type. Expected [application/json], but instead got [%s]", contentType)
-	}
-
-	expectedResponse := `{"data":{"hero":{"name":"R2-D2"}}}`
-	actualResponse := w.Body.String()
-	if expectedResponse != actualResponse {
-		t.Fatalf("Invalid response. Expected [%s], but instead got [%s]", expectedResponse, actualResponse)
-	}
+	assert.Equal(t, 200, w.Code)
+	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+	assert.Equal(t, `{"data":{"hero":{"name":"R2-D2"}}}
+`, w.Body.String())
 }

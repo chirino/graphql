@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -57,6 +58,8 @@ type Handler struct {
 
 	ServeGraphQL       graphql.ServeGraphQLFunc
 	ServeGraphQLStream graphql.ServeGraphQLStreamFunc
+
+	MaxRequestSizeBytes int64
 }
 
 type OperationMessage struct {
@@ -211,6 +214,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	defer r.Body.Close()
 	var request graphql.Request
 
 	switch r.Method {
@@ -219,7 +223,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		request.Variables = json.RawMessage(r.URL.Query().Get("variables"))
 		request.OperationName = r.URL.Query().Get("operationName")
 	case http.MethodPost:
-		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+
+		reader := r.Body.(io.Reader)
+		if h.MaxRequestSizeBytes > 0 {
+			reader = io.LimitReader(reader, h.MaxRequestSizeBytes)
+		}
+
+		if err := json.NewDecoder(reader).Decode(&request); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -236,11 +246,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	request.Context = ctx
 	response := handlerFunc(&request)
-	responseJSON, err := json.Marshal(response)
+
+	w.Header().Set("Content-Type", "application/json")
+	err := json.NewEncoder(w).Encode(response)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(responseJSON)
 }
