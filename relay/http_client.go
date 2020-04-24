@@ -44,6 +44,7 @@ func (client *Client) ServeGraphQL(request *graphql.Request) *graphql.Response {
 			Errors: errors.AsArray(err),
 		}
 	}
+	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.Do(req)
 	if err != nil {
@@ -53,21 +54,21 @@ func (client *Client) ServeGraphQL(request *graphql.Request) *graphql.Response {
 	}
 	defer resp.Body.Close()
 
-	if !(200 <= resp.StatusCode && resp.StatusCode < 300) {
-		return &graphql.Response{
-			Errors: errors.AsArray(errors.Errorf("http status code: %d", resp.StatusCode)),
+	contentType := resp.Header.Get("Content-Type")
+	if contentType == "application/json" {
+		engineResponse := graphql.Response{}
+		err = json.NewDecoder(resp.Body).Decode(&engineResponse)
+		if err != nil {
+			return &graphql.Response{
+				Errors: errors.AsArray(err),
+			}
 		}
+		return &engineResponse
 	}
 
-	engineResponse := graphql.Response{}
-	err = json.NewDecoder(resp.Body).Decode(&engineResponse)
-	if err != nil {
-		return &graphql.Response{
-			Errors: errors.AsArray(err),
-		}
+	return &graphql.Response{
+		Errors: errors.AsArray(errors.Errorf("invalid content type: %s", contentType)),
 	}
-
-	return &engineResponse
 }
 
 // TODO: to support subscriptions, we would need to implmeent the following using websockets..
