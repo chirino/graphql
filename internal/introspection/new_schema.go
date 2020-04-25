@@ -4,6 +4,7 @@ package introspection
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/chirino/graphql/errors"
 	"github.com/chirino/graphql/schema"
@@ -359,5 +360,6 @@ func desc(description *string) *schema.Description {
 	if description == nil {
 		return nil
 	}
-	return &schema.Description{Text: *description}
+	multiLine := strings.IndexRune(*description, '\n') != -1
+	return &schema.Description{Text: *description, BlockString:multiLine}
 }
