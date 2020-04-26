@@ -2,8 +2,9 @@ package schema
 
 import (
 	"encoding/json"
-	"github.com/chirino/graphql/errors"
+
 	"github.com/chirino/graphql/internal/lexer"
+	"github.com/chirino/graphql/qerrors"
 )
 
 type Ident lexer.Ident
@@ -22,8 +23,8 @@ type InputValue struct {
 	Type       Type
 	Default    Literal
 	Desc       *Description
-	Loc        errors.Location
-	TypeLoc    errors.Location
+	Loc        qerrors.Location
+	TypeLoc    qerrors.Location
 	Directives DirectiveList
 }
 

@@ -4,15 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/chirino/graphql/errors"
 	"github.com/chirino/graphql/internal/introspection"
+	"github.com/chirino/graphql/qerrors"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/log"
 )
 
-type TraceQueryFinishFunc func([]*errors.QueryError)
-type TraceFieldFinishFunc func(*errors.QueryError)
+type TraceQueryFinishFunc func(qerrors.ErrorList)
+type TraceFieldFinishFunc func(*qerrors.Error)
 
 type Tracer interface {
 	TraceQuery(ctx context.Context, queryString string, operationName string, variables interface{}, varTypes map[string]*introspection.Type) (context.Context, TraceQueryFinishFunc)
@@ -33,7 +33,7 @@ func (OpenTracingTracer) TraceQuery(ctx context.Context, queryString string, ope
 		span.LogFields(log.Object("graphql.variables", variables))
 	}
 
-	return spanCtx, func(errs []*errors.QueryError) {
+	return spanCtx, func(errs qerrors.ErrorList) {
 		if len(errs) > 0 {
 			msg := errs[0].Error()
 			if len(errs) > 1 {
@@ -58,7 +58,7 @@ func (OpenTracingTracer) TraceField(ctx context.Context, label, typeName, fieldN
 		span.SetTag("graphql.args."+name, value)
 	}
 
-	return spanCtx, func(err *errors.QueryError) {
+	return spanCtx, func(err *qerrors.Error) {
 		if err != nil {
 			ext.Error.Set(span, true)
 			span.SetTag("graphql.error", err.Error())
@@ -67,14 +67,14 @@ func (OpenTracingTracer) TraceField(ctx context.Context, label, typeName, fieldN
 	}
 }
 
-func noop(*errors.QueryError) {}
+func noop(*qerrors.Error) {}
 
 type NoopTracer struct{}
 
 func (NoopTracer) TraceQuery(ctx context.Context, queryString string, operationName string, variables interface{}, varTypes map[string]*introspection.Type) (context.Context, TraceQueryFinishFunc) {
-	return ctx, func(errs []*errors.QueryError) {}
+	return ctx, func(errs qerrors.ErrorList) {}
 }
 
 func (NoopTracer) TraceField(ctx context.Context, label, typeName, fieldName string, trivial bool, args map[string]interface{}) (context.Context, TraceFieldFinishFunc) {
-	return ctx, func(err *errors.QueryError) {}
+	return ctx, func(err *qerrors.Error) {}
 }

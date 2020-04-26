@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/chirino/graphql/internal/deprecated"
-	"github.com/stretchr/testify/require"
 	"reflect"
 	"strconv"
 	"testing"
 
-	"github.com/chirino/graphql/errors"
+	"github.com/chirino/graphql/internal/deprecated"
+	"github.com/chirino/graphql/qerrors"
+	"github.com/stretchr/testify/require"
 )
 
 // Test is a GraphQL test case to be used with RunTest(s).
@@ -21,7 +21,7 @@ type Test struct {
 	OperationName  string
 	Variables      map[string]interface{}
 	ExpectedResult string
-	ExpectedErrors []*errors.QueryError
+	ExpectedErrors qerrors.ErrorList
 }
 
 // RunTests runs the given GraphQL test cases as subtests.
@@ -77,7 +77,7 @@ func formatJSON(data []byte) ([]byte, error) {
 	return formatted, nil
 }
 
-func checkErrors(t *testing.T, expected, actual []*errors.QueryError) {
+func checkErrors(t *testing.T, expected, actual qerrors.ErrorList) {
 	expectedCount, actualCount := len(expected), len(actual)
 
 	if expectedCount != actualCount {

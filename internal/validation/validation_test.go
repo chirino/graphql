@@ -8,8 +8,8 @@ import (
 
 	"encoding/json"
 
-	"github.com/chirino/graphql/errors"
 	"github.com/chirino/graphql/internal/validation"
+	"github.com/chirino/graphql/qerrors"
 	"github.com/chirino/graphql/query"
 	"github.com/chirino/graphql/schema"
 )
@@ -19,7 +19,7 @@ type Test struct {
 	Rule   string
 	Schema int
 	Query  string
-	Errors []*errors.QueryError
+	Errors qerrors.ErrorList
 }
 
 func TestValidate(t *testing.T) {
@@ -51,7 +51,7 @@ func TestValidate(t *testing.T) {
 				t.Fatal(err)
 			}
 			errs := validation.Validate(schemas[test.Schema], d, 0)
-			got := []*errors.QueryError{}
+			got := qerrors.ErrorList{}
 			for _, err := range errs {
 				if err.Rule == test.Rule {
 					err.Rule = ""
@@ -68,7 +68,7 @@ func TestValidate(t *testing.T) {
 	}
 }
 
-func sortLocations(errs []*errors.QueryError) {
+func sortLocations(errs qerrors.ErrorList) {
 	for _, err := range errs {
 		locs := err.Locations
 		sort.Slice(locs, func(i, j int) bool { return locs[i].Before(locs[j]) })

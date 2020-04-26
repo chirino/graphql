@@ -3,7 +3,7 @@ package graphql
 import (
 	"context"
 
-	"github.com/chirino/graphql/errors"
+	"github.com/chirino/graphql/qerrors"
 )
 
 type ResponseStream struct {
@@ -26,15 +26,13 @@ func (f ServeGraphQLStreamFunc) ServeGraphQLStream(request *Request) (*ResponseS
 func (f ServeGraphQLStreamFunc) ServeGraphQL(request *Request) *Response {
 	stream, err := f(request)
 	if err != nil {
-		return &Response{
-			Errors: errors.AsArray(err),
-		}
+		return NewResponse().AddError(err)
 	}
 	defer stream.Close()
 	if stream.IsSubscription {
-		return &Response{
-			Errors: errors.AsArray(errors.Errorf("ExecuteOne method does not support getting results from subscriptions")),
-		}
+		return NewResponse().AddError(qerrors.Errorf(
+			"ExecuteOne method does not support getting results from subscriptions",
+		))
 	}
 	return stream.Next()
 }

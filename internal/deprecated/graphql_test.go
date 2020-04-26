@@ -2,9 +2,11 @@ package deprecated_test
 
 import (
 	"context"
+
 	"github.com/chirino/graphql/customtypes"
-	"github.com/chirino/graphql/errors"
 	"github.com/chirino/graphql/internal/deprecated"
+	"github.com/chirino/graphql/qerrors"
+
 	"testing"
 	"time"
 
@@ -1530,8 +1532,8 @@ func TestUnexportedMethod(t *testing.T) {
 					changeTheNumber(newNumber: 1) 
 				}
 			`,
-			ExpectedErrors: []*errors.QueryError{
-				&errors.QueryError{Message: "No resolver found", Locations: []errors.Location(nil), Path: []string{"changeTheNumber"}, Rule: "", ResolverError: error(nil)},
+			ExpectedErrors: qerrors.ErrorList{
+				&qerrors.Error{Message: "No resolver found", Locations: []qerrors.Location(nil), Path: []string{"changeTheNumber"}, Rule: "", ResolverError: error(nil)},
 			},
 		},
 	})
@@ -1560,8 +1562,8 @@ func TestUnexportedField(t *testing.T) {
 					changeTheNumber(newNumber: 1) 
 				}
 			`,
-			ExpectedErrors: []*errors.QueryError{
-				&errors.QueryError{Message: "No resolver found", Locations: []errors.Location(nil), Path: []string{"changeTheNumber"}, Rule: "", ResolverError: error(nil)},
+			ExpectedErrors: qerrors.ErrorList{
+				&qerrors.Error{Message: "No resolver found", Locations: []qerrors.Location(nil), Path: []string{"changeTheNumber"}, Rule: "", ResolverError: error(nil)},
 			},
 		},
 	})

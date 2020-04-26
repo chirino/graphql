@@ -12,7 +12,7 @@ import (
 
 	"github.com/chirino/graphql"
 	"github.com/chirino/graphql/customtypes"
-	"github.com/chirino/graphql/errors"
+	"github.com/chirino/graphql/qerrors"
 	"github.com/gorilla/websocket"
 )
 
@@ -43,7 +43,7 @@ func UnmarshalSpec(id customtypes.ID, v interface{}) error {
 	}
 	i := strings.IndexByte(string(s), ':')
 	if i == -1 {
-		return errors.Errorf("invalid graphql.ID")
+		return qerrors.Errorf("invalid graphql.ID")
 	}
 	return json.Unmarshal([]byte(s[i+1:]), v)
 }
@@ -137,7 +137,7 @@ func upgrade(streamingHandlerFunc graphql.ServeGraphQLStreamFunc, w http.Respons
 			stream, err := streamingHandlerFunc(&request)
 
 			if err != nil {
-				r := graphql.Response{Errors: errors.AsArray(err)}
+				r := graphql.NewResponse().AddError(err)
 				payload, err := json.Marshal(r)
 				if err != nil {
 					panic(fmt.Sprintf("could not marshal payload: %v\n", err))

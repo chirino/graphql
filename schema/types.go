@@ -1,8 +1,8 @@
 package schema
 
 import (
-	"github.com/chirino/graphql/errors"
 	"github.com/chirino/graphql/internal/lexer"
+	"github.com/chirino/graphql/qerrors"
 )
 
 func DeepestType(t Type) Type {
@@ -48,7 +48,7 @@ func parseNullType(l *lexer.Lexer) Type {
 
 type Resolver func(name string) Type
 
-func ResolveType(t Type, resolver Resolver) (Type, *errors.QueryError) {
+func ResolveType(t Type, resolver Resolver) (Type, *qerrors.Error) {
 	switch t := t.(type) {
 	case *List:
 		ofType, err := ResolveType(t.OfType, resolver)
@@ -65,9 +65,9 @@ func ResolveType(t Type, resolver Resolver) (Type, *errors.QueryError) {
 	case *TypeName:
 		refT := resolver(t.Text)
 		if refT == nil {
-			err := errors.Errorf("Unknown type %q.", t.Text)
+			err := qerrors.Errorf("Unknown type %q.", t.Text)
 			err.Rule = "KnownTypeNames"
-			err.Locations = []errors.Location{t.Loc}
+			err.Locations = []qerrors.Location{t.Loc}
 			return nil, err
 		}
 		return refT, nil

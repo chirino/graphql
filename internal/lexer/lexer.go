@@ -2,11 +2,12 @@ package lexer
 
 import (
 	"fmt"
+
 	"github.com/chirino/graphql/internal/scanner"
+	"github.com/chirino/graphql/qerrors"
+
 	"strconv"
 	"strings"
-
-	"github.com/chirino/graphql/errors"
 )
 
 type syntaxError string
@@ -18,7 +19,7 @@ type Lexer struct {
 
 type Ident struct {
 	Text string
-	Loc  errors.Location
+	Loc  qerrors.Location
 }
 
 func NewLexer(s string) *Lexer {
@@ -27,12 +28,12 @@ func NewLexer(s string) *Lexer {
 	return &Lexer{sc: sc}
 }
 
-func (l *Lexer) CatchSyntaxError(f func()) (errRes *errors.QueryError) {
+func (l *Lexer) CatchSyntaxError(f func()) (errRes *qerrors.Error) {
 	defer func() {
 		if err := recover(); err != nil {
 			if err, ok := err.(syntaxError); ok {
-				errRes = errors.Errorf("syntax error: %s", err)
-				errRes.Locations = []errors.Location{l.Location()}
+				errRes = qerrors.Errorf("syntax error: %s", err)
+				errRes.Locations = []qerrors.Location{l.Location()}
 				return
 			}
 			panic(err)
@@ -124,7 +125,7 @@ func (l *Lexer) ConsumeToken(expected rune) {
 type Description struct {
 	Text        string
 	BlockString bool
-	Loc         errors.Location
+	Loc         qerrors.Location
 }
 
 func (d *Description) String() string {
@@ -170,8 +171,8 @@ func (l *Lexer) SyntaxError(message string) {
 	panic(syntaxError(message))
 }
 
-func (l *Lexer) Location() errors.Location {
-	return errors.Location{
+func (l *Lexer) Location() qerrors.Location {
+	return qerrors.Location{
 		Line:   l.sc.Line,
 		Column: l.sc.Column,
 	}

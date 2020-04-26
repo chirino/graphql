@@ -7,8 +7,8 @@ import (
 	"sort"
 	"text/scanner"
 
-	"github.com/chirino/graphql/errors"
 	"github.com/chirino/graphql/internal/lexer"
+	"github.com/chirino/graphql/qerrors"
 )
 
 // Schema represents a GraphQL service's collective type system capabilities.
@@ -408,7 +408,7 @@ func (s *Schema) ResolveTypes() error {
 		t, ok := s.Types[name]
 		if !ok {
 			if !ok {
-				return errors.Errorf("type %q not found", name)
+				return qerrors.Errorf("type %q not found", name)
 			}
 		}
 		s.EntryPoints[key] = t
@@ -422,11 +422,11 @@ func (s *Schema) ResolveTypes() error {
 		for i, intfName := range obj.InterfaceNames {
 			t, ok := s.Types[intfName]
 			if !ok {
-				return errors.Errorf("interface %q not found", intfName)
+				return qerrors.Errorf("interface %q not found", intfName)
 			}
 			intf, ok := t.(*Interface)
 			if !ok {
-				return errors.Errorf("type %q is not an interface", intfName)
+				return qerrors.Errorf("type %q is not an interface", intfName)
 			}
 			obj.Interfaces[i] = intf
 			intf.PossibleTypes = append(intf.PossibleTypes, obj)
@@ -438,11 +438,11 @@ func (s *Schema) ResolveTypes() error {
 		for i, name := range union.TypeNames {
 			t, ok := s.Types[name]
 			if !ok {
-				return errors.Errorf("object type %q not found", name)
+				return qerrors.Errorf("object type %q not found", name)
 			}
 			obj, ok := t.(*Object)
 			if !ok {
-				return errors.Errorf("type %q is not an object", name)
+				return qerrors.Errorf("type %q is not an object", name)
 			}
 			union.PossibleTypes[i] = obj
 		}
@@ -693,11 +693,11 @@ func resolveDirectives(s *Schema, directives DirectiveList) error {
 		dirName := d.Name.Text
 		dd, ok := s.DeclaredDirectives[dirName]
 		if !ok {
-			return errors.Errorf("directive %q not found", dirName)
+			return qerrors.Errorf("directive %q not found", dirName)
 		}
 		for _, arg := range d.Args {
 			if dd.Args.Get(arg.Name.Text) == nil {
-				return errors.Errorf("invalid argument %q for directive %q", arg.Name.Text, dirName)
+				return qerrors.Errorf("invalid argument %q for directive %q", arg.Name.Text, dirName)
 			}
 		}
 		for _, arg := range dd.Args {

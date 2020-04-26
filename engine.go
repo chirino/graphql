@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/chirino/graphql/errors"
 	"github.com/chirino/graphql/internal/exec"
 	"github.com/chirino/graphql/internal/introspection"
 	"github.com/chirino/graphql/internal/validation"
 	"github.com/chirino/graphql/log"
+	"github.com/chirino/graphql/qerrors"
 	"github.com/chirino/graphql/query"
 	"github.com/chirino/graphql/resolvers"
 	"github.com/chirino/graphql/schema"
@@ -67,7 +67,7 @@ func (engine *Engine) ServeGraphQLStream(request *Request) (*ResponseStream, err
 	errs := validation.Validate(engine.Schema, doc, engine.MaxDepth)
 	validationFinish(errs)
 	if len(errs) != 0 {
-		return nil, errors.AsMulti(errs)
+		return nil, errs.Error()
 	}
 
 	op, err := doc.GetOperation(request.OperationName)
@@ -112,7 +112,7 @@ func (engine *Engine) ServeGraphQLStream(request *Request) (*ResponseStream, err
 		MaxParallelism: engine.MaxParallelism,
 		Root:           engine.Root,
 		Context:        traceContext,
-		Handler: func(d json.RawMessage, e []*errors.QueryError) {
+		Handler: func(d json.RawMessage, e qerrors.ErrorList) {
 			responses <- &Response{
 				Data:   d,
 				Errors: e,

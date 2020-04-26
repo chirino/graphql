@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/chirino/graphql"
-	"github.com/chirino/graphql/errors"
+	"github.com/chirino/graphql/qerrors"
 )
 
 type Client struct {
@@ -27,11 +27,10 @@ func (client *Client) ServeGraphQL(request *graphql.Request) *graphql.Response {
 		c = &http.Client{}
 	}
 
+	response := graphql.NewResponse()
 	body, err := json.Marshal(request)
 	if err != nil {
-		return &graphql.Response{
-			Errors: errors.AsArray(err),
-		}
+		return response.AddError(err)
 	}
 
 	ctx := request.Context
@@ -40,35 +39,26 @@ func (client *Client) ServeGraphQL(request *graphql.Request) *graphql.Response {
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, client.URL, bytes.NewReader(body))
 	if err != nil {
-		return &graphql.Response{
-			Errors: errors.AsArray(err),
-		}
+		return response.AddError(err)
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.Do(req)
 	if err != nil {
-		return &graphql.Response{
-			Errors: errors.AsArray(err),
-		}
+		return response.AddError(err)
 	}
 	defer resp.Body.Close()
 
 	contentType := resp.Header.Get("Content-Type")
 	if contentType == "application/json" {
-		engineResponse := graphql.Response{}
-		err = json.NewDecoder(resp.Body).Decode(&engineResponse)
+		err = json.NewDecoder(resp.Body).Decode(&response)
 		if err != nil {
-			return &graphql.Response{
-				Errors: errors.AsArray(err),
-			}
+			return response.AddError(err)
 		}
-		return &engineResponse
+		return response
 	}
 
-	return &graphql.Response{
-		Errors: errors.AsArray(errors.Errorf("invalid content type: %s", contentType)),
-	}
+	return response.AddError(qerrors.Errorf("invalid content type: %s", contentType))
 }
 
 // TODO: to support subscriptions, we would need to implmeent the following using websockets..

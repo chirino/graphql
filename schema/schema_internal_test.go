@@ -2,9 +2,9 @@ package schema
 
 import (
 	"github.com/chirino/graphql/internal/lexer"
-	"testing"
+	"github.com/chirino/graphql/qerrors"
 
-	"github.com/chirino/graphql/errors"
+	"testing"
 )
 
 func TestParseInterfaceDef(t *testing.T) {
@@ -12,7 +12,7 @@ func TestParseInterfaceDef(t *testing.T) {
 		description string
 		definition  string
 		expected    *Interface
-		err         *errors.QueryError
+		err         *qerrors.Error
 	}
 
 	tests := []testCase{{
@@ -42,7 +42,7 @@ func TestParseObjectDef(t *testing.T) {
 		description string
 		definition  string
 		expected    *Object
-		err         *errors.QueryError
+		err         *qerrors.Error
 	}
 
 	tests := []testCase{{
@@ -77,7 +77,7 @@ func TestParseObjectDef(t *testing.T) {
 	}
 }
 
-func compareErrors(t *testing.T, expected, actual *errors.QueryError) {
+func compareErrors(t *testing.T, expected, actual *qerrors.Error) {
 	t.Helper()
 
 	switch {

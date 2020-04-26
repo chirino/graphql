@@ -3,24 +3,24 @@ package schema
 import (
 	"github.com/chirino/graphql/internal/lexer"
 	"github.com/chirino/graphql/internal/scanner"
+	"github.com/chirino/graphql/qerrors"
+
 	"io"
 	"strconv"
 	"strings"
-
-	"github.com/chirino/graphql/errors"
 )
 
 type Literal interface {
 	Evaluate(vars map[string]interface{}) interface{}
 	String() string
-	Location() errors.Location
+	Location() qerrors.Location
 	WriteTo(out io.StringWriter)
 }
 
 type BasicLit struct {
 	Type rune
 	Text string
-	Loc  errors.Location
+	Loc  qerrors.Location
 }
 
 func (lit *BasicLit) Evaluate(vars map[string]interface{}) interface{} {
@@ -68,13 +68,13 @@ func (lit *BasicLit) String() string {
 	return lit.Text
 }
 
-func (lit *BasicLit) Location() errors.Location {
+func (lit *BasicLit) Location() qerrors.Location {
 	return lit.Loc
 }
 
 type ListLit struct {
 	Entries []Literal
-	Loc     errors.Location
+	Loc     qerrors.Location
 }
 
 func (lit *ListLit) Evaluate(vars map[string]interface{}) interface{} {
@@ -93,13 +93,13 @@ func (lit *ListLit) String() string {
 	return "[" + strings.Join(entries, ", ") + "]"
 }
 
-func (lit *ListLit) Location() errors.Location {
+func (lit *ListLit) Location() qerrors.Location {
 	return lit.Loc
 }
 
 type ObjectLit struct {
 	Fields []*ObjectLitField
-	Loc    errors.Location
+	Loc    qerrors.Location
 }
 
 type ObjectLitField struct {
@@ -123,12 +123,12 @@ func (lit *ObjectLit) String() string {
 	return "{" + strings.Join(entries, ", ") + "}"
 }
 
-func (lit *ObjectLit) Location() errors.Location {
+func (lit *ObjectLit) Location() qerrors.Location {
 	return lit.Loc
 }
 
 type NullLit struct {
-	Loc errors.Location
+	Loc qerrors.Location
 }
 
 func (lit *NullLit) Evaluate(vars map[string]interface{}) interface{} {
@@ -139,13 +139,13 @@ func (lit *NullLit) String() string {
 	return "null"
 }
 
-func (lit *NullLit) Location() errors.Location {
+func (lit *NullLit) Location() qerrors.Location {
 	return lit.Loc
 }
 
 type Variable struct {
 	Name string
-	Loc  errors.Location
+	Loc  qerrors.Location
 }
 
 func (v Variable) Evaluate(vars map[string]interface{}) interface{} {
@@ -156,7 +156,7 @@ func (v Variable) String() string {
 	return "$" + v.Name
 }
 
-func (v *Variable) Location() errors.Location {
+func (v *Variable) Location() qerrors.Location {
 	return v.Loc
 }
 

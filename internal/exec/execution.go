@@ -8,11 +8,11 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/chirino/graphql/errors"
 	"github.com/chirino/graphql/exec"
 	"github.com/chirino/graphql/internal/introspection"
 	"github.com/chirino/graphql/internal/linkedmap"
 	"github.com/chirino/graphql/log"
+	"github.com/chirino/graphql/qerrors"
 	"github.com/chirino/graphql/query"
 	"github.com/chirino/graphql/resolvers"
 	"github.com/chirino/graphql/schema"
@@ -37,9 +37,9 @@ type Execution struct {
 	subMu          sync.Mutex
 	rootFields     *linkedmap.LinkedMap
 	data           *bytes.Buffer
-	errs           []*errors.QueryError
+	errs           qerrors.ErrorList
 	MaxParallelism int
-	Handler        func(data json.RawMessage, errors []*errors.QueryError)
+	Handler        func(data json.RawMessage, errors qerrors.ErrorList)
 }
 
 func (this *Execution) GetQuery() string {
@@ -78,12 +78,12 @@ func (this *Execution) HandlePanic(path []string) error {
 	return nil
 }
 
-func makePanicError(value interface{}) *errors.QueryError {
-	return errors.Errorf("graphql: panic occurred: %v", value)
+func makePanicError(value interface{}) *qerrors.Error {
+	return qerrors.Errorf("graphql: panic occurred: %v", value)
 }
 
 type ExecutionResult struct {
-	Errors []*errors.QueryError
+	Errors qerrors.ErrorList
 	Data   *bytes.Buffer
 }
 
@@ -145,7 +145,7 @@ func (this *Execution) resolveFields(parentSelectionResolver *SelectionResolver,
 				resolution := this.Resolver.Resolve(resolveRequest, nil)
 
 				if resolution == nil {
-					this.AddError((&errors.QueryError{
+					this.AddError((&qerrors.Error{
 						Message: "No resolver found",
 						Path:    append(parentSelectionResolver.Path(), field.Alias.Text),
 					}).WithStack())
@@ -194,7 +194,7 @@ func (this *Execution) Execute() (bool, error) {
 	rootFields := linkedmap.CreateLinkedMap(len(this.Operation.Selections))
 
 	// async processing can start when the field is selected... apply limit here...
-	this.errs = []*errors.QueryError{}
+	this.errs = qerrors.ErrorList{}
 	this.limiter = make(chan byte, this.MaxParallelism)
 	this.limiter <- 1
 	this.resolveFields(nil, rootFields, rootValue, rootType, this.Operation.Selections)
@@ -204,12 +204,12 @@ func (this *Execution) Execute() (bool, error) {
 		// subs are kinda special... we need to setup a subscription to an event,
 		// and execute it every time the event is triggered...
 		if len(this.Operation.Selections) != 1 {
-			return true, errors.Errorf("you can only select 1 field in a subscription")
+			return true, qerrors.Errorf("you can only select 1 field in a subscription")
 		}
 
 		if len(rootFields.ValuesByKey) != 1 {
 			// We may not have resolved it correctly..
-			return true, errors.AsMulti(this.errs)
+			return true, this.errs.Error()
 		}
 		// This code path interact closely with with FireSubscriptionEvent method.
 		this.rootFields = rootFields
@@ -248,7 +248,7 @@ func (this *Execution) FireSubscriptionEvent(value reflect.Value) {
 		return value, nil
 	}
 	this.data = &bytes.Buffer{}
-	this.errs = []*errors.QueryError{}
+	this.errs = qerrors.ErrorList{}
 	this.limiter = make(chan byte, this.MaxParallelism)
 	this.limiter <- 1
 	defer func() { <-this.limiter }()
@@ -284,7 +284,7 @@ func (this *Execution) recursiveExecute(parentSelection *SelectionResolver, sele
 
 var rawMessageType = reflect.TypeOf(resolvers.RawMessage{})
 
-func (this *Execution) executeSelected(parentSelection *SelectionResolver, selected *SelectionResolver) (result *errors.QueryError) {
+func (this *Execution) executeSelected(parentSelection *SelectionResolver, selected *SelectionResolver) (result *qerrors.Error) {
 
 	defer func() {
 		if value := recover(); value != nil {
@@ -298,7 +298,7 @@ func (this *Execution) executeSelected(parentSelection *SelectionResolver, selec
 	resolver := selected.Resolution
 	childValue, err := resolver()
 	if err != nil {
-		return (&errors.QueryError{
+		return (&qerrors.Error{
 			Message:       err.Error(),
 			Path:          selected.Path(),
 			ResolverError: err,
@@ -326,7 +326,7 @@ func (this *Execution) executeSelected(parentSelection *SelectionResolver, selec
 	if (childValue.Kind() == reflect.Ptr || childValue.Kind() == reflect.Interface) &&
 		childValue.IsNil() {
 		if nonNullType {
-			return (&errors.QueryError{
+			return (&qerrors.Error{
 				Message: "ResolverFactory produced a nil value for a Non Null type",
 				Path:    selected.Path(),
 			}).WithStack()
@@ -403,7 +403,7 @@ func (this *Execution) writeLeaf(childValue reflect.Value, selectionResolver *Se
 	switch childType := childType.(type) {
 	case *schema.NonNull:
 		if childValue.Kind() == reflect.Ptr && childValue.Elem().IsNil() {
-			panic(errors.Errorf("got nil for non-null %q", childType))
+			panic(qerrors.Errorf("got nil for non-null %q", childType))
 		} else {
 			this.writeLeaf(childValue, selectionResolver, childType.OfType)
 		}
@@ -411,7 +411,7 @@ func (this *Execution) writeLeaf(childValue reflect.Value, selectionResolver *Se
 	case *schema.Scalar:
 		data, err := json.Marshal(childValue.Interface())
 		if err != nil {
-			panic(errors.Errorf("could not marshal %v: %s", childValue, err))
+			panic(qerrors.Errorf("could not marshal %v: %s", childValue, err))
 		}
 		this.data.Write(data)
 
@@ -438,12 +438,12 @@ func (this *Execution) writeLeaf(childValue reflect.Value, selectionResolver *Se
 
 func (r *Execution) AddError(err error) {
 	if err != nil {
-		var qe *errors.QueryError = nil
+		var qe *qerrors.Error = nil
 		switch err := err.(type) {
-		case *errors.QueryError:
+		case *qerrors.Error:
 			qe = err
 		default:
-			qe = &errors.QueryError{
+			qe = &qerrors.Error{
 				Message: err.Error(),
 			}
 		}

@@ -5,9 +5,8 @@ import (
 	"text/scanner"
 
 	"github.com/chirino/graphql/internal/lexer"
+	"github.com/chirino/graphql/qerrors"
 	"github.com/chirino/graphql/schema"
-
-	"github.com/chirino/graphql/errors"
 )
 
 type Document struct {
@@ -45,7 +44,7 @@ type Operation struct {
 	Vars       schema.InputValueList
 	Selections SelectionList
 	Directives schema.DirectiveList
-	Loc        errors.Location
+	Loc        qerrors.Location
 }
 
 type Fragment struct {
@@ -57,13 +56,13 @@ type FragmentDecl struct {
 	Fragment
 	Name       schema.Ident
 	Directives schema.DirectiveList
-	Loc        errors.Location
+	Loc        qerrors.Location
 }
 
 type Selection interface {
 	schema.Formatter
 	isSelection()
-	Location() errors.Location
+	Location() qerrors.Location
 }
 
 type Field struct {
@@ -72,7 +71,7 @@ type Field struct {
 	Arguments       schema.ArgumentList
 	Directives      schema.DirectiveList
 	Selections      SelectionList
-	SelectionSetLoc errors.Location
+	SelectionSetLoc qerrors.Location
 	Schema          *FieldSchema
 }
 
@@ -84,22 +83,22 @@ type FieldSchema struct {
 type InlineFragment struct {
 	Fragment
 	Directives schema.DirectiveList
-	Loc        errors.Location
+	Loc        qerrors.Location
 }
 
 type FragmentSpread struct {
 	Name       schema.Ident
 	Directives schema.DirectiveList
-	Loc        errors.Location
+	Loc        qerrors.Location
 }
 
 func (Field) isSelection()          {}
 func (InlineFragment) isSelection() {}
 func (FragmentSpread) isSelection() {}
 
-func (t Field) Location() errors.Location          { return t.Name.Loc }
-func (t InlineFragment) Location() errors.Location { return t.Loc }
-func (t FragmentSpread) Location() errors.Location { return t.Loc }
+func (t Field) Location() qerrors.Location          { return t.Name.Loc }
+func (t InlineFragment) Location() qerrors.Location { return t.Loc }
+func (t FragmentSpread) Location() qerrors.Location { return t.Loc }
 
 func Parse(queryString string) (*Document, error) {
 	l := lexer.NewLexer(queryString)

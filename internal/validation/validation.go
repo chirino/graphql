@@ -2,13 +2,15 @@ package validation
 
 import (
 	"fmt"
+
 	"github.com/chirino/graphql/internal/scanner"
+	"github.com/chirino/graphql/qerrors"
+
 	"math"
 	"reflect"
 	"strconv"
 	"strings"
 
-	"github.com/chirino/graphql/errors"
 	"github.com/chirino/graphql/query"
 	"github.com/chirino/graphql/schema"
 )
@@ -25,20 +27,20 @@ type fieldInfo struct {
 type context struct {
 	schema           *schema.Schema
 	doc              *query.Document
-	errs             []*errors.QueryError
-	opErrs           map[*query.Operation][]*errors.QueryError
+	errs             qerrors.ErrorList
+	opErrs           map[*query.Operation]qerrors.ErrorList
 	usedVars         map[*query.Operation]varSet
 	fieldMap         map[*query.Field]fieldInfo
 	overlapValidated map[selectionPair]struct{}
 	maxDepth         int
 }
 
-func (c *context) addErr(loc errors.Location, rule string, format string, a ...interface{}) {
-	c.addErrMultiLoc([]errors.Location{loc}, rule, format, a...)
+func (c *context) addErr(loc qerrors.Location, rule string, format string, a ...interface{}) {
+	c.addErrMultiLoc([]qerrors.Location{loc}, rule, format, a...)
 }
 
-func (c *context) addErrMultiLoc(locs []errors.Location, rule string, format string, a ...interface{}) {
-	c.errs = append(c.errs, (&errors.QueryError{
+func (c *context) addErrMultiLoc(locs []qerrors.Location, rule string, format string, a ...interface{}) {
+	c.errs = append(c.errs, (&qerrors.Error{
 		Message:   fmt.Sprintf(format, a...),
 		Locations: locs,
 		Rule:      rule,
@@ -54,7 +56,7 @@ func newContext(s *schema.Schema, doc *query.Document, maxDepth int) *context {
 	return &context{
 		schema:           s,
 		doc:              doc,
-		opErrs:           make(map[*query.Operation][]*errors.QueryError),
+		opErrs:           make(map[*query.Operation]qerrors.ErrorList),
 		usedVars:         make(map[*query.Operation]varSet),
 		fieldMap:         make(map[*query.Field]fieldInfo),
 		overlapValidated: make(map[selectionPair]struct{}),
@@ -62,7 +64,7 @@ func newContext(s *schema.Schema, doc *query.Document, maxDepth int) *context {
 	}
 }
 
-func Validate(s *schema.Schema, doc *query.Document, maxDepth int) []*errors.QueryError {
+func Validate(s *schema.Schema, doc *query.Document, maxDepth int) qerrors.ErrorList {
 	c := newContext(s, doc, maxDepth)
 
 	opNames := make(nameSet)
@@ -403,7 +405,7 @@ func detectFragmentCycleSel(c *context, sel query.Selection, fragVisited map[*qu
 				via = " via " + strings.Join(names, ", ")
 			}
 
-			locs := make([]errors.Location, len(cyclePath))
+			locs := make([]qerrors.Location, len(cyclePath))
 			for i, frag := range cyclePath {
 				locs[i] = frag.Loc
 			}
@@ -425,7 +427,7 @@ func detectFragmentCycleSel(c *context, sel query.Selection, fragVisited map[*qu
 	}
 }
 
-func (c *context) validateOverlap(a, b query.Selection, reasons *[]string, locs *[]errors.Location) {
+func (c *context) validateOverlap(a, b query.Selection, reasons *[]string, locs *[]qerrors.Location) {
 	if a == b {
 		return
 	}
@@ -488,7 +490,7 @@ func (c *context) validateOverlap(a, b query.Selection, reasons *[]string, locs 
 	}
 }
 
-func (c *context) validateFieldOverlap(a, b *query.Field) ([]string, []errors.Location) {
+func (c *context) validateFieldOverlap(a, b *query.Field) ([]string, []qerrors.Location) {
 	if a.Alias.Text != b.Alias.Text {
 		return nil, nil
 	}
@@ -514,7 +516,7 @@ func (c *context) validateFieldOverlap(a, b *query.Field) ([]string, []errors.Lo
 	}
 
 	var reasons []string
-	var locs []errors.Location
+	var locs []qerrors.Location
 	for _, a2 := range a.Selections {
 		for _, b2 := range b.Selections {
 			c.validateOverlap(a2, b2, &reasons, &locs)
@@ -607,7 +609,7 @@ func validateDirectives(c *opContext, loc string, directives schema.DirectiveLis
 	}
 }
 
-type nameSet map[string]errors.Location
+type nameSet map[string]qerrors.Location
 
 func validateName(c *context, set nameSet, name schema.Ident, rule string, kind string) {
 	validateNameCustomMsg(c, set, name, rule, func() string {
@@ -617,13 +619,13 @@ func validateName(c *context, set nameSet, name schema.Ident, rule string, kind 
 
 func validateNameCustomMsg(c *context, set nameSet, name schema.Ident, rule string, msg func() string) {
 	if loc, ok := set[name.Text]; ok {
-		c.addErrMultiLoc([]errors.Location{loc, name.Loc}, rule, msg())
+		c.addErrMultiLoc([]qerrors.Location{loc, name.Loc}, rule, msg())
 		return
 	}
 	set[name.Text] = name.Loc
 }
 
-func validateArgumentTypes(c *opContext, args schema.ArgumentList, argDecls schema.InputValueList, loc errors.Location, owner1, owner2 func() string) {
+func validateArgumentTypes(c *opContext, args schema.ArgumentList, argDecls schema.InputValueList, loc qerrors.Location, owner1, owner2 func() string) {
 	for _, selArg := range args {
 		arg := argDecls.Get(selArg.Name.Text)
 		if arg == nil {
@@ -672,9 +674,9 @@ func validateLiteral(c *opContext, l schema.Literal) {
 				if op.Name.Text != "" {
 					byOp = fmt.Sprintf(" by operation %q", op.Name.Text)
 				}
-				c.opErrs[op] = append(c.opErrs[op], (&errors.QueryError{
+				c.opErrs[op] = append(c.opErrs[op], (&qerrors.Error{
 					Message:   fmt.Sprintf("Variable %q is not defined%s.", "$"+l.Name, byOp),
-					Locations: []errors.Location{l.Loc, op.Loc},
+					Locations: []qerrors.Location{l.Loc, op.Loc},
 					Rule:      "NoUndefinedVariables",
 				}).WithStack())
 				continue
@@ -693,7 +695,7 @@ func validateValueType(c *opContext, v schema.Literal, t schema.Type) (bool, str
 					t2 = &schema.NonNull{OfType: t2}
 				}
 				if err == nil && !typeCanBeUsedAs(t2, t) {
-					c.addErrMultiLoc([]errors.Location{v2.Loc, v.Loc}, "VariablesInAllowedPosition", "Variable %q of type %q used in position expecting type %q.", "$"+v.Name, t2, t)
+					c.addErrMultiLoc([]qerrors.Location{v2.Loc, v.Loc}, "VariablesInAllowedPosition", "Variable %q of type %q used in position expecting type %q.", "$"+v.Name, t2, t)
 				}
 			}
 		}

@@ -2,9 +2,10 @@ package deprecated
 
 import (
 	"context"
-	"github.com/chirino/graphql"
 
-	"github.com/chirino/graphql/errors"
+	"github.com/chirino/graphql"
+	"github.com/chirino/graphql/qerrors"
+
 	"github.com/chirino/graphql/internal/validation"
 	"github.com/chirino/graphql/log"
 	"github.com/chirino/graphql/query"
@@ -121,10 +122,10 @@ func Logger(logger log.Logger) SchemaOpt {
 }
 
 // Validate validates the given query with the schema.
-func (s *Schema) Validate(queryString string) []*errors.QueryError {
+func (s *Schema) Validate(queryString string) qerrors.ErrorList {
 	doc, qErr := query.Parse(queryString)
 	if qErr != nil {
-		return []*errors.QueryError{qErr.(*errors.QueryError)}
+		return qerrors.ErrorList{qErr.(*qerrors.Error)}
 	}
 
 	return validation.Validate(s.Engine.Schema, doc, s.Engine.MaxDepth)
@@ -149,7 +150,7 @@ func (s *Schema) Exec(ctx context.Context, queryString string, operationName str
 //func (s *Schema) exec(ctx context.Context, queryString string, operationName string, variables map[string]interface{}, res *resolvable.Schema) *Response {
 //	doc, qErr := query.Parse(queryString)
 //	if qErr != nil {
-//		return &Response{Errors: []*errors.QueryError{qErr}}
+//		return &Response{Errors: errors.ErrorList{qErr}}
 //	}
 //
 //	validationFinish := s.validationTracer.TraceValidation()
@@ -161,7 +162,7 @@ func (s *Schema) Exec(ctx context.Context, queryString string, operationName str
 //
 //	op, err := getOperation(doc, operationName)
 //	if err != nil {
-//		return &Response{Errors: []*errors.QueryError{errors.Errorf("%s", err)}}
+//		return &Response{Errors: errors.ErrorList{errors.Errorf("%s", err)}}
 //	}
 //
 //	r := &exec.Request{
@@ -178,7 +179,7 @@ func (s *Schema) Exec(ctx context.Context, queryString string, operationName str
 //	for _, v := range op.Vars {
 //		t, err := common.ResolveType(v.Type, s.schema.Resolve)
 //		if err != nil {
-//			return &Response{Errors: []*errors.QueryError{err}}
+//			return &Response{Errors: errors.ErrorList{err}}
 //		}
 //		varTypes[v.Name.Name] = introspection.WrapType(t)
 //	}

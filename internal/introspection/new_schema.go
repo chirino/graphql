@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/chirino/graphql/errors"
+	"github.com/chirino/graphql/qerrors"
 	"github.com/chirino/graphql/schema"
 )
 
@@ -207,7 +207,7 @@ func NewSchema(introspection json.RawMessage) (*schema.Schema, error) {
 			continue
 		}
 		if t.Kind == nil {
-			return nil, errors.New("kind not set for type: " + t.Name)
+			return nil, qerrors.New("kind not set for type: " + t.Name)
 		}
 		switch *t.Kind {
 		case "OBJECT":
@@ -361,5 +361,5 @@ func desc(description *string) *schema.Description {
 		return nil
 	}
 	multiLine := strings.IndexRune(*description, '\n') != -1
-	return &schema.Description{Text: *description, BlockString:multiLine}
+	return &schema.Description{Text: *description, BlockString: multiLine}
 }
