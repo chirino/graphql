@@ -79,7 +79,7 @@ func TokenString(tok rune) string {
 	return fmt.Sprintf("%q", string(tok))
 }
 
-const Whitespace = 1<<'\t' | 1<<'\n' | 1<<'\r' | 1<<' '
+const Whitespace uint64 = 1<<'\t' | 1<<'\n' | 1<<'\r' | 1<<' '
 
 const bufLen = 1024 // at least utf8.UTFMax
 
