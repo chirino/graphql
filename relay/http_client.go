@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/chirino/graphql"
 	"github.com/chirino/graphql/qerrors"
@@ -50,7 +51,7 @@ func (client *Client) ServeGraphQL(request *graphql.Request) *graphql.Response {
 	defer resp.Body.Close()
 
 	contentType := resp.Header.Get("Content-Type")
-	if contentType == "application/json" {
+	if strings.HasPrefix(contentType, "application/json") {
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		if err != nil {
 			return response.AddError(err)
