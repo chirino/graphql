@@ -45,6 +45,9 @@ func TestValidate(t *testing.T) {
 	}
 
 	for _, test := range testData.Tests {
+		if test.Name!="Validate: Variables are in allowed positions/String over Boolean" {
+			continue
+		}
 		t.Run(test.Name, func(t *testing.T) {
 			d, err := query.Parse(test.Query)
 			if err != nil {

@@ -94,7 +94,7 @@ func Validate(s *schema.Schema, doc *query.Document, maxDepth int) qerrors.Error
 
 			t := resolveType(c, v.Type)
 			if !canBeInput(t) {
-				c.addErr(v.TypeLoc, "VariablesAreInputTypes", "Variable %q cannot be non-input type %q.", "$"+v.Name.Text, t)
+				c.addErr(v.TypeLoc, "VariablesAreInputTypes", "Variable %q cannot be non-input type %q.", v.Name.Text, t)
 			}
 
 			if v.Default != nil {
@@ -102,11 +102,11 @@ func Validate(s *schema.Schema, doc *query.Document, maxDepth int) qerrors.Error
 
 				if t != nil {
 					if nn, ok := t.(*schema.NonNull); ok {
-						c.addErr(v.Default.Location(), "DefaultValuesOfCorrectType", "Variable %q of type %q is required and will not use the default value. Perhaps you meant to use type %q.", "$"+v.Name.Text, t, nn.OfType)
+						c.addErr(v.Default.Location(), "DefaultValuesOfCorrectType", "Variable %q of type %q is required and will not use the default value. Perhaps you meant to use type %q.", v.Name.Text, t, nn.OfType)
 					}
 
 					if ok, reason := validateValueType(opc, v.Default, t); !ok {
-						c.addErr(v.Default.Location(), "DefaultValuesOfCorrectType", "Variable %q of type %q has invalid default value %s.\n%s", "$"+v.Name.Text, t, v.Default, reason)
+						c.addErr(v.Default.Location(), "DefaultValuesOfCorrectType", "Variable %q of type %q has invalid default value %s.\n%s", v.Name.Text, t, v.Default, reason)
 					}
 				}
 			}
@@ -160,7 +160,7 @@ func Validate(s *schema.Schema, doc *query.Document, maxDepth int) qerrors.Error
 				if op.Name.Text != "" {
 					opSuffix = fmt.Sprintf(" in operation %q", op.Name.Text)
 				}
-				c.addErr(v.Loc, "NoUnusedVariables", "Variable %q is never used%s.", "$"+v.Name.Text, opSuffix)
+				c.addErr(v.Loc, "NoUnusedVariables", "Variable %q is never used%s.", v.Name.Text, opSuffix)
 			}
 		}
 	}
@@ -668,14 +668,14 @@ func validateLiteral(c *opContext, l schema.Literal) {
 		}
 	case *schema.Variable:
 		for _, op := range c.ops {
-			v := op.Vars.Get(l.Name)
+			v := op.Vars.Get(l.String())
 			if v == nil {
 				byOp := ""
 				if op.Name.Text != "" {
 					byOp = fmt.Sprintf(" by operation %q", op.Name.Text)
 				}
 				c.opErrs[op] = append(c.opErrs[op], (&qerrors.Error{
-					Message:   fmt.Sprintf("Variable %q is not defined%s.", "$"+l.Name, byOp),
+					Message:   fmt.Sprintf("Variable %q is not defined%s.", l.String(), byOp),
 					Locations: []qerrors.Location{l.Loc, op.Loc},
 					Rule:      "NoUndefinedVariables",
 				}).WithStack())
@@ -689,13 +689,13 @@ func validateLiteral(c *opContext, l schema.Literal) {
 func validateValueType(c *opContext, v schema.Literal, t schema.Type) (bool, string) {
 	if v, ok := v.(*schema.Variable); ok {
 		for _, op := range c.ops {
-			if v2 := op.Vars.Get(v.Name); v2 != nil {
+			if v2 := op.Vars.Get(v.String()); v2 != nil {
 				t2, err := schema.ResolveType(v2.Type, c.schema.Resolve)
 				if _, ok := t2.(*schema.NonNull); !ok && v2.Default != nil {
 					t2 = &schema.NonNull{OfType: t2}
 				}
 				if err == nil && !typeCanBeUsedAs(t2, t) {
-					c.addErrMultiLoc([]qerrors.Location{v2.Loc, v.Loc}, "VariablesInAllowedPosition", "Variable %q of type %q used in position expecting type %q.", "$"+v.Name, t2, t)
+					c.addErrMultiLoc([]qerrors.Location{v2.Loc, v.Loc}, "VariablesInAllowedPosition", "Variable %q of type %q used in position expecting type %q.", v.String(), t2, t)
 				}
 			}
 		}

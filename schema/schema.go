@@ -300,7 +300,7 @@ func (s *Schema) String() string {
 func (t *Field) String() string       { return t.Name }
 func (t *List) String() string        { return "[" + t.OfType.String() + "]" }
 func (t *NonNull) String() string     { return t.OfType.String() + "!" }
-func (*TypeName) String() string      { panic("TypeName needs to be resolved to actual type") }
+func (t *TypeName) String() string    { return t.Ident.Text }
 func (t *Scalar) String() string      { return t.Name }
 func (t *Object) String() string      { return t.Name }
 func (t *Interface) String() string   { return t.Name }

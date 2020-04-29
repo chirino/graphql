@@ -61,7 +61,8 @@ type FragmentDecl struct {
 
 type Selection interface {
 	schema.Formatter
-	isSelection()
+	GetSelections(doc *Document) SelectionList
+	SetSelections(doc *Document, v SelectionList)
 	Location() qerrors.Location
 }
 
@@ -92,10 +93,29 @@ type FragmentSpread struct {
 	Loc        qerrors.Location
 }
 
-func (Field) isSelection()          {}
-func (InlineFragment) isSelection() {}
-func (FragmentSpread) isSelection() {}
+func (t *Operation) SetSelections(doc *Document, v SelectionList)      { t.Selections = v }
+func (t *Field) SetSelections(doc *Document, v SelectionList)          { t.Selections = v }
+func (t *InlineFragment) SetSelections(doc *Document, v SelectionList) { t.Selections = v }
+func (t *FragmentSpread) SetSelections(doc *Document, v SelectionList) {
+	frag := doc.Fragments.Get(t.Name.Text)
+	if frag == nil {
+		return
+	}
+	frag.Selections = v
+}
 
+func (t Operation) GetSelections(doc *Document) SelectionList      { return t.Selections }
+func (t Field) GetSelections(doc *Document) SelectionList          { return t.Selections }
+func (t InlineFragment) GetSelections(doc *Document) SelectionList { return t.Selections }
+func (t FragmentSpread) GetSelections(doc *Document) SelectionList {
+	frag := doc.Fragments.Get(t.Name.Text)
+	if frag == nil {
+		return nil
+	}
+	return frag.Selections
+}
+
+func (t Operation) Location() qerrors.Location      { return t.Loc }
 func (t Field) Location() qerrors.Location          { return t.Name.Loc }
 func (t InlineFragment) Location() qerrors.Location { return t.Loc }
 func (t FragmentSpread) Location() qerrors.Location { return t.Loc }
@@ -161,6 +181,7 @@ func parseOperation(l *lexer.Lexer, opType schema.OperationType) *Operation {
 			loc := l.Location()
 			l.ConsumeToken('$')
 			iv := schema.ParseInputValue(l)
+			iv.Name.Text = "$" + iv.Name.Text
 			iv.Loc = loc
 			op.Vars = append(op.Vars, iv)
 		}
