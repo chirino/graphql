@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/chirino/graphql/internal/lexer"
 	"github.com/chirino/graphql/qerrors"
 	"github.com/chirino/graphql/schema"
 )
@@ -280,6 +281,7 @@ func toEnumValues(values []enumValue) []*schema.EnumValue {
 }
 
 func directives(deprecated bool, reason *string) schema.DirectiveList {
+	// TODO: implement me...
 	return nil
 }
 
@@ -311,7 +313,7 @@ func toInputFields(args []inputValue) schema.InputValueList {
 	for _, arg := range args {
 		rc = append(rc, &schema.InputValue{
 			Desc: desc(arg.Description),
-			Name: schema.Ident{Text: arg.Name},
+			Name: arg.Name,
 			Type: toType(arg.Type),
 		})
 	}
@@ -335,7 +337,7 @@ func args(args []inputValue) schema.InputValueList {
 	for _, arg := range args {
 		rc = append(rc, &schema.InputValue{
 			Desc:    desc(arg.Description),
-			Name:    schema.Ident{Text: arg.Name},
+			Name:    arg.Name,
 			Type:    toType(arg.Type),
 			Default: toLiteral(arg.Type, arg.DefaultValue),
 		})
@@ -351,15 +353,21 @@ func toType(ref typeRef) schema.Type {
 		return &schema.NonNull{OfType: toType(*ref.OfType)}
 	default:
 		return &schema.TypeName{
-			Ident: schema.Ident{Text: ref.Name},
+			Name: ref.Name,
 		}
 	}
 }
 
-func desc(description *string) *schema.Description {
+func desc(description *string) (d schema.Description) {
 	if description == nil {
-		return nil
+		d.ShowType = lexer.NoDescription
+		return
 	}
-	multiLine := strings.IndexRune(*description, '\n') != -1
-	return &schema.Description{Text: *description, BlockString: multiLine}
+	if strings.IndexRune(*description, '\n') != -1 {
+		d.ShowType = lexer.ShowBlockDescription
+	} else {
+		d.ShowType = lexer.ShowStringDescription
+	}
+	d.Text = *description
+	return
 }

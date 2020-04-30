@@ -1,4 +1,4 @@
-package query
+package schema
 
 import (
 	"fmt"
@@ -6,10 +6,9 @@ import (
 
 	"github.com/chirino/graphql/internal/lexer"
 	"github.com/chirino/graphql/qerrors"
-	"github.com/chirino/graphql/schema"
 )
 
-type Document struct {
+type QueryDocument struct {
 	Operations OperationList
 	Fragments  FragmentList
 }
@@ -18,7 +17,7 @@ type OperationList []*Operation
 
 func (l OperationList) Get(name string) *Operation {
 	for _, f := range l {
-		if f.Name.Text == name {
+		if f.Name == name {
 			return f
 		}
 	}
@@ -29,7 +28,7 @@ type FragmentList []*FragmentDecl
 
 func (l FragmentList) Get(name string) *FragmentDecl {
 	for _, f := range l {
-		if f.Name.Text == name {
+		if f.Name == name {
 			return f
 		}
 	}
@@ -39,76 +38,81 @@ func (l FragmentList) Get(name string) *FragmentDecl {
 type SelectionList []Selection
 
 type Operation struct {
-	Type       schema.OperationType
-	Name       schema.Ident
-	Vars       schema.InputValueList
+	Type       OperationType
+	Name       string
+	NameLoc    Location
+	Vars       InputValueList
 	Selections SelectionList
-	Directives schema.DirectiveList
+	Directives DirectiveList
 	Loc        qerrors.Location
 }
 
 type Fragment struct {
-	On         schema.TypeName
+	On         TypeName
 	Selections SelectionList
 }
 
 type FragmentDecl struct {
 	Fragment
-	Name       schema.Ident
-	Directives schema.DirectiveList
+	Name       string
+	NameLoc    Location
+	Directives DirectiveList
 	Loc        qerrors.Location
 }
 
 type Selection interface {
-	schema.Formatter
-	GetSelections(doc *Document) SelectionList
-	SetSelections(doc *Document, v SelectionList)
+	Formatter
+	GetSelections(doc *QueryDocument) SelectionList
+	SetSelections(doc *QueryDocument, v SelectionList)
 	Location() qerrors.Location
 }
 
-type Field struct {
-	Alias           schema.Ident
-	Name            schema.Ident
-	Arguments       schema.ArgumentList
-	Directives      schema.DirectiveList
+type FieldSelection struct {
+	Alias           string
+	AliasLoc        Location
+	Name            string
+	NameLoc         Location
+	Arguments       ArgumentList
+	Directives      DirectiveList
 	Selections      SelectionList
 	SelectionSetLoc qerrors.Location
 	Schema          *FieldSchema
 }
 
 type FieldSchema struct {
-	Field  *schema.Field
-	Parent schema.NamedType
+	Field  *Field
+	Parent NamedType
 }
 
 type InlineFragment struct {
 	Fragment
-	Directives schema.DirectiveList
+	Directives DirectiveList
 	Loc        qerrors.Location
 }
 
 type FragmentSpread struct {
-	Name       schema.Ident
-	Directives schema.DirectiveList
+	Name       string
+	NameLoc    Location
+	Directives DirectiveList
 	Loc        qerrors.Location
 }
 
-func (t *Operation) SetSelections(doc *Document, v SelectionList)      { t.Selections = v }
-func (t *Field) SetSelections(doc *Document, v SelectionList)          { t.Selections = v }
-func (t *InlineFragment) SetSelections(doc *Document, v SelectionList) { t.Selections = v }
-func (t *FragmentSpread) SetSelections(doc *Document, v SelectionList) {
-	frag := doc.Fragments.Get(t.Name.Text)
+func (t *Operation) SetSelections(doc *QueryDocument, v SelectionList)      { t.Selections = v }
+func (t *FieldSelection) SetSelections(doc *QueryDocument, v SelectionList) { t.Selections = v }
+func (t *InlineFragment) SetSelections(doc *QueryDocument, v SelectionList) { t.Selections = v }
+func (t *FragmentSpread) SetSelections(doc *QueryDocument, v SelectionList) {
+	frag := doc.Fragments.Get(t.Name)
 	if frag == nil {
 		return
 	}
 	frag.Selections = v
 }
 
-func (t Operation) GetSelections(doc *Document) SelectionList      { return t.Selections }
-func (t Field) GetSelections(doc *Document) SelectionList          { return t.Selections }
-func (t InlineFragment) GetSelections(doc *Document) SelectionList { return t.Selections }
-func (t FragmentSpread) GetSelections(doc *Document) SelectionList {
-	frag := doc.Fragments.Get(t.Name.Text)
+func (t Operation) GetSelections(doc *QueryDocument) SelectionList      { return t.Selections }
+func (t FieldSelection) GetSelections(doc *QueryDocument) SelectionList { return t.Selections }
+func (t InlineFragment) GetSelections(doc *QueryDocument) SelectionList { return t.Selections }
+func (t FragmentSpread) GetSelections(doc *QueryDocument) SelectionList {
+	frag := doc.Fragments.Get(t.Name)
 	if frag == nil {
 		return nil
 	}
@@ -116,28 +120,20 @@ func (t FragmentSpread) GetSelections(doc *Document) SelectionList {
 }
 
 func (t Operation) Location() qerrors.Location      { return t.Loc }
-func (t Field) Location() qerrors.Location          { return t.Name.Loc }
+func (t FieldSelection) Location() qerrors.Location { return t.NameLoc }
 func (t InlineFragment) Location() qerrors.Location { return t.Loc }
 func (t FragmentSpread) Location() qerrors.Location { return t.Loc }
 
-func Parse(queryString string) (*Document, error) {
+func (doc *QueryDocument) Parse(queryString string) error {
 	l := lexer.NewLexer(queryString)
-
-	var doc *Document
-	err := l.CatchSyntaxError(func() { doc = parseDocument(l) })
-	if err != nil {
-		return nil, err
-	}
-
-	return doc, nil
+	return l.CatchSyntaxError(func() { parseDocument(l, doc) })
 }
 
-func parseDocument(l *lexer.Lexer) *Document {
-	d := &Document{}
+func parseDocument(l *lexer.Lexer, d *QueryDocument) {
 	l.Consume()
 	for l.Peek() != scanner.EOF {
 		if l.Peek() == '{' {
-			op := &Operation{Type: schema.Query, Loc: l.Location()}
+			op := &Operation{Type: Query, Loc: l.Location()}
 			op.Selections = parseSelectionSet(l)
 			d.Operations = append(d.Operations, op)
 			continue
@@ -146,15 +142,15 @@ func parseDocument(l *lexer.Lexer) *Document {
 		loc := l.Location()
 		switch x := l.ConsumeIdent(); x {
 		case "query":
-			op := parseOperation(l, schema.Query)
+			op := parseOperation(l, Query)
 			op.Loc = loc
 			d.Operations = append(d.Operations, op)
 
 		case "mutation":
-			d.Operations = append(d.Operations, parseOperation(l, schema.Mutation))
+			d.Operations = append(d.Operations, parseOperation(l, Mutation))
 
 		case "subscription":
-			d.Operations = append(d.Operations, parseOperation(l, schema.Subscription))
+			d.Operations = append(d.Operations, parseOperation(l, Subscription))
 
 		case "fragment":
 			frag := parseFragment(l)
@@ -165,23 +161,22 @@ func parseDocument(l *lexer.Lexer) *Document {
 			l.SyntaxError(fmt.Sprintf(`unexpected %q, expecting "fragment"`, x))
 		}
 	}
-	return d
 }
 
-func parseOperation(l *lexer.Lexer, opType schema.OperationType) *Operation {
+func parseOperation(l *lexer.Lexer, opType OperationType) *Operation {
 	op := &Operation{Type: opType}
-	op.Name.Loc = l.Location()
+	op.Loc = l.Location()
 	if l.Peek() == scanner.Ident {
-		op.Name = schema.Ident(l.ConsumeIdentWithLoc())
+		op.Name, op.NameLoc = l.ConsumeIdentWithLoc()
 	}
-	op.Directives = schema.ParseDirectives(l)
+	op.Directives = ParseDirectives(l)
 	if l.Peek() == '(' {
 		l.ConsumeToken('(')
 		for l.Peek() != ')' {
 			loc := l.Location()
 			l.ConsumeToken('$')
-			iv := schema.ParseInputValue(l)
-			iv.Name.Text = "$" + iv.Name.Text
+			iv := ParseInputValue(l)
+			iv.Name = "$" + iv.Name
 			iv.Loc = loc
 			op.Vars = append(op.Vars, iv)
 		}
@@ -193,10 +188,10 @@ func parseOperation(l *lexer.Lexer, opType schema.OperationType) *Operation {
 
 func parseFragment(l *lexer.Lexer) *FragmentDecl {
 	f := &FragmentDecl{}
-	f.Name = schema.Ident(l.ConsumeIdentWithLoc())
+	f.Name, f.NameLoc = l.ConsumeIdentWithLoc()
 	l.ConsumeKeyword("on")
-	f.On = schema.TypeName{Ident: schema.Ident(l.ConsumeIdentWithLoc())}
-	f.Directives = schema.ParseDirectives(l)
+	f.On = parseTypeName(l)
+	f.Directives = ParseDirectives(l)
 	f.Selections = parseSelectionSet(l)
 	return f
 }
@@ -218,18 +213,18 @@ func parseSelection(l *lexer.Lexer) Selection {
 	return parseField(l)
 }
 
-func parseField(l *lexer.Lexer) *Field {
-	f := &Field{}
-	f.Alias = schema.Ident(l.ConsumeIdentWithLoc())
+func parseField(l *lexer.Lexer) *FieldSelection {
+	f := &FieldSelection{}
+	f.Alias, f.AliasLoc = l.ConsumeIdentWithLoc()
 	f.Name = f.Alias
 	if l.Peek() == ':' {
 		l.ConsumeToken(':')
-		f.Name = schema.Ident(l.ConsumeIdentWithLoc())
+		f.Name, f.NameLoc = l.ConsumeIdentWithLoc()
 	}
 	if l.Peek() == '(' {
-		f.Arguments = schema.ParseArguments(l)
+		f.Arguments = ParseArguments(l)
 	}
-	f.Directives = schema.ParseDirectives(l)
+	f.Directives = ParseDirectives(l)
 	if l.Peek() == '{' {
 		f.SelectionSetLoc = l.Location()
 		f.Selections = parseSelectionSet(l)
@@ -245,23 +240,24 @@ func parseSpread(l *lexer.Lexer) Selection {
 
 	f := &InlineFragment{Loc: loc}
 	if l.Peek() == scanner.Ident {
-		ident := schema.Ident(l.ConsumeIdentWithLoc())
-		if ident.Text != "on" {
+		ident, identLoc := l.ConsumeIdentWithLoc()
+		if ident != "on" {
 			fs := &FragmentSpread{
-				Name: ident,
-				Loc:  loc,
+				Name:    ident,
+				NameLoc: identLoc,
+				Loc:     loc,
 			}
-			fs.Directives = schema.ParseDirectives(l)
+			fs.Directives = ParseDirectives(l)
 			return fs
 		}
-		f.On = schema.TypeName{Ident: schema.Ident(l.ConsumeIdentWithLoc())}
+		f.On = parseTypeName(l)
 	}
-	f.Directives = schema.ParseDirectives(l)
+	f.Directives = ParseDirectives(l)
 	f.Selections = parseSelectionSet(l)
 	return f
 }
 
-func (d *Document) GetOperation(operationName string) (*Operation, error) {
+func (d *QueryDocument) GetOperation(operationName string) (*Operation, error) {
 	if len(d.Operations) == 0 {
 		return nil, fmt.Errorf("no operations in query document")
 	}

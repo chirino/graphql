@@ -23,13 +23,13 @@ func (factory DirectiveResolver) Resolve(request *ResolveRequest, next Resolutio
 
 func matchingArgList(request *ResolveRequest, directive string) schema.ArgumentList {
 	for _, d := range request.Field.Directives {
-		if d.Name.Text == directive {
+		if d.Name == directive {
 			return d.Args
 		}
 	}
 	if parentType, ok := request.ParentType.(schema.HasDirectives); ok {
 		for _, d := range parentType.GetDirectives() {
-			if d.Name.Text == directive {
+			if d.Name == directive {
 				return d.Args
 			}
 		}

@@ -43,7 +43,8 @@ func parseNullType(l *lexer.Lexer) Type {
 		return &List{OfType: ofType}
 	}
 
-	return &TypeName{Ident: Ident(l.ConsumeIdentWithLoc())}
+	name := parseTypeName(l)
+	return &name
 }
 
 type Resolver func(name string) Type
@@ -63,11 +64,11 @@ func ResolveType(t Type, resolver Resolver) (Type, *qerrors.Error) {
 		}
 		return &NonNull{OfType: ofType}, nil
 	case *TypeName:
-		refT := resolver(t.Text)
+		refT := resolver(t.Name)
 		if refT == nil {
-			err := qerrors.Errorf("Unknown type %q.", t.Text)
+			err := qerrors.Errorf("Unknown type %q.", t.Name)
 			err.Rule = "KnownTypeNames"
-			err.Locations = []qerrors.Location{t.Loc}
+			err.Locations = []qerrors.Location{t.NameLoc}
 			return nil, err
 		}
 		return refT, nil

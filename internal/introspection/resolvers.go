@@ -3,6 +3,7 @@ package introspection
 import (
 	"sort"
 
+	"github.com/chirino/graphql/internal/lexer"
 	"github.com/chirino/graphql/schema"
 )
 
@@ -209,9 +210,14 @@ func (r *Field) Description() *string {
 	return Description(r.field.Desc)
 }
 
-func Description(desc *schema.Description) *string {
-	if desc == nil || desc.Text == "" {
+func Description(desc schema.Description) *string {
+	if desc.ShowType == lexer.NoDescription {
 		return nil
+	}
+	if desc.ShowType == lexer.PossibleDescription {
+		if desc.Text == "" {
+			return nil
+		}
 	}
 	return &desc.Text
 }
@@ -250,7 +256,7 @@ func (r *InputValue) To__InputValue() (*InputValue, bool) {
 }
 
 func (r *InputValue) Name() string {
-	return r.value.Name.Text
+	return r.value.Name
 }
 
 func (r *InputValue) Description() *string {

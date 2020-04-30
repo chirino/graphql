@@ -9,7 +9,6 @@ import (
 	"github.com/chirino/graphql/internal/validation"
 	"github.com/chirino/graphql/log"
 	"github.com/chirino/graphql/qerrors"
-	"github.com/chirino/graphql/query"
 	"github.com/chirino/graphql/resolvers"
 	"github.com/chirino/graphql/schema"
 	"github.com/chirino/graphql/trace"
@@ -58,7 +57,8 @@ func (engine *Engine) ServeGraphQL(request *Request) *Response {
 
 func (engine *Engine) ServeGraphQLStream(request *Request) (*ResponseStream, error) {
 
-	doc, qErr := query.Parse(request.Query)
+	doc := &schema.QueryDocument{}
+	qErr := doc.Parse(request.Query)
 	if qErr != nil {
 		return nil, qErr
 	}
@@ -81,7 +81,7 @@ func (engine *Engine) ServeGraphQLStream(request *Request) (*ResponseStream, err
 		if err != nil {
 			return nil, err
 		}
-		varTypes[v.Name.Text] = introspection.WrapType(t)
+		varTypes[v.Name] = introspection.WrapType(t)
 	}
 
 	ctx := request.Context

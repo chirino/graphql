@@ -4,13 +4,12 @@ import (
 	"reflect"
 
 	qerrors2 "github.com/chirino/graphql/qerrors"
-	"github.com/chirino/graphql/query"
 	"github.com/chirino/graphql/schema"
 )
 
 type FieldSelectionContext struct {
 	Schema        *schema.Schema
-	QueryDocument *query.Document
+	QueryDocument *schema.QueryDocument
 	// Used to provide path context in errors
 	Path []string
 	// The current type that is being selected against
@@ -23,16 +22,16 @@ type FieldSelectionContext struct {
 
 type FieldSelection struct {
 	OnType    schema.Type
-	Selection *query.Field
+	Selection *schema.FieldSelection
 	Field     *schema.Field
 }
 
-func (c FieldSelectionContext) Apply(selections []query.Selection) (result []FieldSelection, errs qerrors2.ErrorList) {
+func (c FieldSelectionContext) Apply(selections []schema.Selection) (result []FieldSelection, errs qerrors2.ErrorList) {
 	c.OnType = schema.DeepestType(c.OnType)
 	selectedFieldAliases := map[string]bool{}
 	for _, selection := range selections {
 		switch selection := selection.(type) {
-		case *query.Field:
+		case *schema.FieldSelection:
 			skip, err := SkipByDirective(selection.Directives, c.Vars)
 			if err != nil {
 				errs = append(errs, err)
@@ -51,11 +50,11 @@ func (c FieldSelectionContext) Apply(selections []query.Selection) (result []Fie
 				panic("unexpected value type: " + reflect.TypeOf(c.OnType).String())
 			}
 
-			field := fields.Get(selection.Name.Text)
+			field := fields.Get(selection.Name)
 			if field == nil {
-				errs = append(errs, qerrors2.Errorf("field '%s' not found on '%s': ", selection.Name.Text, c.OnType.String()))
+				errs = append(errs, qerrors2.Errorf("field '%s' not found on '%s': ", selection.Name, c.OnType.String()))
 			} else {
-				if !selectedFieldAliases[selection.Alias.Text] {
+				if !selectedFieldAliases[selection.Alias] {
 					result = append(result, FieldSelection{
 						OnType:    c.OnType,
 						Selection: selection,
@@ -64,7 +63,7 @@ func (c FieldSelectionContext) Apply(selections []query.Selection) (result []Fie
 				}
 			}
 
-		case *query.InlineFragment:
+		case *schema.InlineFragment:
 			skip, err := SkipByDirective(selection.Directives, c.Vars)
 			if err != nil {
 				errs = append(errs, err)
@@ -75,13 +74,13 @@ func (c FieldSelectionContext) Apply(selections []query.Selection) (result []Fie
 
 			rs, es := c.applyFragment(selection.Fragment)
 			for _, r := range rs {
-				if !selectedFieldAliases[r.Selection.Alias.Text] {
+				if !selectedFieldAliases[r.Selection.Alias] {
 					result = append(result, r)
 				}
 			}
 			errs = append(errs, es...)
 
-		case *query.FragmentSpread:
+		case *schema.FragmentSpread:
 			skip, err := SkipByDirective(selection.Directives, c.Vars)
 			if err != nil {
 				errs = append(errs, err)
@@ -90,9 +89,9 @@ func (c FieldSelectionContext) Apply(selections []query.Selection) (result []Fie
 				continue
 			}
 
-			rs, es := c.applyFragment(c.QueryDocument.Fragments.Get(selection.Name.Text).Fragment)
+			rs, es := c.applyFragment(c.QueryDocument.Fragments.Get(selection.Name).Fragment)
 			for _, r := range rs {
-				if !selectedFieldAliases[r.Selection.Alias.Text] {
+				if !selectedFieldAliases[r.Selection.Alias] {
 					result = append(result, r)
 				}
 			}
@@ -105,10 +104,10 @@ func (c FieldSelectionContext) Apply(selections []query.Selection) (result []Fie
 	return
 }
 
-func (c FieldSelectionContext) applyFragment(fragment query.Fragment) ([]FieldSelection, qerrors2.ErrorList) {
-	if fragment.On.Text != "" && fragment.On.Text != c.OnType.String() {
+func (c FieldSelectionContext) applyFragment(fragment schema.Fragment) ([]FieldSelection, qerrors2.ErrorList) {
+	if fragment.On.Name != "" && fragment.On.Name != c.OnType.String() {
 
-		castType := c.Schema.Types[fragment.On.Text]
+		castType := c.Schema.Types[fragment.On.Name]
 		if c.CanCast == nil || !c.CanCast(castType) {
 			return []FieldSelection{}, qerrors2.ErrorList{}
 		}

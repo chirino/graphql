@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/chirino/graphql/internal/lexer"
-	"github.com/chirino/graphql/qerrors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,7 +19,7 @@ type Hello {
 	//err := lex.CatchSyntaxError(lex.Consume)
 	//require.NoError(t, err)
 	assert.Equal(t,
-		&lexer.Description{Text: "Comment line 1", BlockString: false, Loc: qerrors.Location{Line: 3, Column: 1}},
+		lexer.Description{Text: "Comment line 1", ShowType: lexer.ShowStringDescription, Loc: lexer.Location{Line: 3, Column: 1}},
 		lex.ConsumeDescription())
 }
 
@@ -34,6 +33,6 @@ type Hello {
 }`)
 	lex.Consume()
 	assert.Equal(t,
-		&lexer.Description{Text: "\nComment line 1\n", BlockString: true, Loc: qerrors.Location{Line: 2, Column: 1}},
+		lexer.Description{Text: "\nComment line 1\n", ShowType: lexer.ShowBlockDescription, Loc: lexer.Location{Line: 2, Column: 1}},
 		lex.ConsumeDescription())
 }

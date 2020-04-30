@@ -3,7 +3,6 @@ package gqltesting
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"strconv"
 	"testing"
@@ -59,7 +58,6 @@ func RunTest(t *testing.T, test *Test) {
 		if err != nil {
 			t.Fatalf("want: invalid JSON: %s", err)
 		}
-		fmt.Println(string(got))
 		require.Equal(t, string(want), string(got))
 	}
 

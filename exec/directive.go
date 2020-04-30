@@ -25,12 +25,12 @@ func SkipByDirective(l schema.DirectiveList, vars map[string]interface{}) (bool,
 func evaluateIf(d *schema.Directive, vars map[string]interface{}) (bool, *qerrors.Error) {
 	arg := d.Args.MustGet("if")
 	if arg == nil {
-		return false, qerrors.New("@skip if argument missing").WithLocations(d.Name.Loc).WithStack()
+		return false, qerrors.New("@skip if argument missing").WithLocations(d.NameLoc).WithStack()
 	}
 	p := packer.ValuePacker{ValueType: reflect.TypeOf(false)}
 	v, err := p.Pack(arg.Evaluate(vars))
 	if err != nil {
-		return false, qerrors.New(err.Error()).WithLocations(d.Name.Loc).WithStack()
+		return false, qerrors.New(err.Error()).WithLocations(d.NameLoc).WithStack()
 	}
 	return v.Bool(), nil
 }

@@ -5,10 +5,10 @@ import (
 
 	"github.com/chirino/graphql"
 	"github.com/chirino/graphql/qerrors"
+	"github.com/chirino/graphql/schema"
 
 	"github.com/chirino/graphql/internal/validation"
 	"github.com/chirino/graphql/log"
-	"github.com/chirino/graphql/query"
 	"github.com/chirino/graphql/trace"
 )
 
@@ -123,7 +123,8 @@ func Logger(logger log.Logger) SchemaOpt {
 
 // Validate validates the given query with the schema.
 func (s *Schema) Validate(queryString string) qerrors.ErrorList {
-	doc, qErr := query.Parse(queryString)
+	doc := &schema.QueryDocument{}
+	qErr := doc.Parse(queryString)
 	if qErr != nil {
 		return qerrors.ErrorList{qErr.(*qerrors.Error)}
 	}

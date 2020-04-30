@@ -31,7 +31,7 @@ func (t *InputObject) AddIfMissing(to *Schema, from *Schema) {
 
 func (t DirectiveList) AddIfMissing(to *Schema, from *Schema) {
 	for _, d := range t {
-		k := d.Name.Text
+		k := d.Name
 		v := from.DeclaredDirectives[k]
 		if to.DeclaredDirectives[k] == nil {
 			to.DeclaredDirectives[k] = v

@@ -7,22 +7,13 @@ import (
 	"github.com/chirino/graphql/qerrors"
 )
 
-type Ident lexer.Ident
-type Description lexer.Description
-
-func (d *Description) String() string {
-	if d == nil {
-		return ""
-	}
-	return d.Text
-}
-
 // http://facebook.github.io/graphql/draft/#InputValueDefinition
 type InputValue struct {
-	Name       Ident
+	Name       string
+	NameLoc    Location
 	Type       Type
 	Default    Literal
-	Desc       *Description
+	Desc       Description
 	Loc        qerrors.Location
 	TypeLoc    qerrors.Location
 	Directives DirectiveList
@@ -32,7 +23,7 @@ type InputValueList []*InputValue
 
 func (l InputValueList) Get(name string) *InputValue {
 	for _, v := range l {
-		if v.Name.Text == name {
+		if v.Name == name {
 			return v
 		}
 	}
@@ -42,8 +33,8 @@ func (l InputValueList) Get(name string) *InputValue {
 func ParseInputValue(l *lexer.Lexer) *InputValue {
 	p := &InputValue{}
 	p.Loc = l.Location()
-	p.Desc = toDescription(l.ConsumeDescription())
-	p.Name = Ident(l.ConsumeIdentWithLoc())
+	p.Desc = l.ConsumeDescription()
+	p.Name, p.NameLoc = l.ConsumeIdentWithLoc()
 	l.ConsumeToken(':')
 	p.TypeLoc = l.Location()
 	p.Type = ParseType(l)
@@ -55,24 +46,17 @@ func ParseInputValue(l *lexer.Lexer) *InputValue {
 	return p
 }
 
-func toDescription(description *lexer.Description) *Description {
-	if description == nil {
-		return nil
-	}
-	d := Description(*description)
-	return &d
-}
-
 type Argument struct {
-	Name  Ident
-	Value Literal
+	Name    string
+	NameLoc Location
+	Value   Literal
 }
 
 type ArgumentList []Argument
 
 func (l ArgumentList) Get(name string) (Literal, bool) {
 	for _, arg := range l {
-		if arg.Name.Text == name {
+		if arg.Name == name {
 			return arg.Value, true
 		}
 	}
@@ -90,7 +74,7 @@ func (l ArgumentList) MustGet(name string) Literal {
 func (l ArgumentList) Value(vars map[string]interface{}) map[string]interface{} {
 	result := make(map[string]interface{}, len(l))
 	for _, v := range l {
-		result[v.Name.Text] = v.Value.Evaluate(vars)
+		result[v.Name] = v.Value.Evaluate(vars)
 	}
 	return result
 }
@@ -111,10 +95,11 @@ func ParseArguments(l *lexer.Lexer) ArgumentList {
 	var args ArgumentList
 	l.ConsumeToken('(')
 	for l.Peek() != ')' {
-		name := Ident(l.ConsumeIdentWithLoc())
+		arg := Argument{}
+		arg.Name, arg.NameLoc = l.ConsumeIdentWithLoc()
 		l.ConsumeToken(':')
-		value := ParseLiteral(l, false)
-		args = append(args, Argument{Name: name, Value: value})
+		arg.Value = ParseLiteral(l, false)
+		args = append(args, arg)
 	}
 	l.ConsumeToken(')')
 	return args

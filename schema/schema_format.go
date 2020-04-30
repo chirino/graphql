@@ -3,6 +3,7 @@ package schema
 import (
 	"bytes"
 	"fmt"
+	"github.com/chirino/graphql/internal/lexer"
 	"github.com/chirino/graphql/text"
 	"io"
 	"reflect"
@@ -157,7 +158,7 @@ func (t *InputObject) WriteTo(out io.StringWriter) {
 	out.WriteString(" {\n")
 
 	sort.Slice(t.Fields, func(i, j int) bool {
-		return t.Fields[i].Name.Text < t.Fields[j].Name.Text
+		return t.Fields[i].Name < t.Fields[j].Name
 	})
 	for _, f := range t.Fields {
 		i := &indent{}
@@ -196,7 +197,7 @@ func (t DirectiveList) WriteTo(out io.StringWriter) {
 
 func (t *Directive) WriteTo(out io.StringWriter) {
 	out.WriteString("@")
-	out.WriteString(t.Name.Text)
+	out.WriteString(t.Name)
 	t.Args.WriteTo(out)
 }
 
@@ -214,7 +215,7 @@ func (t ArgumentList) WriteTo(out io.StringWriter) {
 }
 
 func (t *Argument) WriteTo(out io.StringWriter) {
-	out.WriteString(t.Name.Text)
+	out.WriteString(t.Name)
 	out.WriteString(":")
 	t.Value.WriteTo(out)
 }
@@ -251,7 +252,7 @@ func (t InputValueList) WriteTo(out io.StringWriter) {
 
 func (t *InputValue) WriteTo(out io.StringWriter) {
 	writeDescription(out, t.Desc)
-	out.WriteString(t.Name.Text)
+	out.WriteString(t.Name)
 	out.WriteString(":")
 	out.WriteString(t.Type.String())
 	if t.Default != nil {
@@ -279,13 +280,13 @@ func (lit *NullLit) WriteTo(out io.StringWriter) {
 func (t *ObjectLit) WriteTo(out io.StringWriter) {
 	out.WriteString("{")
 	sort.Slice(t.Fields, func(i, j int) bool {
-		return t.Fields[i].Name.Text < t.Fields[j].Name.Text
+		return t.Fields[i].Name < t.Fields[j].Name
 	})
 	for i, v := range t.Fields {
 		if i != 0 {
 			out.WriteString(", ")
 		}
-		out.WriteString(v.Name.Text)
+		out.WriteString(v.Name)
 		out.WriteString(": ")
 		v.Value.WriteTo(out)
 	}
@@ -296,17 +297,26 @@ func (lit *Variable) WriteTo(out io.StringWriter) {
 	out.WriteString(lit.Name)
 }
 
-func writeDescription(out io.StringWriter, desc *Description) {
-	if desc != nil && desc.Text != "" {
-		// desc := desc.Text
-		if desc.BlockString {
-			out.WriteString(`"""`)
-			out.WriteString(desc.Text)
-			out.WriteString(`"""` + "\n")
-		} else {
-			out.WriteString(strconv.Quote(desc.Text))
-			out.WriteString("\n")
+func writeDescription(out io.StringWriter, desc Description) {
+	if desc.ShowType == lexer.NoDescription {
+		return
+	}
+	showType := desc.ShowType
+	if showType == lexer.PossibleDescription {
+		if desc.Text == "" {
+			return
 		}
+		if strings.Contains(desc.Text, "\n") {
+			showType = lexer.ShowBlockDescription
+		}
+	}
+	if desc.ShowType == lexer.ShowBlockDescription {
+		out.WriteString(`"""`)
+		out.WriteString(desc.Text)
+		out.WriteString(`"""` + "\n")
+	} else {
+		out.WriteString(strconv.Quote(desc.Text))
+		out.WriteString("\n")
 	}
 }
 

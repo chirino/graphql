@@ -11,15 +11,11 @@ import (
 )
 
 type syntaxError string
+type Location = qerrors.Location
 
 type Lexer struct {
 	sc   *scanner.Scanner
 	next rune
-}
-
-type Ident struct {
-	Text string
-	Loc  qerrors.Location
 }
 
 func NewLexer(s string) *Lexer {
@@ -28,12 +24,11 @@ func NewLexer(s string) *Lexer {
 	return &Lexer{sc: sc}
 }
 
-func (l *Lexer) CatchSyntaxError(f func()) (errRes *qerrors.Error) {
+func (l *Lexer) CatchSyntaxError(f func()) (errRes error) {
 	defer func() {
 		if err := recover(); err != nil {
 			if err, ok := err.(syntaxError); ok {
-				errRes = qerrors.Errorf("syntax error: %s", err)
-				errRes.Locations = []qerrors.Location{l.Location()}
+				errRes = qerrors.Errorf("syntax error: %s", err).WithLocations(l.Location())
 				return
 			}
 			panic(err)
@@ -74,11 +69,11 @@ func (l *Lexer) ConsumeIdent() string {
 	return name
 }
 
-func (l *Lexer) ConsumeIdentWithLoc() Ident {
+func (l *Lexer) ConsumeIdentWithLoc() (string, Location) {
 	loc := l.Location()
 	name := l.sc.TokenText()
 	l.ConsumeToken(scanner.Ident)
-	return Ident{name, loc}
+	return name, loc
 }
 
 func (l *Lexer) PeekKeyword(keyword string) bool {
@@ -122,39 +117,38 @@ func (l *Lexer) ConsumeToken(expected rune) {
 	l.Consume()
 }
 
+type ShowType byte
+
+var PossibleDescription = ShowType(0)
+var ShowStringDescription = ShowType(1)
+var ShowBlockDescription = ShowType(2)
+var NoDescription = ShowType(3)
+
 type Description struct {
-	Text        string
-	BlockString bool
-	Loc         qerrors.Location
+	ShowType ShowType
+	Text     string
+	Loc      Location
 }
 
-func (d *Description) String() string {
-	if d == nil {
-		return ""
-	}
+func (d Description) String() string {
 	return d.Text
 }
 
-func (l *Lexer) ConsumeDescription() *Description {
-	loc := l.Location()
+func (l *Lexer) ConsumeDescription() (d Description) {
+	d.Loc = l.Location()
 	if l.Peek() == scanner.String {
-		return &Description{
-			Text:        l.ConsumeString(),
-			BlockString: false,
-			Loc:         loc,
-		}
-	}
-	if l.Peek() == scanner.BlockString {
+		d.ShowType = ShowStringDescription
+		d.Text = l.ConsumeString()
+	} else if l.Peek() == scanner.BlockString {
+		d.ShowType = ShowBlockDescription
 		text := l.sc.TokenText()
 		text = text[3 : len(text)-3]
 		l.ConsumeToken(scanner.BlockString)
-		return &Description{
-			Text:        text,
-			BlockString: true,
-			Loc:         loc,
-		}
+		d.Text = text
+	} else {
+		d.ShowType = NoDescription
 	}
-	return nil
+	return
 }
 
 func (l *Lexer) ConsumeString() string {
@@ -171,8 +165,8 @@ func (l *Lexer) SyntaxError(message string) {
 	panic(syntaxError(message))
 }
 
-func (l *Lexer) Location() qerrors.Location {
-	return qerrors.Location{
+func (l *Lexer) Location() Location {
+	return Location{
 		Line:   l.sc.Line,
 		Column: l.sc.Column,
 	}

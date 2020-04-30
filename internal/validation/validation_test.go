@@ -10,7 +10,6 @@ import (
 
 	"github.com/chirino/graphql/internal/validation"
 	"github.com/chirino/graphql/qerrors"
-	"github.com/chirino/graphql/query"
 	"github.com/chirino/graphql/schema"
 )
 
@@ -49,7 +48,8 @@ func TestValidate(t *testing.T) {
 			continue
 		}
 		t.Run(test.Name, func(t *testing.T) {
-			d, err := query.Parse(test.Query)
+			d := &schema.QueryDocument{}
+			err := d.Parse(test.Query)
 			if err != nil {
 				t.Fatal(err)
 			}

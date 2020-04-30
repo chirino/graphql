@@ -103,14 +103,15 @@ type ObjectLit struct {
 }
 
 type ObjectLitField struct {
-	Name  Ident
-	Value Literal
+	Name    string
+	NameLoc Location
+	Value   Literal
 }
 
 func (lit *ObjectLit) Evaluate(vars map[string]interface{}) interface{} {
 	fields := make(map[string]interface{}, len(lit.Fields))
 	for _, f := range lit.Fields {
-		fields[f.Name.Text] = f.Value.Evaluate(vars)
+		fields[f.Name] = f.Value.Evaluate(vars)
 	}
 	return fields
 }
@@ -118,7 +119,7 @@ func (lit *ObjectLit) Evaluate(vars map[string]interface{}) interface{} {
 func (lit *ObjectLit) String() string {
 	entries := make([]string, 0, len(lit.Fields))
 	for _, f := range lit.Fields {
-		entries = append(entries, f.Name.Text+": "+f.Value.String())
+		entries = append(entries, f.Name+": "+f.Value.String())
 	}
 	return "{" + strings.Join(entries, ", ") + "}"
 }
@@ -197,10 +198,10 @@ func ParseLiteral(l *lexer.Lexer, constOnly bool) Literal {
 		l.ConsumeToken('{')
 		var fields []*ObjectLitField
 		for l.Peek() != '}' {
-			name := Ident(l.ConsumeIdentWithLoc())
+			name, loc := l.ConsumeIdentWithLoc()
 			l.ConsumeToken(':')
 			value := ParseLiteral(l, constOnly)
-			fields = append(fields, &ObjectLitField{name, value})
+			fields = append(fields, &ObjectLitField{Name: name, NameLoc: loc, Value: value})
 		}
 		l.ConsumeToken('}')
 		return &ObjectLit{fields, loc}

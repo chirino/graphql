@@ -13,7 +13,6 @@ import (
 	"github.com/chirino/graphql/internal/linkedmap"
 	"github.com/chirino/graphql/log"
 	"github.com/chirino/graphql/qerrors"
-	"github.com/chirino/graphql/query"
 	"github.com/chirino/graphql/resolvers"
 	"github.com/chirino/graphql/schema"
 	"github.com/chirino/graphql/trace"
@@ -23,8 +22,8 @@ type Execution struct {
 	Query     string
 	Vars      map[string]interface{}
 	Schema    *schema.Schema
-	Doc       *query.Document
-	Operation *query.Operation
+	Doc       *schema.QueryDocument
+	Operation *schema.Operation
 	limiter   chan byte
 	Tracer    trace.Tracer
 	Logger    log.Logger
@@ -50,11 +49,11 @@ func (this *Execution) GetVars() map[string]interface{} {
 	return this.Vars
 }
 
-func (this *Execution) GetDocument() *query.Document {
+func (this *Execution) GetDocument() *schema.QueryDocument {
 	return this.Doc
 }
 
-func (this *Execution) GetOperation() *query.Operation {
+func (this *Execution) GetOperation() *schema.Operation {
 	return this.Operation
 }
 
@@ -89,9 +88,9 @@ type ExecutionResult struct {
 
 type SelectionResolver struct {
 	parent     *SelectionResolver
-	field      *query.Field
+	field      *schema.FieldSelection
 	Resolution resolvers.Resolution
-	selections []query.Selection
+	selections []schema.Selection
 }
 
 func (this *SelectionResolver) Path() []string {
@@ -99,21 +98,21 @@ func (this *SelectionResolver) Path() []string {
 		return []string{}
 	}
 	if this.parent == nil {
-		return []string{this.field.Alias.Text}
+		return []string{this.field.Alias}
 	}
-	return append(this.parent.Path(), this.field.Alias.Text)
+	return append(this.parent.Path(), this.field.Alias)
 }
 
-func (this *Execution) resolveFields(parentSelectionResolver *SelectionResolver, selectionResolvers *linkedmap.LinkedMap, parentValue reflect.Value, parentType schema.Type, selections []query.Selection) {
+func (this *Execution) resolveFields(parentSelectionResolver *SelectionResolver, selectionResolvers *linkedmap.LinkedMap, parentValue reflect.Value, parentType schema.Type, selections []schema.Selection) {
 	for _, selection := range selections {
 		switch field := selection.(type) {
-		case *query.Field:
+		case *schema.FieldSelection:
 			if this.skipByDirective(field.Directives) {
 				continue
 			}
 
 			var sr *SelectionResolver = nil
-			x := selectionResolvers.Get(field.Alias.Text)
+			x := selectionResolvers.Get(field.Alias)
 			if x != nil {
 				sr = x.(*SelectionResolver)
 			} else {
@@ -130,7 +129,7 @@ func (this *Execution) resolveFields(parentSelectionResolver *SelectionResolver,
 				typeName := parentType
 				evaluatedArguments := make(map[string]interface{}, len(field.Arguments))
 				for _, arg := range field.Arguments {
-					evaluatedArguments[arg.Name.Text] = arg.Value.Evaluate(this.Vars)
+					evaluatedArguments[arg.Name] = arg.Value.Evaluate(this.Vars)
 				}
 
 				resolveRequest := &resolvers.ResolveRequest{
@@ -147,18 +146,18 @@ func (this *Execution) resolveFields(parentSelectionResolver *SelectionResolver,
 				if resolution == nil {
 					this.AddError((&qerrors.Error{
 						Message: "No resolver found",
-						Path:    append(parentSelectionResolver.Path(), field.Alias.Text),
+						Path:    append(parentSelectionResolver.Path(), field.Alias),
 					}).WithStack())
 				} else {
 					sr.Resolution = resolution
-					selectionResolvers.Set(field.Alias.Text, sr)
+					selectionResolvers.Set(field.Alias, sr)
 				}
 			} else {
 				// field previously resolved, but fragment is adding more child field selections.
 				sr.selections = append(sr.selections, field.Selections...)
 			}
 
-		case *query.InlineFragment:
+		case *schema.InlineFragment:
 			if this.skipByDirective(field.Directives) {
 				continue
 			}
@@ -166,20 +165,20 @@ func (this *Execution) resolveFields(parentSelectionResolver *SelectionResolver,
 			fragment := &field.Fragment
 			this.CreateSelectionResolversForFragment(parentSelectionResolver, fragment, parentType, parentValue, selectionResolvers)
 
-		case *query.FragmentSpread:
+		case *schema.FragmentSpread:
 			if this.skipByDirective(field.Directives) {
 				continue
 			}
-			fragment := &this.Doc.Fragments.Get(field.Name.Text).Fragment
+			fragment := &this.Doc.Fragments.Get(field.Name).Fragment
 			this.CreateSelectionResolversForFragment(parentSelectionResolver, fragment, parentType, parentValue, selectionResolvers)
 		}
 	}
 }
 
-func (this *Execution) CreateSelectionResolversForFragment(parentSelectionResolver *SelectionResolver, fragment *query.Fragment, parentType schema.Type, parentValue reflect.Value, selectionResolvers *linkedmap.LinkedMap) {
-	if fragment.On.Text != "" && fragment.On.Text != parentType.String() {
-		castType := this.Schema.Types[fragment.On.Text]
-		if casted, ok := resolvers.TryCastFunction(parentValue, fragment.On.Text); ok {
+func (this *Execution) CreateSelectionResolversForFragment(parentSelectionResolver *SelectionResolver, fragment *schema.Fragment, parentType schema.Type, parentValue reflect.Value, selectionResolvers *linkedmap.LinkedMap) {
+	if fragment.On.Name != "" && fragment.On.Name != parentType.String() {
+		castType := this.Schema.Types[fragment.On.Name]
+		if casted, ok := resolvers.TryCastFunction(parentValue, fragment.On.Name); ok {
 			this.resolveFields(parentSelectionResolver, selectionResolvers, casted, castType, fragment.Selections)
 		}
 	} else {
@@ -318,7 +317,7 @@ func (this *Execution) executeSelected(parentSelection *SelectionResolver, selec
 	field := selected.field
 
 	this.data.WriteByte('"')
-	this.data.WriteString(selected.field.Alias.Text)
+	this.data.WriteString(selected.field.Alias)
 	this.data.WriteByte('"')
 	this.data.WriteByte(':')
 

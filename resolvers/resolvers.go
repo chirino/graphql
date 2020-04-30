@@ -3,9 +3,9 @@ package resolvers
 import (
 	"context"
 	"encoding/json"
-	"github.com/chirino/graphql/query"
-	"github.com/chirino/graphql/schema"
 	"reflect"
+
+	"github.com/chirino/graphql/schema"
 )
 
 type ExecutionContext interface {
@@ -15,8 +15,8 @@ type ExecutionContext interface {
 	GetLimiter() *chan byte
 	HandlePanic(selectionPath []string) error
 	GetQuery() string
-	GetDocument() *query.Document
-	GetOperation() *query.Operation
+	GetDocument() *schema.QueryDocument
+	GetOperation() *schema.Operation
 	GetVars() map[string]interface{}
 }
 
@@ -28,7 +28,7 @@ type ResolveRequest struct {
 	Parent        reflect.Value
 	Field         *schema.Field
 	Args          map[string]interface{}
-	Selection     *query.Field
+	Selection     *schema.FieldSelection
 }
 
 type Resolution func() (reflect.Value, error)

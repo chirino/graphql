@@ -2,7 +2,7 @@ package schema
 
 import (
 	"github.com/chirino/graphql/internal/lexer"
-	"github.com/chirino/graphql/qerrors"
+	"github.com/stretchr/testify/assert"
 
 	"testing"
 )
@@ -12,7 +12,7 @@ func TestParseInterfaceDef(t *testing.T) {
 		description string
 		definition  string
 		expected    *Interface
-		err         *qerrors.Error
+		err         error
 	}
 
 	tests := []testCase{{
@@ -42,7 +42,7 @@ func TestParseObjectDef(t *testing.T) {
 		description string
 		definition  string
 		expected    *Object
-		err         *qerrors.Error
+		err         error
 	}
 
 	tests := []testCase{{
@@ -77,22 +77,9 @@ func TestParseObjectDef(t *testing.T) {
 	}
 }
 
-func compareErrors(t *testing.T, expected, actual *qerrors.Error) {
+func compareErrors(t *testing.T, expected, actual error) {
 	t.Helper()
-
-	switch {
-	case expected != nil && actual != nil:
-		if expected.Message != actual.Message {
-			t.Fatalf("wanted error message %q, got %q", expected.Message, actual.Message)
-		}
-		// TODO: Check error locations are as expected.
-
-	case expected != nil && actual == nil:
-		t.Fatalf("missing expected error: %q", expected)
-
-	case expected == nil && actual != nil:
-		t.Fatalf("got unexpected error: %q", actual)
-	}
+	assert.Equal(t, expected, actual)
 }
 
 func compareInterfaces(t *testing.T, expected, actual *Interface) {

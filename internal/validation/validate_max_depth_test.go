@@ -3,7 +3,6 @@ package validation
 import (
 	"testing"
 
-	"github.com/chirino/graphql/query"
 	"github.com/chirino/graphql/schema"
 )
 
@@ -72,7 +71,8 @@ type maxDepthTestCase struct {
 
 func (tc maxDepthTestCase) Run(t *testing.T, s *schema.Schema) {
 	t.Run(tc.name, func(t *testing.T) {
-		doc, qErr := query.Parse(tc.query)
+		doc := &schema.QueryDocument{}
+		qErr := doc.Parse(tc.query)
 		if qErr != nil {
 			t.Fatal(qErr)
 		}
@@ -430,7 +430,8 @@ func TestMaxDepthValidation(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			doc, err := query.Parse(tc.query)
+			doc := &schema.QueryDocument{}
+			err := doc.Parse(tc.query)
 			if err != nil {
 				t.Fatal(err)
 			}

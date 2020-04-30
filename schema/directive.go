@@ -5,8 +5,9 @@ import (
 )
 
 type Directive struct {
-	Name Ident
-	Args ArgumentList
+	Name    string
+	NameLoc Location
+	Args    ArgumentList
 }
 
 func (s *Directive) String() string {
@@ -18,8 +19,8 @@ func ParseDirectives(l *lexer.Lexer) DirectiveList {
 	for l.Peek() == '@' {
 		l.ConsumeToken('@')
 		d := &Directive{}
-		d.Name = Ident(l.ConsumeIdentWithLoc())
-		d.Name.Loc.Column--
+		d.Name, d.NameLoc = l.ConsumeIdentWithLoc()
+		d.NameLoc.Column--
 		if l.Peek() == '(' {
 			d.Args = ParseArguments(l)
 		}
@@ -32,7 +33,7 @@ type DirectiveList []*Directive
 
 func (l DirectiveList) Get(name string) *Directive {
 	for _, d := range l {
-		if d.Name.Text == name {
+		if d.Name == name {
 			return d
 		}
 	}
