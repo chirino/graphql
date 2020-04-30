@@ -21,14 +21,15 @@ type ExecutionContext interface {
 }
 
 type ResolveRequest struct {
-	Context       ExecutionContext
-	ParentResolve *ResolveRequest
-	SelectionPath func() []string
-	ParentType    schema.Type
-	Parent        reflect.Value
-	Field         *schema.Field
-	Args          map[string]interface{}
-	Selection     *schema.FieldSelection
+	Context          context.Context
+	ExecutionContext ExecutionContext
+	ParentResolve    *ResolveRequest
+	SelectionPath    func() []string
+	ParentType       schema.Type
+	Parent           reflect.Value
+	Field            *schema.Field
+	Args             map[string]interface{}
+	Selection        *schema.FieldSelection
 }
 
 type Resolution func() (reflect.Value, error)
@@ -45,3 +46,8 @@ type Resolver interface {
 
 // When RawMessage is the result of a Resolution, for a field, no sub field resolution performed.
 type RawMessage json.RawMessage
+
+type ValueWithContext struct {
+	Value   reflect.Value
+	Context context.Context
+}

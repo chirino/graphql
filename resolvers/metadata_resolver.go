@@ -17,7 +17,7 @@ type metadataResolver byte
 const MetadataResolver = metadataResolver(0)
 
 func (this metadataResolver) Resolve(request *ResolveRequest, next Resolution) Resolution {
-	s := request.Context.GetSchema()
+	s := request.ExecutionContext.GetSchema()
 	switch request.Field.Name {
 	case "__typename":
 		return func() (reflect.Value, error) {

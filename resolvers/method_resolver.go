@@ -38,10 +38,10 @@ func (this methodResolver) Resolve(request *ResolveRequest, next Resolution) Res
 	return func() (reflect.Value, error) {
 		var in []reflect.Value
 		if childMethod.hasContext {
-			in = append(in, reflect.ValueOf(request.Context.GetContext()))
+			in = append(in, reflect.ValueOf(request.ExecutionContext.GetContext()))
 		}
 		if childMethod.hasExecutionContext {
-			in = append(in, reflect.ValueOf(request.Context))
+			in = append(in, reflect.ValueOf(request.ExecutionContext))
 		}
 
 		if childMethod.argumentsType != nil {

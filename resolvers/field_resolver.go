@@ -13,7 +13,7 @@ type fieldResolver byte
 const FieldResolver = fieldResolver(0)
 
 func (this fieldResolver) Resolve(request *ResolveRequest, next Resolution) Resolution {
-	parentValue := dereference(request.Parent)
+	parentValue := Dereference(request.Parent)
 	if parentValue.Kind() != reflect.Struct {
 		return next
 	}
@@ -26,7 +26,7 @@ func (this fieldResolver) Resolve(request *ResolveRequest, next Resolution) Reso
 	}
 }
 
-func dereference(value reflect.Value) reflect.Value {
+func Dereference(value reflect.Value) reflect.Value {
 	for value.Kind() == reflect.Ptr || value.Kind() == reflect.Interface {
 		value = value.Elem()
 	}

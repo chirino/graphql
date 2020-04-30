@@ -19,16 +19,16 @@ func (this *ResolveRequest) RunAsync(resolver Resolution) Resolution {
 	}
 
 	// Limit the number of concurrent go routines that we startup.
-	*this.Context.GetLimiter() <- 1
+	*this.ExecutionContext.GetLimiter() <- 1
 	go func() {
 
 		// Setup some post processing
 		defer func() {
-			err := this.Context.HandlePanic(this.SelectionPath())
+			err := this.ExecutionContext.HandlePanic(this.SelectionPath())
 			if err != nil {
 				r.err = err
 			}
-			<-*this.Context.GetLimiter()
+			<-*this.ExecutionContext.GetLimiter()
 			channel <- &r // we do this in defer since the resolver() could panic.
 		}()
 

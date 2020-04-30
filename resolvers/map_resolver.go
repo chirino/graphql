@@ -12,7 +12,7 @@ type mapResolver byte
 const MapResolver = mapResolver(0)
 
 func (this mapResolver) Resolve(request *ResolveRequest, next Resolution) Resolution {
-	parentValue := dereference(request.Parent)
+	parentValue := Dereference(request.Parent)
 	if parentValue.Kind() != reflect.Map || parentValue.Type().Key().Kind() != reflect.String {
 		return next
 	}

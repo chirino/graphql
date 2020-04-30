@@ -103,7 +103,7 @@ func (this *SelectionResolver) Path() []string {
 	return append(this.parent.Path(), this.field.Alias)
 }
 
-func (this *Execution) resolveFields(parentSelectionResolver *SelectionResolver, selectionResolvers *linkedmap.LinkedMap, parentValue reflect.Value, parentType schema.Type, selections []schema.Selection) {
+func (this *Execution) resolveFields(ctx context.Context, parentSelectionResolver *SelectionResolver, selectionResolvers *linkedmap.LinkedMap, parentValue reflect.Value, parentType schema.Type, selections []schema.Selection) {
 	for _, selection := range selections {
 		switch field := selection.(type) {
 		case *schema.FieldSelection:
@@ -133,13 +133,14 @@ func (this *Execution) resolveFields(parentSelectionResolver *SelectionResolver,
 				}
 
 				resolveRequest := &resolvers.ResolveRequest{
-					Context:       this,
-					ParentType:    typeName,
-					Parent:        parentValue,
-					Field:         field.Schema.Field,
-					Args:          evaluatedArguments,
-					Selection:     field,
-					SelectionPath: sr.Path,
+					Context:          ctx,
+					ExecutionContext: this,
+					ParentType:       typeName,
+					Parent:           parentValue,
+					Field:            field.Schema.Field,
+					Args:             evaluatedArguments,
+					Selection:        field,
+					SelectionPath:    sr.Path,
 				}
 				resolution := this.Resolver.Resolve(resolveRequest, nil)
 
@@ -163,26 +164,26 @@ func (this *Execution) resolveFields(parentSelectionResolver *SelectionResolver,
 			}
 
 			fragment := &field.Fragment
-			this.CreateSelectionResolversForFragment(parentSelectionResolver, fragment, parentType, parentValue, selectionResolvers)
+			this.CreateSelectionResolversForFragment(ctx, parentSelectionResolver, fragment, parentType, parentValue, selectionResolvers)
 
 		case *schema.FragmentSpread:
 			if this.skipByDirective(field.Directives) {
 				continue
 			}
 			fragment := &this.Doc.Fragments.Get(field.Name).Fragment
-			this.CreateSelectionResolversForFragment(parentSelectionResolver, fragment, parentType, parentValue, selectionResolvers)
+			this.CreateSelectionResolversForFragment(ctx, parentSelectionResolver, fragment, parentType, parentValue, selectionResolvers)
 		}
 	}
 }
 
-func (this *Execution) CreateSelectionResolversForFragment(parentSelectionResolver *SelectionResolver, fragment *schema.Fragment, parentType schema.Type, parentValue reflect.Value, selectionResolvers *linkedmap.LinkedMap) {
+func (this *Execution) CreateSelectionResolversForFragment(ctx context.Context, parentSelectionResolver *SelectionResolver, fragment *schema.Fragment, parentType schema.Type, parentValue reflect.Value, selectionResolvers *linkedmap.LinkedMap) {
 	if fragment.On.Name != "" && fragment.On.Name != parentType.String() {
 		castType := this.Schema.Types[fragment.On.Name]
 		if casted, ok := resolvers.TryCastFunction(parentValue, fragment.On.Name); ok {
-			this.resolveFields(parentSelectionResolver, selectionResolvers, casted, castType, fragment.Selections)
+			this.resolveFields(ctx, parentSelectionResolver, selectionResolvers, casted, castType, fragment.Selections)
 		}
 	} else {
-		this.resolveFields(parentSelectionResolver, selectionResolvers, parentValue, parentType, fragment.Selections)
+		this.resolveFields(ctx, parentSelectionResolver, selectionResolvers, parentValue, parentType, fragment.Selections)
 	}
 }
 
@@ -196,7 +197,7 @@ func (this *Execution) Execute() (bool, error) {
 	this.errs = qerrors.ErrorList{}
 	this.limiter = make(chan byte, this.MaxParallelism)
 	this.limiter <- 1
-	this.resolveFields(nil, rootFields, rootValue, rootType, this.Operation.Selections)
+	this.resolveFields(this.Context, nil, rootFields, rootValue, rootType, this.Operation.Selections)
 
 	if this.Operation.Type == schema.Subscription {
 
@@ -225,7 +226,7 @@ func (this *Execution) Execute() (bool, error) {
 		// TODO: this may need to move for the subscription case..
 		this.data = &bytes.Buffer{}
 		defer func() { <-this.limiter }()
-		this.recursiveExecute(nil, rootFields)
+		this.recursiveExecute(this.Context, nil, rootFields)
 		this.Handler(json.RawMessage(this.data.Bytes()), this.errs)
 		return false, nil
 	}
@@ -251,11 +252,11 @@ func (this *Execution) FireSubscriptionEvent(value reflect.Value) {
 	this.limiter = make(chan byte, this.MaxParallelism)
 	this.limiter <- 1
 	defer func() { <-this.limiter }()
-	this.recursiveExecute(nil, this.rootFields)
+	this.recursiveExecute(this.Context, nil, this.rootFields)
 	this.Handler(json.RawMessage(this.data.Bytes()), this.errs)
 }
 
-func (this *Execution) recursiveExecute(parentSelection *SelectionResolver, selectedFields *linkedmap.LinkedMap) { // (parentSelection *SelectionResolver, parentValue reflect.Value, parentType schema.Type, selections []query.Selection) ExecutionResult {
+func (this *Execution) recursiveExecute(ctx context.Context, parentSelection *SelectionResolver, selectedFields *linkedmap.LinkedMap) { // (parentSelection *SelectionResolver, parentValue reflect.Value, parentType schema.Type, selections []query.Selection) ExecutionResult {
 
 	this.data.WriteByte('{')
 	writeComma := false
@@ -269,7 +270,7 @@ func (this *Execution) recursiveExecute(parentSelection *SelectionResolver, sele
 		// apply the resolver before the field is written, since it could
 		// fail, and we don't want to write field that resulted in a resolver error.
 		selected := entry.Value.(*SelectionResolver)
-		err := this.executeSelected(parentSelection, selected)
+		err := this.executeSelected(ctx, parentSelection, selected)
 		if err != nil {
 			// undo any (likely partial) writes that we performed
 			this.data.Truncate(offset)
@@ -282,8 +283,9 @@ func (this *Execution) recursiveExecute(parentSelection *SelectionResolver, sele
 }
 
 var rawMessageType = reflect.TypeOf(resolvers.RawMessage{})
+var valueWithContextType = reflect.TypeOf(resolvers.ValueWithContext{})
 
-func (this *Execution) executeSelected(parentSelection *SelectionResolver, selected *SelectionResolver) (result *qerrors.Error) {
+func (this *Execution) executeSelected(ctx context.Context, parentSelection *SelectionResolver, selected *SelectionResolver) (result *qerrors.Error) {
 
 	defer func() {
 		if value := recover(); value != nil {
@@ -294,14 +296,19 @@ func (this *Execution) executeSelected(parentSelection *SelectionResolver, selec
 		}
 	}()
 
-	resolver := selected.Resolution
-	childValue, err := resolver()
+	childValue, err := selected.Resolution()
 	if err != nil {
 		return (&qerrors.Error{
 			Message:       err.Error(),
 			Path:          selected.Path(),
 			ResolverError: err,
 		}).WithStack()
+	}
+
+	if childValue.Type() == valueWithContextType {
+		vwc := childValue.Interface().(resolvers.ValueWithContext)
+		childValue = vwc.Value
+		ctx = vwc.Context
 	}
 
 	if childValue.Type() == rawMessageType {
@@ -343,13 +350,13 @@ func (this *Execution) executeSelected(parentSelection *SelectionResolver, selec
 		case *schema.List:
 			this.writeList(*childType, childValue, selected, func(elementType schema.Type, element reflect.Value) {
 				selectedFields := linkedmap.CreateLinkedMap(len(this.Operation.Selections))
-				this.resolveFields(selected, selectedFields, element, elementType, selected.selections)
-				this.recursiveExecute(selected, selectedFields)
+				this.resolveFields(ctx, selected, selectedFields, element, elementType, selected.selections)
+				this.recursiveExecute(ctx, selected, selectedFields)
 			})
 		case *schema.Object, *schema.Interface, *schema.Union:
 			selectedFields := linkedmap.CreateLinkedMap(len(this.Operation.Selections))
-			this.resolveFields(selected, selectedFields, childValue, childType, selected.selections)
-			this.recursiveExecute(selected, selectedFields)
+			this.resolveFields(ctx, selected, selectedFields, childValue, childType, selected.selections)
+			this.recursiveExecute(ctx, selected, selectedFields)
 		}
 	}
 	return
