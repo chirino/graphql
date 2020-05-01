@@ -639,7 +639,6 @@ redo:
 					break
 				} else {
 					tok = String
-					ch = s.next()
 					// It was just an empty String...
 					break
 				}
