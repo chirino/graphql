@@ -298,17 +298,12 @@ func (lit *Variable) WriteTo(out io.StringWriter) {
 }
 
 func writeDescription(out io.StringWriter, desc Description) {
-	if desc.ShowType == lexer.NoDescription {
+	if desc.ShowType == lexer.NoDescription || desc.Text == "" {
 		return
 	}
 	showType := desc.ShowType
-	if showType == lexer.PossibleDescription {
-		if desc.Text == "" {
-			return
-		}
-		if strings.Contains(desc.Text, "\n") {
-			showType = lexer.ShowBlockDescription
-		}
+	if showType == lexer.PossibleDescription && strings.Contains(desc.Text, "\n") {
+		showType = lexer.ShowBlockDescription
 	}
 	if desc.ShowType == lexer.ShowBlockDescription {
 		out.WriteString(`"""`)
