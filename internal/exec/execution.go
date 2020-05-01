@@ -33,12 +33,14 @@ type Execution struct {
 	Resolver  resolvers.Resolver
 	Mu        sync.Mutex
 
-	subMu          sync.Mutex
 	rootFields     *linkedmap.LinkedMap
 	data           *bytes.Buffer
 	errs           qerrors.ErrorList
 	MaxParallelism int
-	Handler        func(data json.RawMessage, errors qerrors.ErrorList)
+
+	subMu                     sync.Mutex
+	FireSubscriptionEventFunc func(d json.RawMessage, e qerrors.ErrorList)
+	FireSubscriptionCloseFunc func()
 }
 
 func (this *Execution) GetRoot() interface{} {
@@ -191,7 +193,7 @@ func (this *Execution) CreateSelectionResolversForFragment(ctx context.Context, 
 	}
 }
 
-func (this *Execution) Execute() (bool, error) {
+func (this *Execution) Execute() error {
 
 	rootType := this.Schema.EntryPoints[this.Operation.Type]
 	rootValue := reflect.ValueOf(this.Root)
@@ -208,21 +210,21 @@ func (this *Execution) Execute() (bool, error) {
 		// subs are kinda special... we need to setup a subscription to an event,
 		// and execute it every time the event is triggered...
 		if len(this.Operation.Selections) != 1 {
-			return true, qerrors.Errorf("you can only select 1 field in a subscription")
+			return qerrors.Errorf("you can only select 1 field in a subscription")
 		}
 
 		if len(rootFields.ValuesByKey) != 1 {
 			// We may not have resolved it correctly..
-			return true, this.errs.Error()
+			return this.errs.Error()
 		}
 		// This code path interact closely with with FireSubscriptionEvent method.
 		this.rootFields = rootFields
 		selected := rootFields.First.Value.(*SelectionResolver)
 		_, err := selected.Resolution() // This should start go routines to fire events via FireSubscriptionEvent
 		if err != nil {
-			return true, err
+			return err
 		}
-		return true, nil
+		return nil
 
 	} else {
 
@@ -231,8 +233,9 @@ func (this *Execution) Execute() (bool, error) {
 		this.data = &bytes.Buffer{}
 		defer func() { <-this.limiter }()
 		this.recursiveExecute(this.Context, nil, rootFields)
-		this.Handler(json.RawMessage(this.data.Bytes()), this.errs)
-		return false, nil
+		this.FireSubscriptionEventFunc(json.RawMessage(this.data.Bytes()), this.errs)
+		this.FireSubscriptionClose()
+		return nil
 	}
 }
 
@@ -247,6 +250,11 @@ func (this *Execution) FireSubscriptionEvent(value reflect.Value) {
 	this.subMu.Lock()
 	defer this.subMu.Unlock()
 
+	// this.FireSubscriptionEventFunc is nil once the sub has been closed by the resolver.
+	if this.FireSubscriptionEventFunc == nil {
+		return
+	}
+
 	selected := this.rootFields.First.Value.(*SelectionResolver)
 	selected.Resolution = func() (reflect.Value, error) {
 		return value, nil
@@ -257,7 +265,16 @@ func (this *Execution) FireSubscriptionEvent(value reflect.Value) {
 	this.limiter <- 1
 	defer func() { <-this.limiter }()
 	this.recursiveExecute(this.Context, nil, this.rootFields)
-	this.Handler(json.RawMessage(this.data.Bytes()), this.errs)
+
+	this.FireSubscriptionEventFunc(this.data.Bytes(), this.errs)
+}
+
+func (this *Execution) FireSubscriptionClose() {
+	this.subMu.Lock()
+	defer this.subMu.Unlock()
+	this.FireSubscriptionCloseFunc()
+	this.FireSubscriptionEventFunc = nil
+	this.FireSubscriptionCloseFunc = nil
 }
 
 func (this *Execution) recursiveExecute(ctx context.Context, parentSelection *SelectionResolver, selectedFields *linkedmap.LinkedMap) { // (parentSelection *SelectionResolver, parentValue reflect.Value, parentType schema.Type, selections []query.Selection) ExecutionResult {

@@ -55,35 +55,26 @@ func (engine *Engine) ServeGraphQL(request *Request) *Response {
 	return ServeGraphQLStreamFunc(engine.ServeGraphQLStream).ServeGraphQL(request)
 }
 
-func (engine *Engine) ServeGraphQLStream(request *Request) (*ResponseStream, error) {
+type responseStream struct {
+	cancel    context.CancelFunc
+	responses chan *Response
+}
 
-	doc := &schema.QueryDocument{}
-	qErr := doc.Parse(request.Query)
-	if qErr != nil {
-		return nil, qErr
-	}
+func (r responseStream) Close() {
+	r.cancel()
+}
 
-	validationFinish := engine.ValidationTracer.TraceValidation()
-	errs := validation.Validate(engine.Schema, doc, engine.MaxDepth)
-	validationFinish(errs)
-	if len(errs) != 0 {
-		return nil, errs.Error()
-	}
+func (r responseStream) Responses() <-chan *Response {
+	return r.responses
+}
 
-	op, err := doc.GetOperation(request.OperationName)
-	if err != nil {
-		return nil, err
-	}
+func (r responseStream) CloseWithErr(err error) responseStream {
+	r.responses <- NewResponse().AddError(err)
+	close(r.responses)
+	return r
+}
 
-	varTypes := make(map[string]*introspection.Type)
-	for _, v := range op.Vars {
-		t, err := schema.ResolveType(v.Type, engine.Schema.Resolve)
-		if err != nil {
-			return nil, err
-		}
-		varTypes[v.Name] = introspection.WrapType(t)
-	}
-
+func (engine *Engine) ServeGraphQLStream(request *Request) ResponseStream {
 	ctx := request.Context
 	if ctx == nil {
 		ctx = context.Background()
@@ -91,12 +82,43 @@ func (engine *Engine) ServeGraphQLStream(request *Request) (*ResponseStream, err
 	cancelCtx, cancelFunc := context.WithCancel(ctx)
 	ctx = cancelCtx
 
+	stream := responseStream{
+		cancel:    cancelFunc,
+		responses: make(chan *Response, 1),
+	}
+
+	doc := &schema.QueryDocument{}
+	qErr := doc.Parse(request.Query)
+	if qErr != nil {
+		return stream.CloseWithErr(qErr)
+	}
+
+	validationFinish := engine.ValidationTracer.TraceValidation()
+	errs := validation.Validate(engine.Schema, doc, engine.MaxDepth)
+	validationFinish(errs)
+	if len(errs) != 0 {
+		return stream.CloseWithErr(errs.Error())
+	}
+
+	op, err := doc.GetOperation(request.OperationName)
+	if err != nil {
+		return stream.CloseWithErr(err)
+	}
+
+	varTypes := make(map[string]*introspection.Type)
+	for _, v := range op.Vars {
+		t, err := schema.ResolveType(v.Type, engine.Schema.Resolve)
+		if err != nil {
+			return stream.CloseWithErr(err)
+		}
+		varTypes[v.Name] = introspection.WrapType(t)
+	}
+
 	traceContext, finish := engine.Tracer.TraceQuery(ctx, request.Query, request.OperationName, request.Variables, varTypes)
-	responses := make(chan *Response, 1)
 
 	variables, err := request.VariablesAsMap()
 	if err != nil {
-		return nil, err
+		return stream.CloseWithErr(err)
 	}
 
 	r := exec.Execution{
@@ -112,22 +134,21 @@ func (engine *Engine) ServeGraphQLStream(request *Request) (*ResponseStream, err
 		MaxParallelism: engine.MaxParallelism,
 		Root:           engine.Root,
 		Context:        traceContext,
-		Handler: func(d json.RawMessage, e qerrors.ErrorList) {
-			responses <- &Response{
+		FireSubscriptionEventFunc: func(d json.RawMessage, e qerrors.ErrorList) {
+			stream.responses <- &Response{
 				Data:   d,
 				Errors: e,
 			}
 		},
+		FireSubscriptionCloseFunc: func() {
+			close(stream.responses)
+		},
 	}
 
-	sub, err := r.Execute()
+	err = r.Execute()
 	if err != nil {
-		return nil, err
+		return stream.CloseWithErr(err)
 	}
 	finish(errs)
-	return &ResponseStream{
-		IsSubscription: sub,
-		Cancel:         cancelFunc,
-		Responses:      responses,
-	}, nil
+	return stream
 }

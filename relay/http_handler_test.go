@@ -1,6 +1,7 @@
 package relay_test
 
 import (
+	"encoding/json"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -30,4 +31,58 @@ func TestEngineAPIServeHTTP(t *testing.T) {
 	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
 	assert.Equal(t, `{"data":{"hero":{"name":"R2-D2"}}}
 `, w.Body.String())
+}
+
+func TestClientServeGraphQL(t *testing.T) {
+
+	s := httptest.NewServer(&relay.Handler{
+		ServeGraphQL: func(request *graphql.Request) *graphql.Response {
+			return &graphql.Response{
+				Data: json.RawMessage(`{"hello":"world"}`),
+			}
+		},
+	})
+	defer s.Close()
+	client := relay.NewClient(s.URL)
+	response := client.ServeGraphQL(&graphql.Request{Query: "{hello}"})
+	assert.Equal(t, `{"hello":"world"}`, string(response.Data))
+}
+
+type testStream struct {
+	responses chan *graphql.Response
+}
+
+func (t testStream) Close() {
+}
+func (t testStream) Responses() <-chan *graphql.Response {
+	return t.responses
+}
+
+func TestClientServeGraphQLStream(t *testing.T) {
+
+	s := httptest.NewServer(&relay.Handler{
+		ServeGraphQLStream: func(request *graphql.Request) graphql.ResponseStream {
+			result := testStream{
+				responses: make(chan *graphql.Response, 2),
+			}
+			result.responses <- &graphql.Response{
+				Data: json.RawMessage(`{"hello":"world"}`),
+			}
+			result.responses <- &graphql.Response{
+				Data: json.RawMessage(`{"bye":"world"}`),
+			}
+			close(result.responses)
+			return result
+		},
+	})
+
+	defer s.Close()
+	client := relay.NewClient(s.URL)
+	rs := client.ServeGraphQLStream(&graphql.Request{Query: "{hello}"})
+	response := <-rs.Responses()
+	assert.Equal(t, `{"hello":"world"}`, string(response.Data))
+	response = <-rs.Responses()
+	assert.Equal(t, `{"bye":"world"}`, string(response.Data))
+	response = <-rs.Responses()
+	assert.Nil(t, response)
 }

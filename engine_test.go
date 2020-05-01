@@ -481,6 +481,7 @@ func (m *MyMutation) Hello(ctx resolvers.ExecutionContext, args struct{ Duration
 			select {
 			// Please use the context to know when the subscription is canceled.
 			case <-ctx.GetContext().Done():
+				ctx.FireSubscriptionClose()
 				return
 			case <-time.After(time.Duration(args.Duration) * time.Millisecond):
 				// every few duration ms.. fire a subscription event.
@@ -506,19 +507,17 @@ type MySubscription {
 `)
 	require.NoError(t, err)
 
-	query, err := engine.ServeGraphQLStream(&graphql.Request{Query: `subscription{ hello(duration:10) }`})
-	require.NoError(t, err)
-
-	next := query.Next()
+	stream := engine.ServeGraphQLStream(&graphql.Request{Query: `subscription{ hello(duration:10) }`})
+	next := <-stream.Responses()
 	assert.NoError(t, next.Error())
 	assert.Equal(t, `{"hello":"Hello: 10"}`, string(next.Data))
 
-	next = query.Next()
+	next = <-stream.Responses()
 	assert.NoError(t, next.Error())
 	assert.Equal(t, `{"hello":"Hello: 20"}`, string(next.Data))
 
-	query.Close() // close out the subscription...
+	stream.Close() // close out the subscription...
 
-	next = query.Next()
+	next = <-stream.Responses()
 	assert.Nil(t, next)
 }

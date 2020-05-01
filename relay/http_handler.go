@@ -84,8 +84,25 @@ func upgrade(streamingHandlerFunc graphql.ServeGraphQLStreamFunc, w http.Respons
 		header.Set("Sec-WebSocket-Protocol", subprotocol)
 	}
 
+	mu := sync.Mutex{}
+	streams := map[interface{}]graphql.ResponseStream{}
 	conn, _ := upgrader.Upgrade(w, r, header) // error ignored for sake of simplicity
-	defer conn.Close()
+	defer func() {
+		mu.Lock()
+		for _, stream := range streams {
+			stream.Close()
+		}
+		mu.Unlock()
+		conn.Close()
+	}()
+
+	// websocket connections do not support concurrent write access.. protect with a mutex.
+	writeJSON := func(json interface{}) error {
+		mu.Lock()
+		err := conn.WriteJSON(json)
+		mu.Unlock()
+		return err
+	}
 
 	op := OperationMessage{}
 	err := conn.ReadJSON(&op)
@@ -94,22 +111,13 @@ func upgrade(streamingHandlerFunc graphql.ServeGraphQLStreamFunc, w http.Respons
 		return
 	}
 	if op.Type != "connection_init" {
-		fmt.Printf("protocol violation: expected an init message, but received: %v\n", op.Type)
+		r := graphql.NewResponse().AddError(fmt.Errorf("protocol violation: expected an init message, but received: %v", op.Type))
+		payload, _ := json.Marshal(r)
+		writeJSON(OperationMessage{Type: "connection_error", Payload: payload})
 		return
 	}
 
-	// websocket connections do not support concurrent write access.. protect with a mutex.
-	mu := sync.Mutex{}
-	writeJSON := func(json interface{}) error {
-		mu.Lock()
-		err := conn.WriteJSON(json)
-		mu.Unlock()
-		return err
-	}
-
 	writeJSON(OperationMessage{Type: "connection_ack"})
-	streams := map[interface{}]*graphql.ResponseStream{}
-
 	for {
 
 		msg := OperationMessage{}
@@ -134,57 +142,42 @@ func upgrade(streamingHandlerFunc graphql.ServeGraphQLStreamFunc, w http.Respons
 			ctx = context.WithValue(ctx, "*net/http.Request", r)
 
 			request.Context = ctx
-			stream, err := streamingHandlerFunc(&request)
+			stream := streamingHandlerFunc(&request)
 
-			if err != nil {
-				r := graphql.NewResponse().AddError(err)
-				payload, err := json.Marshal(r)
-				if err != nil {
-					panic(fmt.Sprintf("could not marshal payload: %v\n", err))
-				}
-				writeJSON(OperationMessage{Type: "error", Id: msg.Id, Payload: json.RawMessage(payload)})
-				return
-			}
+			// save it.. so that client can later cancel it...
+			mu.Lock()
+			streams[msg.Id] = stream
+			mu.Unlock()
 
-			if stream.IsSubscription {
-				// save it.. so that client can later cancel it...
-				streams[msg.Id] = stream
-
-				// Start a goroutine ot handle the events....
-				go func() {
-					for {
-						r := stream.Next()
-						if r != nil {
-							payload, err := json.Marshal(r)
-							if err != nil {
-								panic(fmt.Sprintf("could not marshal payload: %v\n", err))
-							}
-							writeJSON(OperationMessage{Type: "data", Id: msg.Id, Payload: json.RawMessage(payload)})
-						} else {
-							writeJSON(OperationMessage{Type: "complete", Id: msg.Id})
+			// Start a goroutine ot handle the events....
+			go func() {
+				for {
+					r := <-stream.Responses()
+					if r != nil {
+						payload, err := json.Marshal(r)
+						if err != nil {
+							panic(fmt.Sprintf("could not marshal payload: %v\n", err))
 						}
+						writeJSON(OperationMessage{Type: "data", Id: msg.Id, Payload: payload})
+					} else {
+
+						mu.Lock()
+						delete(streams, msg.Id)
+						mu.Unlock()
+
+						writeJSON(OperationMessage{Type: "complete", Id: msg.Id})
+						stream.Close()
+						return
 					}
-				}()
-
-			} else {
-
-				r := stream.Next()
-				payload, err := json.Marshal(r)
-				if err != nil {
-					fmt.Println(r)
-					stream.Close()
-					panic(fmt.Sprintf("could not marshal payload: %v\n", err))
 				}
-				writeJSON(OperationMessage{Type: "data", Id: msg.Id, Payload: json.RawMessage(payload)})
-				writeJSON(OperationMessage{Type: "complete", Id: msg.Id})
-				stream.Close()
-			}
+			}()
 
 		case "stop":
+			mu.Lock()
 			stream := streams[msg.Id]
+			mu.Unlock()
 			if stream != nil {
 				stream.Close()
-				delete(streams, msg.Id)
 			}
 		}
 	}

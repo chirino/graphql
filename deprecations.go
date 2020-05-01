@@ -13,6 +13,6 @@ func (engine *Engine) ExecuteOne(request *EngineRequest) *EngineResponse {
 }
 
 // Deprecated: use ServeGraphQLStream instead.
-func (engine *Engine) Execute(request *EngineRequest) (*ResponseStream, error) {
-	return engine.ServeGraphQLStream(request)
+func (engine *Engine) Execute(request *EngineRequest) (ResponseStream, error) {
+	return engine.ServeGraphQLStream(request), nil
 }

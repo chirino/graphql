@@ -1,54 +1,44 @@
 package graphql
 
-import (
-	"context"
+import "github.com/chirino/graphql/qerrors"
 
-	"github.com/chirino/graphql/qerrors"
-)
+type ResponseStream interface {
+	Close()
+	Responses() <-chan *Response
+}
 
-type ResponseStream struct {
-	Cancel          context.CancelFunc
-	Responses       chan *Response
-	IsSubscription  bool
-	ResponseCounter int
+type errStream <-chan *Response
+
+func (e errStream) Close() {
+}
+func (e errStream) Responses() <-chan *Response {
+	return e
+}
+
+func NewErrStream(err error) ResponseStream {
+	rc := make(chan *Response, 1)
+	rc <- NewResponse().AddError(err)
+	close(rc)
+	return errStream(rc)
 }
 
 type StreamingHandler interface {
-	ServeGraphQLStream(request *Request) (*ResponseStream, error)
+	ServeGraphQLStream(request *Request) ResponseStream
 }
 
-type ServeGraphQLStreamFunc func(request *Request) (*ResponseStream, error)
+type ServeGraphQLStreamFunc func(request *Request) ResponseStream
 
-func (f ServeGraphQLStreamFunc) ServeGraphQLStream(request *Request) (*ResponseStream, error) {
+func (f ServeGraphQLStreamFunc) ServeGraphQLStream(request *Request) ResponseStream {
 	return f(request)
 }
 
 func (f ServeGraphQLStreamFunc) ServeGraphQL(request *Request) *Response {
-	stream, err := f(request)
-	if err != nil {
-		return NewResponse().AddError(err)
-	}
+	stream := f(request)
 	defer stream.Close()
-	if stream.IsSubscription {
-		return NewResponse().AddError(qerrors.Errorf(
-			"ExecuteOne method does not support getting results from subscriptions",
-		))
-	}
-	return stream.Next()
-}
-
-func (qr *ResponseStream) Next() *Response {
-	if !qr.IsSubscription && qr.ResponseCounter > 0 {
-		return nil
-	}
-	response := <-qr.Responses
-	if response != nil {
-		qr.ResponseCounter += 1
+	response := <-stream.Responses()
+	if response == nil {
+		response = &Response{}
+		response.AddError(qerrors.New("response stream closed.").WithStack())
 	}
 	return response
-}
-
-func (qr *ResponseStream) Close() {
-	close(qr.Responses)
-	qr.Cancel()
 }

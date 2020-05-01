@@ -11,6 +11,7 @@ import (
 type ExecutionContext interface {
 	GetRoot() interface{}
 	FireSubscriptionEvent(value reflect.Value)
+	FireSubscriptionClose()
 	GetSchema() *schema.Schema
 	GetContext() context.Context
 	GetLimiter() *chan byte
