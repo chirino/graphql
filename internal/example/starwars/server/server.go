@@ -22,6 +22,6 @@ func main() {
 	graphiql, _ := graphiql.NewGraphiqlHandler("/query")
 	http.Handle("/", graphiql)
 
-	fmt.Println("GraphiQL UI running at http://localhost:8080/")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	fmt.Println("GraphiQL UI running at http://localhost:8085/")
+	log.Fatal(http.ListenAndServe(":8085", nil))
 }
