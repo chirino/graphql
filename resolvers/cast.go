@@ -13,11 +13,26 @@ func normalizeMethodName(method string) string {
 
 var castMethodCache Cache
 
-func TryCastFunction(parentValue reflect.Value, toType string) (reflect.Value, bool) {
+func TryCastFunction(value reflect.Value, toType string) (v reflect.Value, ok bool) {
+	for {
+		v, ok = tryCastFunction(value, toType)
+		if ok {
+			return
+		}
+		if value.Kind() == reflect.Interface || value.Kind() == reflect.Ptr {
+			value = value.Elem()
+		} else {
+			return
+		}
+	}
+}
+
+func tryCastFunction(parentValue reflect.Value, toType string) (reflect.Value, bool) {
 	var key struct {
 		fromType reflect.Type
 		toType   string
 	}
+
 	key.fromType = parentValue.Type()
 	key.toType = toType
 
