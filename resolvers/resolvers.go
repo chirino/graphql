@@ -9,6 +9,7 @@ import (
 )
 
 type ExecutionContext interface {
+	GetRoot() interface{}
 	FireSubscriptionEvent(value reflect.Value)
 	GetSchema() *schema.Schema
 	GetContext() context.Context

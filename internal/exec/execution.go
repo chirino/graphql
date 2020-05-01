@@ -41,6 +41,10 @@ type Execution struct {
 	Handler        func(data json.RawMessage, errors qerrors.ErrorList)
 }
 
+func (this *Execution) GetRoot() interface{} {
+	return this.Root
+}
+
 func (this *Execution) GetQuery() string {
 	return this.Query
 }
