@@ -2,7 +2,6 @@ package relay
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -44,11 +43,7 @@ func (client *Client) ServeGraphQL(request *graphql.Request) *graphql.Response {
 		return response.AddError(err)
 	}
 
-	ctx := request.Context
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, client.URL, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(request.GetContext(), http.MethodPost, client.URL, bytes.NewReader(body))
 	if err != nil {
 		return response.AddError(err)
 	}
@@ -153,14 +148,11 @@ func (c *connection) Close() {
 
 func (c *connection) ServeGraphQLStream(request *graphql.Request) graphql.ResponseStream {
 	stream := &stream{
-		connection:      c,
 		request:         request,
 		responseChannel: make(chan *graphql.Response, 1),
 	}
-
-	// request the stream, and wait for the result...
 	c.serviceCommands <- stream
-	return stream
+	return stream.responseChannel
 }
 
 func service(c *connection) {
@@ -258,14 +250,9 @@ func serviceClose(c *connection) {
 }
 
 type stream struct {
-	connection      *connection
 	id              int64
 	request         *graphql.Request
 	responseChannel chan *graphql.Response
-}
-
-func (s *stream) Close() {
-	s.connection.serviceCommands <- closeStream{stream: s}
 }
 
 func (s *stream) Responses() <-chan *graphql.Response {

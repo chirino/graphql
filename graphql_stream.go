@@ -1,25 +1,18 @@
 package graphql
 
-import "github.com/chirino/graphql/qerrors"
+import (
+	"context"
 
-type ResponseStream interface {
-	Close()
-	Responses() <-chan *Response
-}
+	"github.com/chirino/graphql/qerrors"
+)
 
-type errStream <-chan *Response
-
-func (e errStream) Close() {
-}
-func (e errStream) Responses() <-chan *Response {
-	return e
-}
+type ResponseStream = <-chan *Response
 
 func NewErrStream(err error) ResponseStream {
 	rc := make(chan *Response, 1)
 	rc <- NewResponse().AddError(err)
 	close(rc)
-	return errStream(rc)
+	return rc
 }
 
 type StreamingHandler interface {
@@ -33,9 +26,15 @@ func (f ServeGraphQLStreamFunc) ServeGraphQLStream(request *Request) ResponseStr
 }
 
 func (f ServeGraphQLStreamFunc) ServeGraphQL(request *Request) *Response {
+	ctx, cancel := context.WithCancel(request.GetContext())
+	requestCp := *request
+	requestCp.Context = ctx
+
 	stream := f(request)
-	defer stream.Close()
-	response := <-stream.Responses()
+	request.GetContext()
+
+	defer cancel()
+	response := <-stream
 	if response == nil {
 		response = &Response{}
 		response.AddError(qerrors.New("response stream closed.").WithStack())

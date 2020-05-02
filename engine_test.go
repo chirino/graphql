@@ -507,17 +507,18 @@ type MySubscription {
 `)
 	require.NoError(t, err)
 
-	stream := engine.ServeGraphQLStream(&graphql.Request{Query: `subscription{ hello(duration:10) }`})
-	next := <-stream.Responses()
+	ctx, streamClose := context.WithCancel(context.Background())
+	stream := engine.ServeGraphQLStream(&graphql.Request{Context: ctx, Query: `subscription{ hello(duration:10) }`})
+	next := <-stream
 	assert.NoError(t, next.Error())
 	assert.Equal(t, `{"hello":"Hello: 10"}`, string(next.Data))
 
-	next = <-stream.Responses()
+	next = <-stream
 	assert.NoError(t, next.Error())
 	assert.Equal(t, `{"hello":"Hello: 20"}`, string(next.Data))
 
-	stream.Close() // close out the subscription...
+	streamClose() // close out the subscription...
 
-	next = <-stream.Responses()
+	next = <-stream
 	assert.Nil(t, next)
 }

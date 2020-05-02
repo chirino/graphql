@@ -68,6 +68,11 @@ type OperationMessage struct {
 	Payload json.RawMessage `json:"payload,omitempty"`
 }
 
+type wsStream struct {
+	cancel    context.CancelFunc
+	responses graphql.ResponseStream
+}
+
 func upgrade(streamingHandlerFunc graphql.ServeGraphQLStreamFunc, w http.ResponseWriter, r *http.Request) {
 
 	var upgrader = websocket.Upgrader{
@@ -85,12 +90,12 @@ func upgrade(streamingHandlerFunc graphql.ServeGraphQLStreamFunc, w http.Respons
 	}
 
 	mu := sync.Mutex{}
-	streams := map[interface{}]graphql.ResponseStream{}
+	streams := map[interface{}]wsStream{}
 	conn, _ := upgrader.Upgrade(w, r, header) // error ignored for sake of simplicity
 	defer func() {
 		mu.Lock()
 		for _, stream := range streams {
-			stream.Close()
+			stream.cancel()
 		}
 		mu.Unlock()
 		conn.Close()
@@ -141,8 +146,9 @@ func upgrade(streamingHandlerFunc graphql.ServeGraphQLStreamFunc, w http.Respons
 			ctx = context.WithValue(ctx, "net/http.ResponseWriter", w)
 			ctx = context.WithValue(ctx, "*net/http.Request", r)
 
-			request.Context = ctx
-			stream := streamingHandlerFunc(&request)
+			stream := wsStream{}
+			request.Context, stream.cancel = context.WithCancel(ctx)
+			stream.responses = streamingHandlerFunc(&request)
 
 			// save it.. so that client can later cancel it...
 			mu.Lock()
@@ -152,7 +158,7 @@ func upgrade(streamingHandlerFunc graphql.ServeGraphQLStreamFunc, w http.Respons
 			// Start a goroutine ot handle the events....
 			go func() {
 				for {
-					r := <-stream.Responses()
+					r := <-stream.responses
 					if r != nil {
 						payload, err := json.Marshal(r)
 						if err != nil {
@@ -166,7 +172,7 @@ func upgrade(streamingHandlerFunc graphql.ServeGraphQLStreamFunc, w http.Respons
 						mu.Unlock()
 
 						writeJSON(OperationMessage{Type: "complete", Id: msg.Id})
-						stream.Close()
+						stream.cancel()
 						return
 					}
 				}
@@ -174,10 +180,10 @@ func upgrade(streamingHandlerFunc graphql.ServeGraphQLStreamFunc, w http.Respons
 
 		case "stop":
 			mu.Lock()
-			stream := streams[msg.Id]
+			stream, ok := streams[msg.Id]
 			mu.Unlock()
-			if stream != nil {
-				stream.Close()
+			if ok {
+				stream.cancel()
 			}
 		}
 	}

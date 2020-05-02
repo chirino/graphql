@@ -62,16 +62,14 @@ func TestClientServeGraphQLStream(t *testing.T) {
 
 	s := httptest.NewServer(&relay.Handler{
 		ServeGraphQLStream: func(request *graphql.Request) graphql.ResponseStream {
-			result := testStream{
-				responses: make(chan *graphql.Response, 2),
-			}
-			result.responses <- &graphql.Response{
+			result := make(chan *graphql.Response, 2)
+			result <- &graphql.Response{
 				Data: json.RawMessage(`{"hello":"world"}`),
 			}
-			result.responses <- &graphql.Response{
+			result <- &graphql.Response{
 				Data: json.RawMessage(`{"bye":"world"}`),
 			}
-			close(result.responses)
+			close(result)
 			return result
 		},
 	})
@@ -79,10 +77,10 @@ func TestClientServeGraphQLStream(t *testing.T) {
 	defer s.Close()
 	client := relay.NewClient(s.URL)
 	rs := client.ServeGraphQLStream(&graphql.Request{Query: "{hello}"})
-	response := <-rs.Responses()
+	response := <-rs
 	assert.Equal(t, `{"hello":"world"}`, string(response.Data))
-	response = <-rs.Responses()
+	response = <-rs
 	assert.Equal(t, `{"bye":"world"}`, string(response.Data))
-	response = <-rs.Responses()
+	response = <-rs
 	assert.Nil(t, response)
 }

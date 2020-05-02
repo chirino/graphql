@@ -1,7 +1,6 @@
 package graphql_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/chirino/graphql"
@@ -18,7 +17,6 @@ func BenchmarkStarwarsQuery(b *testing.B) {
 	// Lets build a query that throws the kitchen skink at the query engine.
 	// (we grab a little bit of all the tests we have so far)
 	request := &graphql.Request{
-		Context:       context.Background(),
 		OperationName: "",
 		Query: `
 	query HeroNameAndFriends($episode: Episode, $withoutFriends: Boolean!, $withFriends: Boolean!) {

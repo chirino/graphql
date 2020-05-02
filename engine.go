@@ -75,52 +75,43 @@ func (r responseStream) CloseWithErr(err error) responseStream {
 }
 
 func (engine *Engine) ServeGraphQLStream(request *Request) ResponseStream {
-	ctx := request.Context
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	cancelCtx, cancelFunc := context.WithCancel(ctx)
-	ctx = cancelCtx
-
-	stream := responseStream{
-		cancel:    cancelFunc,
-		responses: make(chan *Response, 1),
-	}
 
 	doc := &schema.QueryDocument{}
 	qErr := doc.Parse(request.Query)
 	if qErr != nil {
-		return stream.CloseWithErr(qErr)
+		return NewErrStream(qErr)
 	}
 
 	validationFinish := engine.ValidationTracer.TraceValidation()
 	errs := validation.Validate(engine.Schema, doc, engine.MaxDepth)
 	validationFinish(errs)
 	if len(errs) != 0 {
-		return stream.CloseWithErr(errs.Error())
+		return NewErrStream(qErr)
 	}
 
 	op, err := doc.GetOperation(request.OperationName)
 	if err != nil {
-		return stream.CloseWithErr(err)
+		return NewErrStream(qErr)
 	}
 
 	varTypes := make(map[string]*introspection.Type)
 	for _, v := range op.Vars {
 		t, err := schema.ResolveType(v.Type, engine.Schema.Resolve)
 		if err != nil {
-			return stream.CloseWithErr(err)
+			return NewErrStream(qErr)
 		}
 		varTypes[v.Name] = introspection.WrapType(t)
 	}
 
+	ctx := request.GetContext()
 	traceContext, finish := engine.Tracer.TraceQuery(ctx, request.Query, request.OperationName, request.Variables, varTypes)
 
 	variables, err := request.VariablesAsMap()
 	if err != nil {
-		return stream.CloseWithErr(err)
+		return NewErrStream(qErr)
 	}
 
+	responses := make(chan *Response, 1)
 	r := exec.Execution{
 		Query:          request.Query,
 		Vars:           variables,
@@ -135,20 +126,20 @@ func (engine *Engine) ServeGraphQLStream(request *Request) ResponseStream {
 		Root:           engine.Root,
 		Context:        traceContext,
 		FireSubscriptionEventFunc: func(d json.RawMessage, e qerrors.ErrorList) {
-			stream.responses <- &Response{
+			responses <- &Response{
 				Data:   d,
 				Errors: e,
 			}
 		},
 		FireSubscriptionCloseFunc: func() {
-			close(stream.responses)
+			close(responses)
 		},
 	}
 
 	err = r.Execute()
 	if err != nil {
-		return stream.CloseWithErr(err)
+		return NewErrStream(qErr)
 	}
 	finish(errs)
-	return stream
+	return responses
 }

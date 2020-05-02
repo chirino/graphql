@@ -8,11 +8,23 @@ import (
 )
 
 type Request struct {
-	Context       context.Context `json:"-"`
-	Query         string          `json:"query,omitempty"`
-	OperationName string          `json:"operationName,omitempty"`
+	// Optional Context to use on the request.  Required if caller wants to cancel long-running \
+	// operations like subscriptions.
+	Context context.Context `json:"-"`
+	// Query is the graphql query document to execute
+	Query string `json:"query,omitempty"`
+	// OperationName is the name of the operation in the query document to execute
+	OperationName string `json:"operationName,omitempty"`
 	// Variables can be set to a json.RawMessage or a map[string]interface{}
 	Variables interface{} `json:"variables,omitempty"`
+}
+
+func (r Request) GetContext() (ctx context.Context) {
+	ctx = r.Context
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return
 }
 
 func (r *Request) VariablesAsMap() (map[string]interface{}, error) {
