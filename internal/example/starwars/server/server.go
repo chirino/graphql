@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/chirino/graphql/internal/deprecated"
-	"github.com/chirino/graphql/relay"
-	"github.com/friendsofgo/graphiql"
 	"log"
 	"net/http"
+
+	"github.com/chirino/graphql/httpgql"
+	"github.com/chirino/graphql/internal/deprecated"
+	"github.com/friendsofgo/graphiql"
 
 	"github.com/chirino/graphql/internal/example/starwars"
 )
@@ -18,7 +19,7 @@ func init() {
 }
 
 func main() {
-	http.Handle("/query", &relay.Handler{ServeGraphQLStream: schema.Engine.ServeGraphQLStream})
+	http.Handle("/query", &httpgql.Handler{ServeGraphQLStream: schema.Engine.ServeGraphQLStream})
 	graphiql, _ := graphiql.NewGraphiqlHandler("/query")
 	http.Handle("/", graphiql)
 

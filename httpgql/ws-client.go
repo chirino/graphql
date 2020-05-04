@@ -1,71 +1,14 @@
-package relay
+package httpgql
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	neturl "net/url"
-	"strings"
-	"sync"
+	url2 "net/url"
 	"time"
 
 	"github.com/chirino/graphql"
-	"github.com/chirino/graphql/qerrors"
 	"github.com/gorilla/websocket"
 )
-
-type Client struct {
-	URL           string
-	HTTPClient    *http.Client
-	connections   map[string]*connection
-	requestHeader http.Header
-	mu            sync.Mutex
-}
-
-func NewClient(url string) *Client {
-	return &Client{
-		URL:           url,
-		connections:   map[string]*connection{},
-		requestHeader: http.Header{},
-	}
-}
-
-func (client *Client) ServeGraphQL(request *graphql.Request) *graphql.Response {
-	c := client.HTTPClient
-	if c == nil {
-		c = &http.Client{}
-	}
-
-	response := graphql.NewResponse()
-	body, err := json.Marshal(request)
-	if err != nil {
-		return response.AddError(err)
-	}
-
-	req, err := http.NewRequestWithContext(request.GetContext(), http.MethodPost, client.URL, bytes.NewReader(body))
-	if err != nil {
-		return response.AddError(err)
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := c.Do(req)
-	if err != nil {
-		return response.AddError(err)
-	}
-	defer resp.Body.Close()
-
-	contentType := resp.Header.Get("Content-Type")
-	if strings.HasPrefix(contentType, "application/json") {
-		err = json.NewDecoder(resp.Body).Decode(&response)
-		if err != nil {
-			return response.AddError(err)
-		}
-		return response
-	}
-
-	return response.AddError(qerrors.Errorf("invalid content type: %s", contentType))
-}
 
 func (client *Client) ServeGraphQLStream(request *graphql.Request) graphql.ResponseStream {
 	url := client.URL
@@ -75,15 +18,15 @@ func (client *Client) ServeGraphQLStream(request *graphql.Request) graphql.Respo
 	client.mu.Unlock()
 
 	if c == nil {
-		c = &connection{
+		c = &wsConnection{
 			client:          client,
 			url:             url,
 			serviceCommands: make(chan interface{}),
-			streams:         map[int64]*stream{},
+			streams:         map[int64]*wsOperation{},
 			idleFlag:        false,
 		}
 
-		parsed, err := neturl.Parse(client.URL)
+		parsed, err := url2.Parse(client.URL)
 		if err != nil {
 			return graphql.NewErrStream(err)
 		}
@@ -128,7 +71,7 @@ func (client *Client) ServeGraphQLStream(request *graphql.Request) graphql.Respo
 	return c.ServeGraphQLStream(request)
 }
 
-type connection struct {
+type wsConnection struct {
 	client          *Client
 	url             string
 	serviceCommands chan interface{}
@@ -136,18 +79,18 @@ type connection struct {
 
 	// these fields should only be mutated by the service* methods.
 	nextStreamId int64
-	streams      map[int64]*stream
+	streams      map[int64]*wsOperation
 	idleFlag     bool
 	err          error
 }
 
-func (c *connection) Close() {
+func (c *wsConnection) Close() {
 	c.serviceCommands <- "close"
 	close(c.serviceCommands)
 }
 
-func (c *connection) ServeGraphQLStream(request *graphql.Request) graphql.ResponseStream {
-	stream := &stream{
+func (c *wsConnection) ServeGraphQLStream(request *graphql.Request) graphql.ResponseStream {
+	stream := &wsOperation{
 		request:         request,
 		responseChannel: make(chan *graphql.Response, 1),
 	}
@@ -155,7 +98,7 @@ func (c *connection) ServeGraphQLStream(request *graphql.Request) graphql.Respon
 	return stream.responseChannel
 }
 
-func service(c *connection) {
+func service(c *wsConnection) {
 	ticker := time.NewTicker(60 * time.Second)
 	defer func() {
 		c.websocket.Close()
@@ -189,12 +132,12 @@ func service(c *connection) {
 		select {
 		case command := <-c.serviceCommands:
 			switch command := command.(type) {
-			case *stream:
+			case *wsOperation:
 				c.idleFlag = false
-				serviceOpenStream(c, command)
-			case closeStream:
+				serviceOpenOperation(c, command)
+			case closeOperation:
 				c.idleFlag = false
-				serviceCloseStream(c, command)
+				serviceCloseOperation(c, command)
 			case OperationMessage:
 				c.idleFlag = false
 				serviceRead(c, command)
@@ -234,7 +177,7 @@ func service(c *connection) {
 
 }
 
-func serviceClose(c *connection) {
+func serviceClose(c *wsConnection) {
 	err := c.websocket.WriteJSON(OperationMessage{
 		Type: "connection_terminate",
 	})
@@ -249,17 +192,17 @@ func serviceClose(c *connection) {
 	}
 }
 
-type stream struct {
+type wsOperation struct {
 	id              int64
 	request         *graphql.Request
 	responseChannel chan *graphql.Response
 }
 
-func (s *stream) Responses() <-chan *graphql.Response {
+func (s *wsOperation) Responses() <-chan *graphql.Response {
 	return s.responseChannel
 }
 
-func serviceOpenStream(c *connection, stream *stream) {
+func serviceOpenOperation(c *wsConnection, stream *wsOperation) {
 	payload, err := json.Marshal(stream.request)
 	if err != nil {
 		stream.responseChannel <- graphql.NewResponse().AddError(err)
@@ -283,11 +226,11 @@ func serviceOpenStream(c *connection, stream *stream) {
 	c.streams[streamId] = stream
 }
 
-type closeStream struct {
-	stream *stream
+type closeOperation struct {
+	stream *wsOperation
 }
 
-func serviceCloseStream(c *connection, command closeStream) {
+func serviceCloseOperation(c *wsConnection, command closeOperation) {
 	id := command.stream.id
 	if c.streams[id] == nil {
 		return // it was already closed...
@@ -301,23 +244,23 @@ func serviceCloseStream(c *connection, command closeStream) {
 	})
 }
 
-func serviceError(c *connection, err error) {
+func serviceError(c *wsConnection, err error) {
 	for _, s := range c.streams {
 		r := &graphql.Response{}
 		r.AddError(err)
 		s.responseChannel <- r
 		close(s.responseChannel)
 	}
-	c.streams = map[int64]*stream{}
+	c.streams = map[int64]*wsOperation{}
 	c.err = err
 }
 
-func serviceRead(c *connection, command OperationMessage) {
+func serviceRead(c *wsConnection, command OperationMessage) {
 
 	switch command.Type {
 	case "data":
 		id := command.Id.(float64)
-		stream := serviceStream(c, int64(id))
+		stream := serviceOperation(c, int64(id))
 		if stream == nil {
 			return
 		}
@@ -330,7 +273,7 @@ func serviceRead(c *connection, command OperationMessage) {
 
 	case "complete":
 		id := command.Id.(float64)
-		stream := serviceStream(c, int64(id))
+		stream := serviceOperation(c, int64(id))
 		if stream == nil {
 			return
 		}
@@ -346,7 +289,7 @@ func serviceRead(c *connection, command OperationMessage) {
 	}
 }
 
-func serviceStream(c *connection, id int64) *stream {
+func serviceOperation(c *wsConnection, id int64) *wsOperation {
 	stream := c.streams[id]
 	if stream == nil {
 		serviceError(c, fmt.Errorf("invalid operation id received: %v", id))

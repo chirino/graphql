@@ -1,4 +1,4 @@
-package relay_test
+package httpsrv_test
 
 import (
 	"encoding/json"
@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/chirino/graphql/httpgql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/chirino/graphql"
 	"github.com/chirino/graphql/internal/example/starwars"
-	"github.com/chirino/graphql/relay"
 )
 
 func TestEngineAPIServeHTTP(t *testing.T) {
@@ -23,7 +23,7 @@ func TestEngineAPIServeHTTP(t *testing.T) {
 
 	require.NoError(t, err)
 	engine.Root = &starwars.Resolver{}
-	h := relay.Handler{ServeGraphQLStream: engine.ServeGraphQLStream}
+	h := httpgql.Handler{ServeGraphQLStream: engine.ServeGraphQLStream}
 
 	h.ServeHTTP(w, r)
 
@@ -35,7 +35,7 @@ func TestEngineAPIServeHTTP(t *testing.T) {
 
 func TestClientServeGraphQL(t *testing.T) {
 
-	s := httptest.NewServer(&relay.Handler{
+	s := httptest.NewServer(&httpgql.Handler{
 		ServeGraphQL: func(request *graphql.Request) *graphql.Response {
 			return &graphql.Response{
 				Data: json.RawMessage(`{"hello":"world"}`),
@@ -43,7 +43,7 @@ func TestClientServeGraphQL(t *testing.T) {
 		},
 	})
 	defer s.Close()
-	client := relay.NewClient(s.URL)
+	client := httpgql.NewClient(s.URL)
 	response := client.ServeGraphQL(&graphql.Request{Query: "{hello}"})
 	assert.Equal(t, `{"hello":"world"}`, string(response.Data))
 }
@@ -60,7 +60,7 @@ func (t testStream) Responses() <-chan *graphql.Response {
 
 func TestClientServeGraphQLStream(t *testing.T) {
 
-	s := httptest.NewServer(&relay.Handler{
+	s := httptest.NewServer(&httpgql.Handler{
 		ServeGraphQLStream: func(request *graphql.Request) graphql.ResponseStream {
 			result := make(chan *graphql.Response, 2)
 			result <- &graphql.Response{
@@ -75,7 +75,7 @@ func TestClientServeGraphQLStream(t *testing.T) {
 	})
 
 	defer s.Close()
-	client := relay.NewClient(s.URL)
+	client := httpgql.NewClient(s.URL)
 	rs := client.ServeGraphQLStream(&graphql.Request{Query: "{hello}"})
 	response := <-rs
 	assert.Equal(t, `{"hello":"world"}`, string(response.Data))

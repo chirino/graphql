@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/chirino/graphql"
-	"github.com/chirino/graphql/graphiql"
-	"github.com/chirino/graphql/relay"
-	"github.com/chirino/graphql/resolvers"
 	"log"
 	"net/http"
 	"reflect"
 	"time"
+
+	"github.com/chirino/graphql"
+	"github.com/chirino/graphql/graphiql"
+	"github.com/chirino/graphql/httpgql"
+	"github.com/chirino/graphql/resolvers"
 )
 
 type root struct {
@@ -52,7 +53,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	http.Handle("/graphql", &relay.Handler{ServeGraphQLStream: engine.ServeGraphQLStream})
+	http.Handle("/graphql", &httpgql.Handler{ServeGraphQLStream: engine.ServeGraphQLStream})
 	fmt.Println("GraphQL service running at http://localhost:8080/graphql")
 
 	http.Handle("/", graphiql.New("ws://localhost:8080/graphql", true))
