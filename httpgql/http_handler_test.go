@@ -1,4 +1,4 @@
-package httpsrv_test
+package httpgql_test
 
 import (
 	"encoding/json"
