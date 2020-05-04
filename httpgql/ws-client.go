@@ -26,17 +26,10 @@ func (client *Client) ServeGraphQLStream(request *graphql.Request) graphql.Respo
 			idleFlag:        false,
 		}
 
-		parsed, err := url2.Parse(client.URL)
+		wsUrl, err := ToWsURL(client.URL)
 		if err != nil {
 			return graphql.NewErrStream(err)
 		}
-		switch parsed.Scheme {
-		case "http":
-			parsed.Scheme = "ws"
-		case "https":
-			parsed.Scheme = "wss"
-		}
-		wsUrl := parsed.String()
 
 		headers := client.requestHeader.Clone()
 		headers.Set("Sec-WebSocket-Protocol", "graphql-ws")
@@ -69,6 +62,21 @@ func (client *Client) ServeGraphQLStream(request *graphql.Request) graphql.Respo
 		client.mu.Unlock()
 	}
 	return c.ServeGraphQLStream(request)
+}
+
+func ToWsURL(url string) (string, error) {
+	parsed, err := url2.Parse(url)
+	if err != nil {
+		return "", err
+	}
+	switch parsed.Scheme {
+	case "http":
+		parsed.Scheme = "ws"
+	case "https":
+		parsed.Scheme = "wss"
+	}
+	wsUrl := parsed.String()
+	return wsUrl, nil
 }
 
 type wsConnection struct {

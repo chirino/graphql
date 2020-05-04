@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"html/template"
 	"net/http"
+
+	"github.com/chirino/graphql/httpgql"
 )
 
 type Handler string
@@ -158,6 +160,13 @@ func New(url string, ws bool) Handler {
 	type Options struct {
 		WebSocket bool
 		URL       string
+	}
+
+	if ws {
+		url, err = httpgql.ToWsURL(url)
+		if err != nil {
+			panic(err)
+		}
 	}
 	err = parse.Execute(buf, Options{
 		WebSocket: ws,
