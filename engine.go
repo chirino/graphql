@@ -77,28 +77,28 @@ func (r responseStream) CloseWithErr(err error) responseStream {
 func (engine *Engine) ServeGraphQLStream(request *Request) ResponseStream {
 
 	doc := &schema.QueryDocument{}
-	qErr := doc.Parse(request.Query)
-	if qErr != nil {
-		return NewErrStream(qErr)
+	err := doc.Parse(request.Query)
+	if err != nil {
+		return NewErrStream(err)
 	}
 
 	validationFinish := engine.ValidationTracer.TraceValidation()
 	errs := validation.Validate(engine.Schema, doc, engine.MaxDepth)
 	validationFinish(errs)
 	if len(errs) != 0 {
-		return NewErrStream(qErr)
+		return NewErrStream(errs.Error())
 	}
 
 	op, err := doc.GetOperation(request.OperationName)
 	if err != nil {
-		return NewErrStream(qErr)
+		return NewErrStream(err)
 	}
 
 	varTypes := make(map[string]*introspection.Type)
 	for _, v := range op.Vars {
 		t, err := schema.ResolveType(v.Type, engine.Schema.Resolve)
 		if err != nil {
-			return NewErrStream(qErr)
+			return NewErrStream(err)
 		}
 		varTypes[v.Name] = introspection.WrapType(t)
 	}
@@ -108,7 +108,7 @@ func (engine *Engine) ServeGraphQLStream(request *Request) ResponseStream {
 
 	variables, err := request.VariablesAsMap()
 	if err != nil {
-		return NewErrStream(qErr)
+		return NewErrStream(err)
 	}
 
 	responses := make(chan *Response, 1)
@@ -138,7 +138,7 @@ func (engine *Engine) ServeGraphQLStream(request *Request) ResponseStream {
 
 	err = r.Execute()
 	if err != nil {
-		return NewErrStream(qErr)
+		return NewErrStream(err)
 	}
 	finish(errs)
 	return responses

@@ -9,13 +9,13 @@ import (
 
 // http://facebook.github.io/graphql/draft/#InputValueDefinition
 type InputValue struct {
+	Loc        qerrors.Location
 	Name       string
 	NameLoc    Location
 	Type       Type
+	TypeLoc    qerrors.Location
 	Default    Literal
 	Desc       Description
-	Loc        qerrors.Location
-	TypeLoc    qerrors.Location
 	Directives DirectiveList
 }
 
