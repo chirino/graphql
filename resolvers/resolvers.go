@@ -10,7 +10,7 @@ import (
 
 type ExecutionContext interface {
 	GetRoot() interface{}
-	FireSubscriptionEvent(value reflect.Value)
+	FireSubscriptionEvent(value reflect.Value, err error)
 	FireSubscriptionClose()
 	GetSchema() *schema.Schema
 	GetContext() context.Context

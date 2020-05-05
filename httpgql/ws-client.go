@@ -206,10 +206,6 @@ type wsOperation struct {
 	responseChannel chan *graphql.Response
 }
 
-func (s *wsOperation) Responses() <-chan *graphql.Response {
-	return s.responseChannel
-}
-
 func serviceOpenOperation(c *wsConnection, stream *wsOperation) {
 	payload, err := json.Marshal(stream.request)
 	if err != nil {

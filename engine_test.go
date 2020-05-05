@@ -7,6 +7,7 @@ import (
 	"github.com/chirino/graphql/internal/gqltesting"
 	"github.com/chirino/graphql/resolvers"
 	"github.com/chirino/graphql/schema"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"reflect"
@@ -485,7 +486,26 @@ func (m *MyMutation) Hello(ctx resolvers.ExecutionContext, args struct{ Duration
 				return
 			case <-time.After(time.Duration(args.Duration) * time.Millisecond):
 				// every few duration ms.. fire a subscription event.
-				ctx.FireSubscriptionEvent(reflect.ValueOf(fmt.Sprintf("Hello: %d", counter)))
+				ctx.FireSubscriptionEvent(reflect.ValueOf(fmt.Sprintf("Hello: %d", counter)), nil)
+				counter += args.Duration
+			}
+		}
+	}()
+}
+
+func (m *MyMutation) HelloThenError(ctx resolvers.ExecutionContext, args struct{ Duration int }) {
+	go func() {
+		counter := args.Duration
+		for {
+			select {
+			// Please use the context to know when the subscription is canceled.
+			case <-ctx.GetContext().Done():
+				ctx.FireSubscriptionClose()
+				return
+			case <-time.After(time.Duration(args.Duration) * time.Millisecond):
+				// every few duration ms.. fire a subscription event.
+				ctx.FireSubscriptionEvent(reflect.ValueOf(fmt.Sprintf("Hello: %d", counter)), nil)
+				ctx.FireSubscriptionEvent(reflect.Value{}, errors.New("Error from Hello!"))
 				counter += args.Duration
 			}
 		}
@@ -521,4 +541,35 @@ type MySubscription {
 
 	next = <-stream
 	assert.Nil(t, next)
+}
+
+func TestSubscriptionError(t *testing.T) {
+	engine := graphql.New()
+	root := &MyMutation{}
+	engine.Root = root
+
+	err := engine.Schema.Parse(`
+schema {
+    subscription: MySubscription
+}
+type MySubscription {
+	helloThenError(duration: Int!): String
+}
+`)
+	require.NoError(t, err)
+
+	ctx, streamClose := context.WithCancel(context.Background())
+	stream := engine.ServeGraphQLStream(&graphql.Request{Context: ctx, Query: `subscription{ helloThenError(duration:10) }`})
+	next := <-stream
+	assert.NoError(t, next.Error())
+	assert.Equal(t, `{"helloThenError":"Hello: 10"}`, string(next.Data))
+
+	next = <-stream
+	require.Error(t, next.Error())
+	assert.Equal(t, `1 errors occurred:
+	 * graphql: Error from Hello!
+
+`, next.Error().Error())
+
+	streamClose() // close out the subscription...
 }

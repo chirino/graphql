@@ -240,7 +240,7 @@ func (this *Execution) Execute() error {
 }
 
 // This is called by subscription resolvers to send out a subscription event.
-func (this *Execution) FireSubscriptionEvent(value reflect.Value) {
+func (this *Execution) FireSubscriptionEvent(value reflect.Value, err error) {
 	if this.rootFields == nil {
 		panic("the FireSubscriptionEvent method should only be called when triggering events for subscription fields")
 	}
@@ -255,16 +255,22 @@ func (this *Execution) FireSubscriptionEvent(value reflect.Value) {
 		return
 	}
 
+	// Change the resolution function to that it returns the fired event
 	selected := this.rootFields.First.Value.(*SelectionResolver)
 	selected.Resolution = func() (reflect.Value, error) {
 		return value, nil
 	}
 	this.data = &bytes.Buffer{}
 	this.errs = qerrors.ErrorList{}
-	this.limiter = make(chan byte, this.MaxParallelism)
-	this.limiter <- 1
-	defer func() { <-this.limiter }()
-	this.recursiveExecute(this.Context, nil, this.rootFields)
+
+	if err != nil {
+		this.errs = qerrors.AppendErrors(this.errs, err)
+	} else {
+		this.limiter = make(chan byte, this.MaxParallelism)
+		this.limiter <- 1
+		defer func() { <-this.limiter }()
+		this.recursiveExecute(this.Context, nil, this.rootFields)
+	}
 
 	this.FireSubscriptionEventFunc(this.data.Bytes(), this.errs)
 }

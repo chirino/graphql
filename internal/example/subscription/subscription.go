@@ -27,7 +27,7 @@ func (m *root) Hello(ctx resolvers.ExecutionContext, args struct{ Duration int }
 				return
 			case <-time.After(time.Duration(args.Duration) * time.Millisecond):
 				// every few duration ms.. fire a subscription event.
-				ctx.FireSubscriptionEvent(reflect.ValueOf(fmt.Sprintf("Hello: %d", counter)))
+				ctx.FireSubscriptionEvent(reflect.ValueOf(fmt.Sprintf("Hello: %d", counter)), nil)
 				counter += args.Duration
 			}
 		}

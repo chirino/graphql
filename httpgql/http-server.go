@@ -11,13 +11,6 @@ import (
 )
 
 type Handler struct {
-
-	// Engine points at the graphql.Engine requests will be issued against.
-	//
-	// Deprecated: Engine exists for historical compatibility  and should not be used.
-	// set HandlerFunc or StreamingHandlerFunc instead.
-	Engine *graphql.Engine
-
 	ServeGraphQL       graphql.ServeGraphQLFunc
 	ServeGraphQLStream graphql.ServeGraphQLStreamFunc
 
@@ -35,9 +28,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	handlerFunc := h.ServeGraphQL
 	streamingHandlerFunc := h.ServeGraphQLStream
 
-	if streamingHandlerFunc == nil && h.Engine != nil {
-		streamingHandlerFunc = h.Engine.ServeGraphQLStream
-	}
 	if handlerFunc == nil && streamingHandlerFunc != nil {
 		handlerFunc = streamingHandlerFunc.ServeGraphQL
 	}
