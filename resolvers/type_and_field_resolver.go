@@ -1,23 +1,23 @@
 package resolvers
 
-type TypeAndFieldResolver map[typeAndFieldResolverKey]Func
+type TypeAndFieldResolver map[TypeAndFieldKey]Func
 
-type typeAndFieldResolverKey struct {
-	typeName string
-	field    string
+type TypeAndFieldKey struct {
+	Type  string
+	Field string
 }
 
 func (r TypeAndFieldResolver) Set(typeName string, field string, f Func) {
-	r[typeAndFieldResolverKey{typeName: typeName, field: field}] = f
+	r[TypeAndFieldKey{Type: typeName, Field: field}] = f
 }
 
 func (r TypeAndFieldResolver) Resolve(request *ResolveRequest, next Resolution) Resolution {
 	if request.ParentType == nil {
 		return next
 	}
-	f := r[typeAndFieldResolverKey{
-		typeName: request.ParentType.String(),
-		field:    request.Field.Name,
+	f := r[TypeAndFieldKey{
+		Type:  request.ParentType.String(),
+		Field: request.Field.Name,
 	}]
 	if f == nil {
 		return next
