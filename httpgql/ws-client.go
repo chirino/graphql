@@ -1,6 +1,7 @@
 package httpgql
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	url2 "net/url"
@@ -9,6 +10,10 @@ import (
 	"github.com/chirino/graphql"
 	"github.com/gorilla/websocket"
 )
+
+func (client *Client) Exec(ctx context.Context, result interface{}, query string, args ...interface{}) error {
+	return graphql.Exec(client.ServeGraphQL, ctx, result, query, args...)
+}
 
 func (client *Client) ServeGraphQLStream(request *graphql.Request) graphql.ResponseStream {
 	url := client.URL
