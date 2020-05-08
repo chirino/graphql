@@ -5,20 +5,11 @@ import (
 
 	"github.com/chirino/graphql"
 	"github.com/chirino/graphql/internal/example/starwars"
+	"github.com/chirino/graphql/schema"
 	"github.com/stretchr/testify/require"
 )
 
-func BenchmarkStarwarsQuery(b *testing.B) {
-	engine := graphql.New()
-	engine.Root = &starwars.Resolver{}
-	err := engine.Schema.Parse(starwars.Schema)
-	require.NoError(b, err)
-
-	// Lets build a query that throws the kitchen skink at the query engine.
-	// (we grab a little bit of all the tests we have so far)
-	request := &graphql.Request{
-		OperationName: "",
-		Query: `
+var query = `
 	query HeroNameAndFriends($episode: Episode, $withoutFriends: Boolean!, $withFriends: Boolean!) {
 		hero {
 			id
@@ -140,7 +131,19 @@ func BenchmarkStarwarsQuery(b *testing.B) {
 			name
 		}
 	}	
-	`,
+	`
+
+func BenchmarkParallelExecuteStarwarsQuery(b *testing.B) {
+	engine := graphql.New()
+	engine.Root = &starwars.Resolver{}
+	err := engine.Schema.Parse(starwars.Schema)
+	require.NoError(b, err)
+
+	// Lets build a query that throws the kitchen skink at the query engine.
+	// (we grab a little bit of all the tests we have so far)
+	request := &graphql.Request{
+		OperationName: "",
+		Query:         query,
 		Variables: map[string]interface{}{
 			"episode":        "JEDI",
 			"withoutFriends": true,
@@ -157,6 +160,20 @@ func BenchmarkStarwarsQuery(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			engine.ServeGraphQL(request)
+		}
+	})
+
+}
+func BenchmarkParallelParseStarwarsQuery(b *testing.B) {
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			document := schema.QueryDocument{}
+			err := document.Parse(query)
+			if err != nil {
+				panic(err)
+			}
 		}
 	})
 }
