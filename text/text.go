@@ -14,7 +14,7 @@ func BulletIndent(bullet string, text string) string {
 }
 
 func Indent(text, indent string) string {
-	if text[len(text)-1:] == "\n" {
+	if len(text) != 0 && text[len(text)-1:] == "\n" {
 		result := ""
 		for _, j := range strings.Split(text[:len(text)-1], "\n") {
 			result += indent + j + "\n"
