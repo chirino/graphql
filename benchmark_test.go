@@ -174,6 +174,7 @@ func BenchmarkParallelParseStarwarsQuery(b *testing.B) {
 			if err != nil {
 				panic(err)
 			}
+			document.Close()
 		}
 	})
 }

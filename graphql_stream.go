@@ -33,11 +33,11 @@ func (f ServeGraphQLStreamFunc) ServeGraphQL(request *Request) *Response {
 	stream := f(request)
 	request.GetContext()
 
-	defer cancel()
 	response := <-stream
 	if response == nil {
 		response = &Response{}
 		response.AddError(qerrors.New("response stream closed.").WithStack())
 	}
+	cancel()
 	return response
 }

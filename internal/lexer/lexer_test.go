@@ -8,7 +8,7 @@ import (
 )
 
 func TestConsumeDescription(t *testing.T) {
-	lex := lexer.NewLexer(`
+	lex := lexer.Get(`
 # comment
 "Comment line 1"
 ,,,,,, # Commas are insignificant
@@ -24,7 +24,7 @@ type Hello {
 }
 
 func TestConsumeBlockDescription(t *testing.T) {
-	lex := lexer.NewLexer(`
+	lex := lexer.Get(`
 """
 Comment line 1
 """

@@ -2,6 +2,7 @@ package schema
 
 import (
 	"fmt"
+	"sync"
 	"text/scanner"
 
 	"github.com/chirino/graphql/internal/lexer"
@@ -125,14 +126,18 @@ func (t InlineFragment) Location() qerrors.Location { return t.Loc }
 func (t FragmentSpread) Location() qerrors.Location { return t.Loc }
 
 func (doc *QueryDocument) ParseWithDescriptions(queryString string) error {
-	l := lexer.NewLexer(queryString)
-	return l.CatchSyntaxError(func() { parseDocument(l, doc) })
+	l := lexer.Get(queryString)
+	err := l.CatchSyntaxError(func() { parseDocument(l, doc) })
+	lexer.Put(l)
+	return err
 }
 
 func (doc *QueryDocument) Parse(queryString string) error {
-	l := lexer.NewLexer(queryString)
+	l := lexer.Get(queryString)
 	l.SkipDescriptions = true
-	return l.CatchSyntaxError(func() { parseDocument(l, doc) })
+	err := l.CatchSyntaxError(func() { parseDocument(l, doc) })
+	lexer.Put(l)
+	return err
 }
 
 func parseDocument(l *lexer.Lexer, d *QueryDocument) {
@@ -219,8 +224,36 @@ func parseSelection(l *lexer.Lexer) Selection {
 	return parseField(l)
 }
 
+var fieldPool = sync.Pool{
+	New: func() interface{} { return new(FieldSelection) },
+}
+
+func returnFieldsToPool(sl SelectionList) {
+	for _, s := range sl {
+		switch s := s.(type) {
+		case *FieldSelection:
+			returnFieldsToPool(s.Selections)
+			*s = FieldSelection{}
+			fieldPool.Put(s)
+		case *InlineFragment:
+			returnFieldsToPool(s.Selections)
+		}
+	}
+}
+
+func (d *QueryDocument) Close() {
+	for _, o := range d.Operations {
+		returnFieldsToPool(o.Selections)
+	}
+	d.Operations = OperationList{}
+	for _, f := range d.Fragments {
+		returnFieldsToPool(f.Selections)
+	}
+	d.Fragments = FragmentList{}
+}
+
 func parseField(l *lexer.Lexer) *FieldSelection {
-	f := &FieldSelection{}
+	f := fieldPool.Get().(*FieldSelection)
 	f.Alias, f.AliasLoc = l.ConsumeIdentInternWithLoc()
 	f.Name = f.Alias
 	if l.Peek() == ':' {

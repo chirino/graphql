@@ -145,7 +145,7 @@ func compareObjects(t *testing.T, expected, actual *Object) {
 func setup(t *testing.T, def string) *lexer.Lexer {
 	t.Helper()
 
-	lex := lexer.NewLexer(def)
+	lex := lexer.Get(def)
 	lex.Consume()
 
 	return lex

@@ -369,13 +369,12 @@ func New() *Schema {
 
 // Parse the schema string.
 func (s *Schema) Parse(schemaString string) error {
-	l := lexer.NewLexer(schemaString)
-
+	l := lexer.Get(schemaString)
 	err := l.CatchSyntaxError(func() { parseSchema(s, l) })
+	lexer.Put(l)
 	if err != nil {
 		return err
 	}
-
 	return s.ResolveTypes()
 }
 

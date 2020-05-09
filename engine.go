@@ -133,6 +133,7 @@ func (engine *Engine) ServeGraphQLStream(request *Request) ResponseStream {
 		},
 		FireSubscriptionCloseFunc: func() {
 			close(responses)
+			doc.Close()
 		},
 	}
 

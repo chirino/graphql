@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/chirino/graphql/internal/scanner"
 	"github.com/chirino/graphql/qerrors"
@@ -14,15 +15,25 @@ type syntaxError string
 type Location = qerrors.Location
 
 type Lexer struct {
-	sc               *scanner.Scanner
+	sc               scanner.Scanner
 	next             rune
 	SkipDescriptions bool
 }
 
-func NewLexer(s string) *Lexer {
-	sc := &scanner.Scanner{}
-	sc.Init(strings.NewReader(s))
-	return &Lexer{sc: sc}
+var lexerPool = sync.Pool{
+	New: func() interface{} { return new(Lexer) },
+}
+
+func Put(l *Lexer) {
+	l.sc.TokBuf.Reset()
+	l.SkipDescriptions = false
+	lexerPool.Put(l)
+}
+
+func Get(s string) *Lexer {
+	l := lexerPool.Get().(*Lexer)
+	l.sc.Init(strings.NewReader(s))
+	return l
 }
 
 func (l *Lexer) CatchSyntaxError(f func()) (errRes error) {

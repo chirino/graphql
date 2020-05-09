@@ -106,7 +106,7 @@ type Scanner struct {
 	// Typically, token text is stored completely in srcBuf, but in general
 	// the token text's head may be buffered in tokBuf while the token text's
 	// tail is stored in srcBuf.
-	tokBuf bytes.Buffer // token text head that is not in srcBuf anymore
+	TokBuf bytes.Buffer // token text head that is not in srcBuf anymore
 	tokPos int          // token text tail position (srcBuf index); valid if >= 0
 	tokEnd int          // token text tail end (srcBuf index)
 
@@ -184,7 +184,7 @@ func (s *Scanner) next() rune {
 			// not enough bytes: read some more, but first
 			// save away token text if any
 			if s.tokPos >= 0 {
-				s.tokBuf.Write(s.srcBuf[s.tokPos:s.srcPos])
+				s.TokBuf.Write(s.srcBuf[s.tokPos:s.srcPos])
 				s.tokPos = 0
 				// s.tokEnd is set by Scan()
 			}
@@ -600,7 +600,7 @@ redo:
 	}
 
 	// start collecting token text
-	s.tokBuf.Reset()
+	s.TokBuf.Reset()
 	s.tokPos = s.srcPos - s.lastCharLen
 
 	// set token position
@@ -708,16 +708,16 @@ func (s *Scanner) TokenText() string {
 	}
 	// s.tokEnd >= s.tokPos
 
-	if s.tokBuf.Len() == 0 {
+	if s.TokBuf.Len() == 0 {
 		// common case: the entire token text is still in srcBuf
 		return string(s.srcBuf[s.tokPos:s.tokEnd])
 	}
 
 	// part of the token text was saved in tokBuf: save the rest in
 	// tokBuf as well and return its content
-	s.tokBuf.Write(s.srcBuf[s.tokPos:s.tokEnd])
+	s.TokBuf.Write(s.srcBuf[s.tokPos:s.tokEnd])
 	s.tokPos = s.tokEnd // ensure idempotency of TokenText() call
-	return s.tokBuf.String()
+	return s.TokBuf.String()
 }
 
 // TokenText returns the interned string corresponding to the most recently scanned token.
@@ -734,16 +734,16 @@ func (s *Scanner) TokenTextIntern() string {
 	}
 	// s.tokEnd >= s.tokPos
 
-	if s.tokBuf.Len() == 0 {
+	if s.TokBuf.Len() == 0 {
 		// common case: the entire token text is still in srcBuf
 		return intern.Bytes(s.srcBuf[s.tokPos:s.tokEnd])
 	}
 
 	// part of the token text was saved in tokBuf: save the rest in
 	// tokBuf as well and return its content
-	s.tokBuf.Write(s.srcBuf[s.tokPos:s.tokEnd])
+	s.TokBuf.Write(s.srcBuf[s.tokPos:s.tokEnd])
 	s.tokPos = s.tokEnd // ensure idempotency of TokenText() call
-	return intern.Bytes(s.tokBuf.Bytes())
+	return intern.Bytes(s.TokBuf.Bytes())
 }
 
 // TokenText returns the string corresponding to the most recently scanned token.
@@ -760,14 +760,14 @@ func (s *Scanner) TokenBytes() []byte {
 	}
 	// s.tokEnd >= s.tokPos
 
-	if s.tokBuf.Len() == 0 {
+	if s.TokBuf.Len() == 0 {
 		// common case: the entire token text is still in srcBuf
 		return s.srcBuf[s.tokPos:s.tokEnd]
 	}
 
 	// part of the token text was saved in tokBuf: save the rest in
 	// tokBuf as well and return its content
-	s.tokBuf.Write(s.srcBuf[s.tokPos:s.tokEnd])
+	s.TokBuf.Write(s.srcBuf[s.tokPos:s.tokEnd])
 	s.tokPos = s.tokEnd // ensure idempotency of TokenText() call
-	return s.tokBuf.Bytes()
+	return s.TokBuf.Bytes()
 }
