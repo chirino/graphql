@@ -6,23 +6,15 @@ mv benchmark-results/latest.txt benchmark-results/previous.txt 2> /dev/null
 go test -c -o benchmark-results/test
 
 #export GODEBUG=allocfreetrace=1,gctrace=1
-#BENCHMARK=BenchmarkParallelParseStarwarsQuery
-BENCHMARK=${1:-.}
 
-results() {
-    if [[  "" == "$1" ]] ; then
-        benchstat benchmark-results/previous.txt benchmark-results/latest.txt
-    else
-        benchstat "$1" benchmark-results/latest.txt
-    fi
-}
+BENCHMARK=${1:-.}
+PREV_BENCHMARK=${2:-benchmark-results/previous.txt}
 
 ./benchmark-results/test  -test.bench=$BENCHMARK | tee benchmark-results/latest.txt
-results $1
 ./benchmark-results/test  -test.bench=$BENCHMARK | tee -a benchmark-results/latest.txt
-results $1
 ./benchmark-results/test  -test.bench=$BENCHMARK | tee -a benchmark-results/latest.txt
-results $1
+benchcmp "$PREV_BENCHMARK" benchmark-results/latest.txt
+benchstat "$PREV_BENCHMARK" benchmark-results/latest.txt
 
 cp "benchmark-results/latest.txt" "benchmark-results/$(date).txt"
 

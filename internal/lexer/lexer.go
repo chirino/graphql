@@ -14,8 +14,9 @@ type syntaxError string
 type Location = qerrors.Location
 
 type Lexer struct {
-	sc   *scanner.Scanner
-	next rune
+	sc               *scanner.Scanner
+	next             rune
+	SkipDescriptions bool
 }
 
 func NewLexer(s string) *Lexer {
@@ -63,28 +64,28 @@ func (l *Lexer) Consume() {
 	}
 }
 
-func (l *Lexer) ConsumeIdent() string {
-	name := l.sc.TokenText()
+func (l *Lexer) ConsumeIdentIntern() string {
+	name := l.sc.TokenTextIntern()
 	l.ConsumeToken(scanner.Ident)
 	return name
 }
 
-func (l *Lexer) ConsumeIdentWithLoc() (string, Location) {
+func (l *Lexer) ConsumeIdentInternWithLoc() (string, Location) {
 	loc := l.Location()
-	name := l.sc.TokenText()
+	name := l.sc.TokenTextIntern()
 	l.ConsumeToken(scanner.Ident)
 	return name, loc
 }
 
 func (l *Lexer) PeekKeyword(keyword string) bool {
-	return l.next == scanner.Ident && l.sc.TokenText() == keyword
+	return l.next == scanner.Ident && l.sc.TokenTextIntern() == keyword
 }
 
 func (l *Lexer) ConsumeKeyword(keywords ...string) string {
-	if l.next != scanner.Ident || !isOneOf(l.sc.TokenText(), keywords...) {
-		l.SyntaxError(fmt.Sprintf("unexpected %q, expecting %q", l.sc.TokenText(), keywords))
+	if l.next != scanner.Ident || !isOneOf(l.sc.TokenTextIntern(), keywords...) {
+		l.SyntaxError(fmt.Sprintf("unexpected %q, expecting %q", l.sc.TokenTextIntern(), keywords))
 	}
-	result := l.sc.TokenText()
+	result := l.sc.TokenTextIntern()
 	l.Consume()
 	return result
 }
@@ -137,14 +138,24 @@ func (d Description) String() string {
 func (l *Lexer) ConsumeDescription() (d Description) {
 	d.Loc = l.Location()
 	if l.Peek() == scanner.String {
-		d.ShowType = ShowStringDescription
-		d.Text = l.ConsumeString()
+		if l.SkipDescriptions {
+			d.ShowType = NoDescription
+			l.ConsumeToken(scanner.String)
+		} else {
+			d.ShowType = ShowStringDescription
+			d.Text = l.ConsumeString()
+		}
 	} else if l.Peek() == scanner.BlockString {
-		d.ShowType = ShowBlockDescription
-		text := l.sc.TokenText()
-		text = text[3 : len(text)-3]
-		l.ConsumeToken(scanner.BlockString)
-		d.Text = text
+		if l.SkipDescriptions {
+			d.ShowType = NoDescription
+			l.ConsumeToken(scanner.BlockString)
+		} else {
+			d.ShowType = ShowBlockDescription
+			text := l.sc.TokenText()
+			text = text[3 : len(text)-3]
+			l.ConsumeToken(scanner.BlockString)
+			d.Text = text
+		}
 	} else {
 		d.ShowType = NoDescription
 	}

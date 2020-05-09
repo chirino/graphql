@@ -124,8 +124,14 @@ func (t FieldSelection) Location() qerrors.Location { return t.NameLoc }
 func (t InlineFragment) Location() qerrors.Location { return t.Loc }
 func (t FragmentSpread) Location() qerrors.Location { return t.Loc }
 
+func (doc *QueryDocument) ParseWithDescriptions(queryString string) error {
+	l := lexer.NewLexer(queryString)
+	return l.CatchSyntaxError(func() { parseDocument(l, doc) })
+}
+
 func (doc *QueryDocument) Parse(queryString string) error {
 	l := lexer.NewLexer(queryString)
+	l.SkipDescriptions = true
 	return l.CatchSyntaxError(func() { parseDocument(l, doc) })
 }
 
@@ -140,7 +146,7 @@ func parseDocument(l *lexer.Lexer, d *QueryDocument) {
 		}
 
 		loc := l.Location()
-		switch x := l.ConsumeIdent(); x {
+		switch x := l.ConsumeIdentIntern(); x {
 		case "query":
 			op := parseOperation(l, Query)
 			op.Loc = loc
@@ -167,7 +173,7 @@ func parseOperation(l *lexer.Lexer, opType OperationType) *Operation {
 	op := &Operation{Type: opType}
 	op.Loc = l.Location()
 	if l.Peek() == scanner.Ident {
-		op.Name, op.NameLoc = l.ConsumeIdentWithLoc()
+		op.Name, op.NameLoc = l.ConsumeIdentInternWithLoc()
 	}
 	op.Directives = ParseDirectives(l)
 	if l.Peek() == '(' {
@@ -188,7 +194,7 @@ func parseOperation(l *lexer.Lexer, opType OperationType) *Operation {
 
 func parseFragment(l *lexer.Lexer) *FragmentDecl {
 	f := &FragmentDecl{}
-	f.Name, f.NameLoc = l.ConsumeIdentWithLoc()
+	f.Name, f.NameLoc = l.ConsumeIdentInternWithLoc()
 	l.ConsumeKeyword("on")
 	f.On = parseTypeName(l)
 	f.Directives = ParseDirectives(l)
@@ -215,11 +221,11 @@ func parseSelection(l *lexer.Lexer) Selection {
 
 func parseField(l *lexer.Lexer) *FieldSelection {
 	f := &FieldSelection{}
-	f.Alias, f.AliasLoc = l.ConsumeIdentWithLoc()
+	f.Alias, f.AliasLoc = l.ConsumeIdentInternWithLoc()
 	f.Name = f.Alias
 	if l.Peek() == ':' {
 		l.ConsumeToken(':')
-		f.Name, f.NameLoc = l.ConsumeIdentWithLoc()
+		f.Name, f.NameLoc = l.ConsumeIdentInternWithLoc()
 	}
 	if l.Peek() == '(' {
 		f.Arguments = ParseArguments(l)
@@ -240,7 +246,7 @@ func parseSpread(l *lexer.Lexer) Selection {
 
 	f := &InlineFragment{Loc: loc}
 	if l.Peek() == scanner.Ident {
-		ident, identLoc := l.ConsumeIdentWithLoc()
+		ident, identLoc := l.ConsumeIdentInternWithLoc()
 		if ident != "on" {
 			fs := &FragmentSpread{
 				Name:    ident,

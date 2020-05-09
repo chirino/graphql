@@ -729,7 +729,7 @@ func parseSchema(s *Schema, l *lexer.Lexer) {
 
 	for l.Peek() != scanner.EOF {
 		desc := l.ConsumeDescription()
-		switch x := l.ConsumeIdent(); x {
+		switch x := l.ConsumeIdentIntern(); x {
 
 		case "schema":
 			s.Directives = ParseDirectives(l)
@@ -737,7 +737,7 @@ func parseSchema(s *Schema, l *lexer.Lexer) {
 			for l.Peek() != '}' {
 				name := OperationType(l.ConsumeKeyword(string(Query), string(Mutation), string(Subscription)))
 				l.ConsumeToken(':')
-				typ := l.ConsumeIdent()
+				typ := l.ConsumeIdentIntern()
 				s.EntryPointNames[name] = typ
 			}
 			l.ConsumeToken('}')
@@ -837,7 +837,7 @@ func parseSchema(s *Schema, l *lexer.Lexer) {
 			s.Types[input.Name] = input
 
 		case "scalar":
-			name := l.ConsumeIdent()
+			name := l.ConsumeIdentIntern()
 			s.Types[name] = &Scalar{
 				Name:       name,
 				Desc:       desc,
@@ -857,7 +857,7 @@ func parseSchema(s *Schema, l *lexer.Lexer) {
 }
 
 func parseObjectDef(l *lexer.Lexer) *Object {
-	object := &Object{Name: l.ConsumeIdent()}
+	object := &Object{Name: l.ConsumeIdentIntern()}
 
 	if l.PeekKeyword("implements") {
 		l.Consume()
@@ -865,7 +865,7 @@ func parseObjectDef(l *lexer.Lexer) *Object {
 			l.ConsumeToken('&')
 		}
 		for {
-			object.InterfaceNames = append(object.InterfaceNames, l.ConsumeIdent())
+			object.InterfaceNames = append(object.InterfaceNames, l.ConsumeIdentIntern())
 			if l.Peek() == '&' {
 				l.ConsumeToken('&')
 			} else if l.Peek() == '@' || l.Peek() == '{' {
@@ -884,12 +884,12 @@ func parseObjectDef(l *lexer.Lexer) *Object {
 }
 
 func parseTypeName(l *lexer.Lexer) TypeName {
-	name, loc := l.ConsumeIdentWithLoc()
+	name, loc := l.ConsumeIdentInternWithLoc()
 	return TypeName{Name: name, NameLoc: loc}
 }
 
 func parseInterfaceDef(l *lexer.Lexer) *Interface {
-	i := &Interface{Name: l.ConsumeIdent()}
+	i := &Interface{Name: l.ConsumeIdentIntern()}
 	i.Directives = ParseDirectives(l)
 	l.ConsumeToken('{')
 	i.Fields = parseFieldsDef(l)
@@ -899,13 +899,13 @@ func parseInterfaceDef(l *lexer.Lexer) *Interface {
 }
 
 func parseUnionDef(l *lexer.Lexer) *Union {
-	union := &Union{Name: l.ConsumeIdent()}
+	union := &Union{Name: l.ConsumeIdentIntern()}
 	union.Directives = ParseDirectives(l)
 	l.ConsumeToken('=')
-	union.TypeNames = []string{l.ConsumeIdent()}
+	union.TypeNames = []string{l.ConsumeIdentIntern()}
 	for l.Peek() == '|' {
 		l.ConsumeToken('|')
-		union.TypeNames = append(union.TypeNames, l.ConsumeIdent())
+		union.TypeNames = append(union.TypeNames, l.ConsumeIdentIntern())
 	}
 
 	return union
@@ -913,7 +913,7 @@ func parseUnionDef(l *lexer.Lexer) *Union {
 
 func parseInputDef(l *lexer.Lexer) *InputObject {
 	i := &InputObject{}
-	i.Name = l.ConsumeIdent()
+	i.Name = l.ConsumeIdentIntern()
 	i.Directives = ParseDirectives(l)
 	l.ConsumeToken('{')
 	for l.Peek() != '}' {
@@ -924,13 +924,13 @@ func parseInputDef(l *lexer.Lexer) *InputObject {
 }
 
 func parseEnumDef(l *lexer.Lexer) *Enum {
-	enum := &Enum{Name: l.ConsumeIdent()}
+	enum := &Enum{Name: l.ConsumeIdentIntern()}
 	enum.Directives = ParseDirectives(l)
 	l.ConsumeToken('{')
 	for l.Peek() != '}' {
 		v := &EnumValue{
 			Desc:       l.ConsumeDescription(),
-			Name:       l.ConsumeIdent(),
+			Name:       l.ConsumeIdentIntern(),
 			Directives: ParseDirectives(l),
 		}
 
@@ -942,7 +942,7 @@ func parseEnumDef(l *lexer.Lexer) *Enum {
 
 func parseDirectiveDef(l *lexer.Lexer) *DirectiveDecl {
 	l.ConsumeToken('@')
-	d := &DirectiveDecl{Name: l.ConsumeIdent()}
+	d := &DirectiveDecl{Name: l.ConsumeIdentIntern()}
 
 	if l.Peek() == '(' {
 		l.ConsumeToken('(')
@@ -956,7 +956,7 @@ func parseDirectiveDef(l *lexer.Lexer) *DirectiveDecl {
 	l.ConsumeKeyword("on")
 
 	for {
-		loc := l.ConsumeIdent()
+		loc := l.ConsumeIdentIntern()
 		d.Locs = append(d.Locs, loc)
 		if l.Peek() != '|' {
 			break
@@ -971,7 +971,7 @@ func parseFieldsDef(l *lexer.Lexer) FieldList {
 	for l.Peek() != '}' {
 		f := &Field{}
 		f.Desc = l.ConsumeDescription()
-		f.Name = l.ConsumeIdent()
+		f.Name = l.ConsumeIdentIntern()
 		if l.Peek() == '(' {
 			l.ConsumeToken('(')
 			for l.Peek() != ')' {

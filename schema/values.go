@@ -34,7 +34,7 @@ func ParseInputValue(l *lexer.Lexer) *InputValue {
 	p := &InputValue{}
 	p.Loc = l.Location()
 	p.Desc = l.ConsumeDescription()
-	p.Name, p.NameLoc = l.ConsumeIdentWithLoc()
+	p.Name, p.NameLoc = l.ConsumeIdentInternWithLoc()
 	l.ConsumeToken(':')
 	p.TypeLoc = l.Location()
 	p.Type = ParseType(l)
@@ -96,7 +96,7 @@ func ParseArguments(l *lexer.Lexer) ArgumentList {
 	l.ConsumeToken('(')
 	for l.Peek() != ')' {
 		arg := Argument{}
-		arg.Name, arg.NameLoc = l.ConsumeIdentWithLoc()
+		arg.Name, arg.NameLoc = l.ConsumeIdentInternWithLoc()
 		l.ConsumeToken(':')
 		arg.Value = ParseLiteral(l, false)
 		args = append(args, arg)

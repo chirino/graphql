@@ -19,7 +19,7 @@ func ParseDirectives(l *lexer.Lexer) DirectiveList {
 	for l.Peek() == '@' {
 		l.ConsumeToken('@')
 		d := &Directive{}
-		d.Name, d.NameLoc = l.ConsumeIdentWithLoc()
+		d.Name, d.NameLoc = l.ConsumeIdentInternWithLoc()
 		d.NameLoc.Column--
 		if l.Peek() == '(' {
 			d.Args = ParseArguments(l)

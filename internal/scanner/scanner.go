@@ -22,6 +22,8 @@ import (
 	"text/scanner"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/josharian/intern"
 )
 
 // A source position is represented by a Position value.
@@ -432,7 +434,7 @@ func (s *Scanner) scanNumber(ch rune, seenDot bool) (rune, rune) {
 
 	if digsep&2 != 0 {
 		s.tokEnd = s.srcPos - s.lastCharLen // make sure token text is terminated
-		if i := invalidSep(s.TokenText()); i >= 0 {
+		if i := invalidSep(s.TokenBytes()); i >= 0 {
 			s.error("'_' must separate successive digits")
 		}
 	}
@@ -454,7 +456,7 @@ func litname(prefix rune) string {
 }
 
 // invalidSep returns the index of the first invalid separator in x, or -1.
-func invalidSep(x string) int {
+func invalidSep(x []byte) int {
 	x1 := ' ' // prefix char, we only care if it's 'x'
 	d := '.'  // digit, one of '_', '0' (a digit), or '.' (anything else)
 	i := 0
@@ -716,4 +718,56 @@ func (s *Scanner) TokenText() string {
 	s.tokBuf.Write(s.srcBuf[s.tokPos:s.tokEnd])
 	s.tokPos = s.tokEnd // ensure idempotency of TokenText() call
 	return s.tokBuf.String()
+}
+
+// TokenText returns the interned string corresponding to the most recently scanned token.
+// Valid after calling Scan and in calls of Scanner.Error.
+func (s *Scanner) TokenTextIntern() string {
+	if s.tokPos < 0 {
+		// no token text
+		return ""
+	}
+
+	if s.tokEnd < s.tokPos {
+		// if EOF was reached, s.tokEnd is set to -1 (s.srcPos == 0)
+		s.tokEnd = s.tokPos
+	}
+	// s.tokEnd >= s.tokPos
+
+	if s.tokBuf.Len() == 0 {
+		// common case: the entire token text is still in srcBuf
+		return intern.Bytes(s.srcBuf[s.tokPos:s.tokEnd])
+	}
+
+	// part of the token text was saved in tokBuf: save the rest in
+	// tokBuf as well and return its content
+	s.tokBuf.Write(s.srcBuf[s.tokPos:s.tokEnd])
+	s.tokPos = s.tokEnd // ensure idempotency of TokenText() call
+	return intern.Bytes(s.tokBuf.Bytes())
+}
+
+// TokenText returns the string corresponding to the most recently scanned token.
+// Valid after calling Scan and in calls of Scanner.Error.
+func (s *Scanner) TokenBytes() []byte {
+	if s.tokPos < 0 {
+		// no token text
+		return []byte{}
+	}
+
+	if s.tokEnd < s.tokPos {
+		// if EOF was reached, s.tokEnd is set to -1 (s.srcPos == 0)
+		s.tokEnd = s.tokPos
+	}
+	// s.tokEnd >= s.tokPos
+
+	if s.tokBuf.Len() == 0 {
+		// common case: the entire token text is still in srcBuf
+		return s.srcBuf[s.tokPos:s.tokEnd]
+	}
+
+	// part of the token text was saved in tokBuf: save the rest in
+	// tokBuf as well and return its content
+	s.tokBuf.Write(s.srcBuf[s.tokPos:s.tokEnd])
+	s.tokPos = s.tokEnd // ensure idempotency of TokenText() call
+	return s.tokBuf.Bytes()
 }

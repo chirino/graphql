@@ -170,7 +170,7 @@ func ParseLiteral(l *lexer.Lexer, constOnly bool) Literal {
 			panic("unreachable")
 		}
 		l.ConsumeToken('$')
-		return &Variable{l.ConsumeIdent(), loc}
+		return &Variable{l.ConsumeIdentIntern(), loc}
 
 	case scanner.Int, scanner.Float, scanner.String, scanner.BlockString, scanner.Ident:
 		lit := ConsumeLiteral(l)
@@ -198,7 +198,7 @@ func ParseLiteral(l *lexer.Lexer, constOnly bool) Literal {
 		l.ConsumeToken('{')
 		var fields []*ObjectLitField
 		for l.Peek() != '}' {
-			name, loc := l.ConsumeIdentWithLoc()
+			name, loc := l.ConsumeIdentInternWithLoc()
 			l.ConsumeToken(':')
 			value := ParseLiteral(l, constOnly)
 			fields = append(fields, &ObjectLitField{Name: name, NameLoc: loc, Value: value})
