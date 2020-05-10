@@ -3,6 +3,9 @@ package httpgql
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
@@ -60,5 +63,6 @@ func (client *Client) ServeGraphQL(request *graphql.Request) *graphql.Response {
 		return response
 	}
 
-	return response.AddError(qerrors.Errorf("invalid content type: %s", contentType))
+	preview, _ := ioutil.ReadAll(io.LimitReader(resp.Body, 1024))
+	return response.AddError(qerrors.Errorf("invalid content type: %s", contentType).WithCause(errors.New(string(preview))))
 }
