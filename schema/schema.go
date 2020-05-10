@@ -471,6 +471,7 @@ func (s *Schema) RenameTypes(renamer func(string) string) {
 
 		// Don't rename built in types.
 		if Meta.Types[oldName] != nil {
+			newTypes[oldName] = t
 			continue
 		}
 
