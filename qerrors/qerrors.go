@@ -16,12 +16,12 @@ import (
 /////////////////////////////////////////////////////////////////////////////
 
 type Error struct {
-	Message       string     `json:"message"`
-	Locations     []Location `json:"locations,omitempty"`
-	Path          []string   `json:"path,omitempty"`
-	Rule          string     `json:"-"`
-	ResolverError error      `json:"-"`
-	stack         errors.StackTrace
+	Message   string     `json:"message"`
+	Locations []Location `json:"locations,omitempty"`
+	Path      []string   `json:"path,omitempty"`
+	Rule      string     `json:"-"`
+	cause     error
+	stack     errors.StackTrace
 }
 
 // asserts that *Error implements the error interface.
@@ -39,13 +39,18 @@ func New(message string) *Error {
 
 func WrapError(err error, message string) *Error {
 	return &Error{
-		Message:       message,
-		ResolverError: err,
+		Message: message,
+		cause:   err,
 	}
 }
 
 func (e *Error) WithPath(path ...string) *Error {
 	e.Path = path
+	return e
+}
+
+func (e *Error) WithCause(err error) *Error {
+	e.cause = err
 	return e
 }
 
@@ -135,7 +140,7 @@ func (w *Error) Format(s fmt.State, verb rune) {
 }
 
 func (err *Error) Cause() error {
-	return err.ResolverError
+	return err.cause
 }
 
 /////////////////////////////////////////////////////////////////////////////

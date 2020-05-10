@@ -1533,7 +1533,7 @@ func TestUnexportedMethod(t *testing.T) {
 				}
 			`,
 			ExpectedErrors: qerrors.ErrorList{
-				&qerrors.Error{Message: "No resolver found", Locations: []qerrors.Location(nil), Path: []string{"changeTheNumber"}, Rule: "", ResolverError: error(nil)},
+				qerrors.New("No resolver found").WithPath("changeTheNumber"),
 			},
 		},
 	})
@@ -1563,7 +1563,7 @@ func TestUnexportedField(t *testing.T) {
 				}
 			`,
 			ExpectedErrors: qerrors.ErrorList{
-				&qerrors.Error{Message: "No resolver found", Locations: []qerrors.Location(nil), Path: []string{"changeTheNumber"}, Rule: "", ResolverError: error(nil)},
+				qerrors.New("No resolver found").WithPath("changeTheNumber"),
 			},
 		},
 	})

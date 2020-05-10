@@ -325,11 +325,7 @@ func (this *Execution) executeSelected(ctx context.Context, parentSelection *Sel
 
 	childValue, err := selected.Resolution()
 	if err != nil {
-		return (&qerrors.Error{
-			Message:       err.Error(),
-			Path:          selected.Path(),
-			ResolverError: err,
-		}).WithStack()
+		return qerrors.WrapError(err, err.Error()).WithPath(selected.Path()...).WithStack()
 	}
 
 	if childValue.Type() == valueWithContextType {

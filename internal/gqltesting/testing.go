@@ -3,7 +3,6 @@ package gqltesting
 import (
 	"context"
 	"encoding/json"
-	"reflect"
 	"strconv"
 	"testing"
 
@@ -89,9 +88,11 @@ func checkErrors(t *testing.T, expected, actual qerrors.ErrorList) {
 		for i, want := range expected {
 			got := actual[i]
 			got.ClearStack()
-			if !reflect.DeepEqual(got, want) {
-				t.Fatalf("unexpected error: got %+v, want %+v", got, want)
-			}
+			want.ClearStack()
+			require.Equal(t, want, got)
+			//if !reflect.DeepEqual(got, want) {
+			//	t.Fatalf("unexpected error: got %+v, want %+v", got, want)
+			//}
 		}
 
 		// Return because we're done checking.
