@@ -11,17 +11,18 @@ import (
 	"github.com/opentracing/opentracing-go/log"
 )
 
-type TraceQueryFinishFunc func(qerrors.ErrorList)
+type TraceQueryResponse func(qerrors.ErrorList)
+type TraceQueryFinishFunc func()
 type TraceFieldFinishFunc func(*qerrors.Error)
 
 type Tracer interface {
-	TraceQuery(ctx context.Context, queryString string, operationName string, variables interface{}, varTypes map[string]*introspection.Type) (context.Context, TraceQueryFinishFunc)
+	TraceQuery(ctx context.Context, queryString string, operationName string, variables interface{}, varTypes map[string]*introspection.Type) (context.Context, TraceQueryResponse, TraceQueryFinishFunc)
 	TraceField(ctx context.Context, label, typeName, fieldName string, trivial bool, args map[string]interface{}) (context.Context, TraceFieldFinishFunc)
 }
 
 type OpenTracingTracer struct{}
 
-func (OpenTracingTracer) TraceQuery(ctx context.Context, queryString string, operationName string, variables interface{}, varTypes map[string]*introspection.Type) (context.Context, TraceQueryFinishFunc) {
+func (OpenTracingTracer) TraceQuery(ctx context.Context, queryString string, operationName string, variables interface{}, varTypes map[string]*introspection.Type) (context.Context, TraceQueryResponse, TraceQueryFinishFunc) {
 	span, spanCtx := opentracing.StartSpanFromContext(ctx, "GraphQL request")
 	span.SetTag("graphql.query", queryString)
 
@@ -34,16 +35,17 @@ func (OpenTracingTracer) TraceQuery(ctx context.Context, queryString string, ope
 	}
 
 	return spanCtx, func(errs qerrors.ErrorList) {
-		if len(errs) > 0 {
-			msg := errs[0].Error()
-			if len(errs) > 1 {
-				msg += fmt.Sprintf(" (and %d more errors)", len(errs)-1)
+			if len(errs) > 0 {
+				msg := errs[0].Error()
+				if len(errs) > 1 {
+					msg += fmt.Sprintf(" (and %d more errors)", len(errs)-1)
+				}
+				ext.Error.Set(span, true)
+				span.SetTag("graphql.error", msg)
 			}
-			ext.Error.Set(span, true)
-			span.SetTag("graphql.error", msg)
+		}, func() {
+			span.Finish()
 		}
-		span.Finish()
-	}
 }
 
 func (OpenTracingTracer) TraceField(ctx context.Context, label, typeName, fieldName string, trivial bool, args map[string]interface{}) (context.Context, TraceFieldFinishFunc) {
@@ -71,8 +73,8 @@ func noop(*qerrors.Error) {}
 
 type NoopTracer struct{}
 
-func (NoopTracer) TraceQuery(ctx context.Context, queryString string, operationName string, variables interface{}, varTypes map[string]*introspection.Type) (context.Context, TraceQueryFinishFunc) {
-	return ctx, func(errs qerrors.ErrorList) {}
+func (NoopTracer) TraceQuery(ctx context.Context, queryString string, operationName string, variables interface{}, varTypes map[string]*introspection.Type) (context.Context, TraceQueryResponse, TraceQueryFinishFunc) {
+	return ctx, func(errs qerrors.ErrorList) {}, func() {}
 }
 
 func (NoopTracer) TraceField(ctx context.Context, label, typeName, fieldName string, trivial bool, args map[string]interface{}) (context.Context, TraceFieldFinishFunc) {

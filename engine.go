@@ -15,14 +15,17 @@ import (
 )
 
 type Engine struct {
-	Schema           *schema.Schema
-	MaxDepth         int
-	MaxParallelism   int
-	Tracer           trace.Tracer
-	ValidationTracer trace.ValidationTracer
-	Logger           log.Logger
-	Resolver         resolvers.Resolver
-	Root             interface{}
+	Schema         *schema.Schema
+	MaxDepth       int
+	MaxParallelism int
+	Tracer         trace.Tracer
+	Logger         log.Logger
+	Resolver       resolvers.Resolver
+	Root           interface{}
+	// Validate can be set to nil to disable validation.
+	Validate func(doc *schema.QueryDocument, maxDepth int) error
+	// OnRequest is called after the query is parsed but before the request is validated.
+	OnRequestHook func(request *Request, doc *schema.QueryDocument, op *schema.Operation) error
 }
 
 func CreateEngine(schema string) (*Engine, error) {
@@ -32,15 +35,16 @@ func CreateEngine(schema string) (*Engine, error) {
 }
 
 func New() *Engine {
-	return &Engine{
-		Schema:           schema.New(),
-		Tracer:           trace.NoopTracer{},
-		MaxParallelism:   10,
-		MaxDepth:         50,
-		ValidationTracer: trace.NoopValidationTracer{},
-		Logger:           &log.DefaultLogger{},
-		Resolver:         resolvers.DynamicResolverFactory(),
+	e := &Engine{
+		Schema:         schema.New(),
+		Tracer:         trace.NoopTracer{},
+		MaxParallelism: 10,
+		MaxDepth:       50,
+		Logger:         &log.DefaultLogger{},
+		Resolver:       resolvers.DynamicResolverFactory(),
 	}
+	e.Validate = e.validate
+	return e
 }
 
 func (engine *Engine) GetSchemaIntrospectionJSON() ([]byte, error) {
@@ -82,16 +86,23 @@ func (engine *Engine) ServeGraphQLStream(request *Request) ResponseStream {
 		return NewErrStream(err)
 	}
 
-	validationFinish := engine.ValidationTracer.TraceValidation()
-	errs := validation.Validate(engine.Schema, doc, engine.MaxDepth)
-	validationFinish(errs)
-	if len(errs) != 0 {
-		return NewErrStream(errs.Error())
-	}
-
 	op, err := doc.GetOperation(request.OperationName)
 	if err != nil {
 		return NewErrStream(err)
+	}
+
+	if engine.OnRequestHook != nil {
+		err := engine.OnRequestHook(request, doc, op)
+		if err != nil {
+			return NewErrStream(err)
+		}
+	}
+
+	if engine.Validate != nil {
+		err = engine.Validate(doc, engine.MaxDepth)
+		if err != nil {
+			return NewErrStream(err)
+		}
 	}
 
 	varTypes := make(map[string]*introspection.Type)
@@ -104,7 +115,7 @@ func (engine *Engine) ServeGraphQLStream(request *Request) ResponseStream {
 	}
 
 	ctx := request.GetContext()
-	traceContext, finish := engine.Tracer.TraceQuery(ctx, request.Query, request.OperationName, request.Variables, varTypes)
+	traceContext, traceResponse, traceFinish := engine.Tracer.TraceQuery(ctx, request.Query, request.OperationName, request.Variables, varTypes)
 
 	variables, err := request.VariablesAsMap()
 	if err != nil {
@@ -113,6 +124,7 @@ func (engine *Engine) ServeGraphQLStream(request *Request) ResponseStream {
 
 	responses := make(chan *Response, 1)
 	r := exec.Execution{
+		Context:        traceContext,
 		Query:          request.Query,
 		Vars:           variables,
 		Schema:         engine.Schema,
@@ -124,16 +136,17 @@ func (engine *Engine) ServeGraphQLStream(request *Request) ResponseStream {
 		VarTypes:       varTypes,
 		MaxParallelism: engine.MaxParallelism,
 		Root:           engine.Root,
-		Context:        traceContext,
 		FireSubscriptionEventFunc: func(d json.RawMessage, e qerrors.ErrorList) {
 			responses <- &Response{
 				Data:   d,
 				Errors: e,
 			}
+			traceResponse(e)
 		},
 		FireSubscriptionCloseFunc: func() {
 			close(responses)
 			doc.Close()
+			traceFinish()
 		},
 	}
 
@@ -141,6 +154,13 @@ func (engine *Engine) ServeGraphQLStream(request *Request) ResponseStream {
 	if err != nil {
 		return NewErrStream(err)
 	}
-	finish(errs)
 	return responses
+}
+
+func (engine *Engine) validate(doc *schema.QueryDocument, maxDepth int) error {
+	errs := validation.Validate(engine.Schema, doc, maxDepth)
+	if len(errs) != 0 {
+		return errs.Error()
+	}
+	return nil
 }
