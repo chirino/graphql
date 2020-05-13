@@ -78,6 +78,7 @@ type FieldSelection struct {
 	Selections      SelectionList
 	SelectionSetLoc qerrors.Location
 	Schema          *FieldSchema
+	Extension       interface{}
 }
 
 type FieldSchema struct {
