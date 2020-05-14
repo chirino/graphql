@@ -12,9 +12,18 @@ import (
 	"strings"
 )
 
-func (t *List) WriteTo(out io.StringWriter)    { panic("unsupported") }
-func (t *NonNull) WriteTo(out io.StringWriter) { panic("unsupported") }
-func (*TypeName) WriteTo(out io.StringWriter)  { panic("unsupported") }
+func (t *List) WriteTo(out io.StringWriter) {
+	out.WriteString("[")
+	t.OfType.WriteTo(out)
+	out.WriteString("]")
+}
+func (t *NonNull) WriteTo(out io.StringWriter) {
+	out.WriteString("!")
+	t.OfType.WriteTo(out)
+}
+func (t *TypeName) WriteTo(out io.StringWriter) {
+	out.WriteString(t.Name)
+}
 
 func (s *Schema) WriteTo(out io.StringWriter) {
 

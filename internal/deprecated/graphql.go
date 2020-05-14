@@ -107,13 +107,6 @@ func Tracer(tracer trace.Tracer) SchemaOpt {
 	}
 }
 
-// ValidationTracer is used to trace validation errors. It defaults to trace.NoopValidationTracer.
-func ValidationTracer(tracer trace.ValidationTracer) SchemaOpt {
-	return func(s *Schema) {
-		s.Engine.ValidationTracer = tracer
-	}
-}
-
 // Logger is used to log panics during query execution. It defaults to exec.DefaultLogger.
 func Logger(logger log.Logger) SchemaOpt {
 	return func(s *Schema) {
