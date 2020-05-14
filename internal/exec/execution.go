@@ -41,6 +41,7 @@ type Execution struct {
 	subMu                     sync.Mutex
 	FireSubscriptionEventFunc func(d json.RawMessage, e qerrors.ErrorList)
 	FireSubscriptionCloseFunc func()
+	TryCast                   func(value reflect.Value, toType string) (v reflect.Value, ok bool)
 }
 
 func (this *Execution) GetRoot() interface{} {
@@ -116,6 +117,9 @@ func (this *Execution) resolveFields(ctx context.Context, parentSelectionResolve
 			if this.skipByDirective(field.Directives) {
 				continue
 			}
+			if field.Schema == nil {
+				continue
+			}
 
 			var sr *SelectionResolver = nil
 			x := selectionResolvers.Get(field.Alias)
@@ -137,7 +141,6 @@ func (this *Execution) resolveFields(ctx context.Context, parentSelectionResolve
 				for _, arg := range field.Arguments {
 					evaluatedArguments[arg.Name] = arg.Value.Evaluate(this.Vars)
 				}
-
 				resolveRequest := &resolvers.ResolveRequest{
 					Context:          ctx,
 					ExecutionContext: this,
@@ -185,7 +188,7 @@ func (this *Execution) resolveFields(ctx context.Context, parentSelectionResolve
 func (this *Execution) CreateSelectionResolversForFragment(ctx context.Context, parentSelectionResolver *SelectionResolver, fragment *schema.Fragment, parentType schema.Type, parentValue reflect.Value, selectionResolvers *linkedmap.LinkedMap) {
 	if fragment.On.Name != "" && fragment.On.Name != parentType.String() {
 		castType := this.Schema.Types[fragment.On.Name]
-		if casted, ok := resolvers.TryCastFunction(parentValue, fragment.On.Name); ok {
+		if casted, ok := this.TryCast(parentValue, fragment.On.Name); ok {
 			this.resolveFields(ctx, parentSelectionResolver, selectionResolvers, casted, castType, fragment.Selections)
 		}
 	} else {

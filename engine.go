@@ -3,6 +3,7 @@ package graphql
 import (
 	"context"
 	"encoding/json"
+	"reflect"
 
 	"github.com/chirino/graphql/internal/exec"
 	"github.com/chirino/graphql/internal/introspection"
@@ -26,6 +27,7 @@ type Engine struct {
 	Validate func(doc *schema.QueryDocument, maxDepth int) error
 	// OnRequest is called after the query is parsed but before the request is validated.
 	OnRequestHook func(request *Request, doc *schema.QueryDocument, op *schema.Operation) error
+	TryCast       func(value reflect.Value, toType string) (v reflect.Value, ok bool)
 }
 
 func CreateEngine(schema string) (*Engine, error) {
@@ -42,6 +44,7 @@ func New() *Engine {
 		MaxDepth:       50,
 		Logger:         &log.DefaultLogger{},
 		Resolver:       resolvers.DynamicResolverFactory(),
+		TryCast:        resolvers.TryCastFunction,
 	}
 	e.Validate = e.validate
 	return e
@@ -136,6 +139,7 @@ func (engine *Engine) ServeGraphQLStream(request *Request) ResponseStream {
 		VarTypes:       varTypes,
 		MaxParallelism: engine.MaxParallelism,
 		Root:           engine.Root,
+		TryCast:        engine.TryCast,
 		FireSubscriptionEventFunc: func(d json.RawMessage, e qerrors.ErrorList) {
 			responses <- &Response{
 				Data:   d,
