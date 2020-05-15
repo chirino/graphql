@@ -256,7 +256,10 @@ func validateSelection(c *opContext, sel schema.Selection, t schema.NamedType) {
 		}
 		c.fieldMap[sel] = fieldInfo{sf: f, parent: t}
 
-		sel.Field = f
+		sel.Schema = &schema.FieldSchema{
+			Field:  f,
+			Parent: t,
+		}
 
 		validateArgumentLiterals(c, sel.Arguments)
 		if f != nil {

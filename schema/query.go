@@ -77,8 +77,13 @@ type FieldSelection struct {
 	Directives      DirectiveList
 	Selections      SelectionList
 	SelectionSetLoc qerrors.Location
-	Field           *Field
+	Schema          *FieldSchema
 	Extension       interface{}
+}
+
+type FieldSchema struct {
+	Field  *Field
+	Parent NamedType
 }
 
 type InlineFragment struct {
