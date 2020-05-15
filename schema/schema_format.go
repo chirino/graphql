@@ -95,9 +95,6 @@ func (t *Object) WriteTo(out io.StringWriter) {
 		t.Directives.WriteTo(out)
 	}
 	out.WriteString(" {\n")
-	sort.Slice(t.Fields, func(i, j int) bool {
-		return t.Fields[i].Name < t.Fields[j].Name
-	})
 	for _, f := range t.Fields {
 		i := &indent{}
 		f.WriteTo(i)
@@ -120,10 +117,6 @@ func (t *Interface) WriteTo(out io.StringWriter) {
 	out.WriteString("interface ")
 	out.WriteString(t.Name)
 	out.WriteString(" {\n")
-
-	sort.Slice(t.Fields, func(i, j int) bool {
-		return t.Fields[i].Name < t.Fields[j].Name
-	})
 	for _, f := range t.Fields {
 		i := &indent{}
 		f.WriteTo(i)
@@ -165,10 +158,6 @@ func (t *InputObject) WriteTo(out io.StringWriter) {
 	out.WriteString("input ")
 	out.WriteString(t.Name)
 	out.WriteString(" {\n")
-
-	sort.Slice(t.Fields, func(i, j int) bool {
-		return t.Fields[i].Name < t.Fields[j].Name
-	})
 	for _, f := range t.Fields {
 		i := &indent{}
 		f.WriteTo(i)
@@ -288,9 +277,6 @@ func (lit *NullLit) WriteTo(out io.StringWriter) {
 }
 func (t *ObjectLit) WriteTo(out io.StringWriter) {
 	out.WriteString("{")
-	sort.Slice(t.Fields, func(i, j int) bool {
-		return t.Fields[i].Name < t.Fields[j].Name
-	})
 	for i, v := range t.Fields {
 		if i != 0 {
 			out.WriteString(", ")

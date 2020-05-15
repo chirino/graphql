@@ -54,6 +54,10 @@ func (c FieldSelectionContext) Apply(selections []schema.Selection) (result []Fi
 			if field == nil {
 				errs = append(errs, qerrors2.Errorf("field '%s' not found on '%s': ", selection.Name, c.OnType.String()))
 			} else {
+				selection.Schema = &schema.FieldSchema{
+					Field:  field,
+					Parent: c.OnType.(schema.NamedType),
+				}
 				if !selectedFieldAliases[selection.Alias] {
 					result = append(result, FieldSelection{
 						OnType:    c.OnType,

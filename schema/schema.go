@@ -348,6 +348,7 @@ type Field struct {
 	Type       Type
 	Directives DirectiveList
 	Desc       Description `json:"desc"`
+	Extension  interface{} `json:"-"`
 }
 
 // New initializes an instance of Schema.
@@ -390,10 +391,48 @@ func (s *Schema) ResolveTypes() error {
 		}
 		switch t := t.(type) {
 		case *Object:
+			sort.Slice(t.Fields, func(i, j int) bool {
+				return t.Fields[i].Name < t.Fields[j].Name
+			})
+			sort.Slice(t.Directives, func(i, j int) bool {
+				return t.Directives[i].Name < t.Directives[j].Name
+			})
+			sort.Slice(t.InterfaceNames, func(i, j int) bool {
+				return t.InterfaceNames[i] < t.InterfaceNames[j]
+			})
 			objects = append(objects, t)
+
+		case *Interface:
+			sort.Slice(t.Directives, func(i, j int) bool {
+				return t.Directives[i].Name < t.Directives[j].Name
+			})
+			sort.Slice(t.Fields, func(i, j int) bool {
+				return t.Fields[i].Name < t.Fields[j].Name
+			})
+
+		case *InputObject:
+			sort.Slice(t.Directives, func(i, j int) bool {
+				return t.Directives[i].Name < t.Directives[j].Name
+			})
+			sort.Slice(t.Fields, func(i, j int) bool {
+				return t.Fields[i].Name < t.Fields[j].Name
+			})
+
 		case *Union:
+			sort.Slice(t.Directives, func(i, j int) bool {
+				return t.Directives[i].Name < t.Directives[j].Name
+			})
+			sort.Slice(t.TypeNames, func(i, j int) bool {
+				return t.TypeNames[i] < t.TypeNames[j]
+			})
 			unions = append(unions, t)
 		case *Enum:
+			sort.Slice(t.Directives, func(i, j int) bool {
+				return t.Directives[i].Name < t.Directives[j].Name
+			})
+			sort.Slice(t.Values, func(i, j int) bool {
+				return t.Values[i].Name < t.Values[j].Name
+			})
 			enums = append(enums, t)
 		}
 	}
@@ -435,7 +474,6 @@ func (s *Schema) ResolveTypes() error {
 			intf.PossibleTypes = append(intf.PossibleTypes, obj)
 		}
 	}
-
 	for _, union := range unions {
 		union.PossibleTypes = make([]*Object, len(union.TypeNames))
 		for i, name := range union.TypeNames {

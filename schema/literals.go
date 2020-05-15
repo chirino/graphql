@@ -1,6 +1,8 @@
 package schema
 
 import (
+	"sort"
+
 	"github.com/chirino/graphql/internal/lexer"
 	"github.com/chirino/graphql/internal/scanner"
 	"github.com/chirino/graphql/qerrors"
@@ -21,6 +23,49 @@ type BasicLit struct {
 	Type rune
 	Text string
 	Loc  qerrors.Location
+}
+
+func ToLiteral(v interface{}) Literal {
+	switch v := v.(type) {
+	case nil:
+		return &NullLit{}
+	case string:
+		return &BasicLit{
+			Type: scanner.String,
+			Text: strconv.Quote(v),
+		}
+	case int:
+		return &BasicLit{
+			Type: scanner.Int,
+			Text: strconv.FormatInt(int64(v), 10),
+		}
+	case int32:
+		return &BasicLit{
+			Type: scanner.Int,
+			Text: strconv.FormatInt(int64(v), 10),
+		}
+	case int64:
+		return &BasicLit{
+			Type: scanner.Int,
+			Text: strconv.FormatInt(v, 10),
+		}
+	case uint:
+		return &BasicLit{
+			Type: scanner.Int,
+			Text: strconv.FormatUint(uint64(v), 10),
+		}
+	case uint32:
+		return &BasicLit{
+			Type: scanner.Int,
+			Text: strconv.FormatUint(uint64(v), 10),
+		}
+	case uint64:
+		return &BasicLit{
+			Type: scanner.Int,
+			Text: strconv.FormatUint(v, 10),
+		}
+	}
+	return nil
 }
 
 func (lit *BasicLit) Evaluate(vars map[string]interface{}) interface{} {
@@ -204,6 +249,9 @@ func ParseLiteral(l *lexer.Lexer, constOnly bool) Literal {
 			fields = append(fields, &ObjectLitField{Name: name, NameLoc: loc, Value: value})
 		}
 		l.ConsumeToken('}')
+		sort.Slice(fields, func(i, j int) bool {
+			return fields[i].Name < fields[j].Name
+		})
 		return &ObjectLit{fields, loc}
 
 	default:

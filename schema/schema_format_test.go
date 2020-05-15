@@ -44,12 +44,12 @@ type Droid implements Character  {
 }
 "The episodes in the Star Wars trilogy"
 enum Episode {
-  "Star Wars Episode IV: A New Hope, released in 1977."
-  NEWHOPE
   "Star Wars Episode V: The Empire Strikes Back, released in 1980."
   EMPIRE
   "Star Wars Episode VI: Return of the Jedi, released in 1983."
   JEDI
+  "Star Wars Episode IV: A New Hope, released in 1977."
+  NEWHOPE
 }
 "A connection object for a character's friends"
 type FriendsConnection {
@@ -90,10 +90,10 @@ type Human implements Character  {
 }
 "Units of height"
 enum LengthUnit {
-  "The standard unit around the world"
-  METER
   "Primarily used in the United States"
   FOOT
+  "The standard unit around the world"
+  METER
 }
 "The mutation type, represents all updates we can make to our data"
 type Mutation {
