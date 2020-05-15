@@ -117,7 +117,7 @@ func (this *Execution) resolveFields(ctx context.Context, parentSelectionResolve
 			if this.skipByDirective(field.Directives) {
 				continue
 			}
-			if field.Schema == nil {
+			if field.Field == nil {
 				continue
 			}
 
@@ -146,7 +146,7 @@ func (this *Execution) resolveFields(ctx context.Context, parentSelectionResolve
 					ExecutionContext: this,
 					ParentType:       typeName,
 					Parent:           parentValue,
-					Field:            field.Schema.Field,
+					Field:            field.Field,
 					Args:             evaluatedArguments,
 					Selection:        field,
 					SelectionPath:    sr.Path,
@@ -354,7 +354,7 @@ func (this *Execution) executeSelected(ctx context.Context, parentSelection *Sel
 	this.data.WriteByte('"')
 	this.data.WriteByte(':')
 
-	childType, nonNullType := unwrapNonNull(field.Schema.Field.Type)
+	childType, nonNullType := unwrapNonNull(field.Field.Type)
 	if (childValue.Kind() == reflect.Ptr || childValue.Kind() == reflect.Interface) &&
 		childValue.IsNil() {
 		if nonNullType {
