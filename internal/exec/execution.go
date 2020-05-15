@@ -450,7 +450,7 @@ func (this *Execution) writeLeaf(childValue reflect.Value, selectionResolver *Se
 	case *schema.Enum:
 
 		// Deref the pointer.
-		for childValue.Kind() == reflect.Ptr {
+		for childValue.Kind() == reflect.Ptr || childValue.Kind() == reflect.Interface  {
 			childValue = childValue.Elem()
 		}
 
