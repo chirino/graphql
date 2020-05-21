@@ -1233,15 +1233,7 @@ func TestIntrospection(t *testing.T) {
 						"name": "Droid",
 						"fields": [
 							{
-								"name": "id",
-								"args": [],
-								"type": {
-									"name": null,
-									"kind": "NON_NULL"
-								}
-							},
-							{
-								"name": "name",
+								"name": "appearsIn",
 								"args": [],
 								"type": {
 									"name": null,
@@ -1280,7 +1272,15 @@ func TestIntrospection(t *testing.T) {
 								}
 							},
 							{
-								"name": "appearsIn",
+								"name": "id",
+								"args": [],
+								"type": {
+									"name": null,
+									"kind": "NON_NULL"
+								}
+							},
+							{
+								"name": "name",
 								"args": [],
 								"type": {
 									"name": null,
@@ -1317,13 +1317,13 @@ func TestIntrospection(t *testing.T) {
 					"__type": {
 						"enumValues": [
 							{
-								"name": "NEWHOPE"
-							},
-							{
 								"name": "EMPIRE"
 							},
 							{
 								"name": "JEDI"
+							},
+							{
+								"name": "NEWHOPE"
 							}
 						]
 					}
