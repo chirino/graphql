@@ -13,8 +13,8 @@ import (
 type Handler struct {
 	ServeGraphQL       graphql.ServeGraphQLFunc
 	ServeGraphQLStream graphql.ServeGraphQLStreamFunc
-
 	MaxRequestSizeBytes int64
+	Indent             string
 }
 
 type OperationMessage struct {
@@ -90,7 +90,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	response := handlerFunc(&request)
 
 	w.Header().Set("Content-Type", "application/json")
-	err := json.NewEncoder(w).Encode(response)
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", h.Indent)
+	err := encoder.Encode(response)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
