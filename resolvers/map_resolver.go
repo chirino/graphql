@@ -19,10 +19,6 @@ func (this mapResolver) Resolve(request *ResolveRequest, next Resolution) Resolu
 	}
 	field := reflect.ValueOf(request.Field.Name)
 	value := parentValue.MapIndex(field)
-	if !value.IsValid() {
-		value = reflect.Zero(parentValue.Type().Elem())
-	}
-
 	return func() (reflect.Value, error) {
 		return value, nil
 	}

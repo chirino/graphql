@@ -331,20 +331,22 @@ func (this *Execution) executeSelected(ctx context.Context, parentSelection *Sel
 		return qerrors.WrapError(err, err.Error()).WithPath(selected.Path()...).WithStack()
 	}
 
-	if childValue.Type() == valueWithContextType {
-		vwc := childValue.Interface().(resolvers.ValueWithContext)
-		childValue = vwc.Value
-		ctx = vwc.Context
-	}
-
-	if childValue.Type() == rawMessageType {
-		message := childValue.Interface().(resolvers.RawMessage)
-		// if it's wrapped, then unwrap...
-		if message[0] == '{' {
-			message = message[1 : len(message)-1]
+	if childValue.IsValid() {
+		if childValue.Type() == rawMessageType {
+			message := childValue.Interface().(resolvers.RawMessage)
+			// if it's wrapped, then unwrap...
+			if message[0] == '{' {
+				message = message[1 : len(message)-1]
+			}
+			this.data.Write(message)
+			return
 		}
-		this.data.Write(message)
-		return
+
+		if childValue.Type() == valueWithContextType {
+			vwc := childValue.Interface().(resolvers.ValueWithContext)
+			childValue = vwc.Value
+			ctx = vwc.Context
+		}
 	}
 
 	field := selected.field
@@ -355,8 +357,9 @@ func (this *Execution) executeSelected(ctx context.Context, parentSelection *Sel
 	this.data.WriteByte(':')
 
 	childType, nonNullType := unwrapNonNull(field.Schema.Field.Type)
-	if (childValue.Kind() == reflect.Ptr || childValue.Kind() == reflect.Interface) &&
-		childValue.IsNil() {
+	valid := childValue.IsValid()
+
+	if !valid || ((childValue.Kind() == reflect.Ptr || childValue.Kind() == reflect.Interface) && childValue.IsNil()) {
 		if nonNullType {
 			return (&qerrors.Error{
 				Message: "ResolverFactory produced a nil value for a Non Null type",
@@ -372,6 +375,7 @@ func (this *Execution) executeSelected(ctx context.Context, parentSelection *Sel
 	if selected.selections == nil {
 		this.writeLeaf(childValue, selected, childType)
 	} else {
+
 		switch childType := childType.(type) {
 		case *schema.List:
 			this.writeList(*childType, childValue, selected, func(elementType schema.Type, element reflect.Value) {
@@ -450,7 +454,7 @@ func (this *Execution) writeLeaf(childValue reflect.Value, selectionResolver *Se
 	case *schema.Enum:
 
 		// Deref the pointer.
-		for childValue.Kind() == reflect.Ptr || childValue.Kind() == reflect.Interface  {
+		for childValue.Kind() == reflect.Ptr || childValue.Kind() == reflect.Interface {
 			childValue = childValue.Elem()
 		}
 
