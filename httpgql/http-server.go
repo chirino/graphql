@@ -11,10 +11,10 @@ import (
 )
 
 type Handler struct {
-	ServeGraphQL       graphql.ServeGraphQLFunc
-	ServeGraphQLStream graphql.ServeGraphQLStreamFunc
+	ServeGraphQL        graphql.ServeGraphQLFunc
+	ServeGraphQLStream  graphql.ServeGraphQLStreamFunc
 	MaxRequestSizeBytes int64
-	Indent             string
+	Indent              string
 }
 
 type OperationMessage struct {

@@ -55,7 +55,6 @@ func Upgrade(w http.ResponseWriter, r *http.Request, streamingHandlerFunc graphq
 	op := OperationMessage{}
 	err := conn.ReadJSON(&op)
 	if err != nil {
-		fmt.Printf("websocket read failure\n")
 		return
 	}
 	if op.Type != "connection_init" {
@@ -71,7 +70,6 @@ func Upgrade(w http.ResponseWriter, r *http.Request, streamingHandlerFunc graphq
 		msg := OperationMessage{}
 		err := conn.ReadJSON(&msg)
 		if err != nil {
-			fmt.Printf("websocket read failure\n")
 			return
 		}
 
@@ -81,7 +79,6 @@ func Upgrade(w http.ResponseWriter, r *http.Request, streamingHandlerFunc graphq
 			var request graphql.Request
 			err := json.Unmarshal(msg.Payload, &request)
 			if err != nil {
-				fmt.Printf("could not read payload: %v\n", err)
 				return
 			}
 
