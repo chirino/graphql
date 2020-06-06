@@ -34,7 +34,12 @@ func Upgrade(w http.ResponseWriter, r *http.Request, streamingHandlerFunc graphq
 
 	mu := sync.Mutex{}
 	streams := map[interface{}]wsStream{}
-	conn, _ := upgrader.Upgrade(w, r, header) // error ignored for sake of simplicity
+	conn, err := upgrader.Upgrade(w, r, header) // error ignored for sake of simplicity
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	defer func() {
 		mu.Lock()
 		for _, stream := range streams {
@@ -53,7 +58,7 @@ func Upgrade(w http.ResponseWriter, r *http.Request, streamingHandlerFunc graphq
 	}
 
 	op := OperationMessage{}
-	err := conn.ReadJSON(&op)
+	err = conn.ReadJSON(&op)
 	if err != nil {
 		return
 	}
