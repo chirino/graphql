@@ -18,7 +18,7 @@ type Client struct {
 	URL           string
 	HTTPClient    *http.Client
 	connections   map[string]*wsConnection
-	requestHeader http.Header
+	RequestHeader http.Header
 	mu            sync.Mutex
 }
 
@@ -26,7 +26,7 @@ func NewClient(url string) *Client {
 	return &Client{
 		URL:           url,
 		connections:   map[string]*wsConnection{},
-		requestHeader: http.Header{},
+		RequestHeader: http.Header{},
 	}
 }
 
@@ -48,6 +48,11 @@ func (client *Client) ServeGraphQL(request *graphql.Request) *graphql.Response {
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
+
+	for k, h := range client.RequestHeader {
+		req.Header[k] = h
+	}
+
 	resp, err := c.Do(req)
 	if err != nil {
 		return response.AddError(err)

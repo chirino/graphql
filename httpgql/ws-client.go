@@ -36,7 +36,7 @@ func (client *Client) ServeGraphQLStream(request *graphql.Request) graphql.Respo
 			return graphql.NewErrStream(err)
 		}
 
-		headers := client.requestHeader.Clone()
+		headers := client.RequestHeader.Clone()
 		headers.Set("Sec-WebSocket-Protocol", "graphql-ws")
 
 		c.websocket, _, err = websocket.DefaultDialer.Dial(wsUrl, headers)
