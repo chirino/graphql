@@ -297,15 +297,17 @@ func writeDescription(out io.StringWriter, desc Description) {
 		return
 	}
 	showType := desc.ShowType
+	text := desc.Text
 	if showType == lexer.PossibleDescription && strings.Contains(desc.Text, "\n") {
+		text = "\n" + text + "\n"
 		showType = lexer.ShowBlockDescription
 	}
-	if desc.ShowType == lexer.ShowBlockDescription {
+	if showType == lexer.ShowBlockDescription {
 		out.WriteString(`"""`)
-		out.WriteString(desc.Text)
+		out.WriteString(text)
 		out.WriteString(`"""` + "\n")
 	} else {
-		out.WriteString(strconv.Quote(desc.Text))
+		out.WriteString(strconv.Quote(text))
 		out.WriteString("\n")
 	}
 }

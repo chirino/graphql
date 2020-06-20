@@ -14,6 +14,12 @@ import (
 type Description = lexer.Description
 type Location = lexer.Location
 
+func NewDescription(text string) Description {
+	return Description{
+		Text: text,
+	}
+}
+
 // Schema represents a GraphQL service's collective type system capabilities.
 // A schema is defined in terms of the types and directives it supports as well as the root
 // operation types for each kind of operation: `query`, `mutation`, and `subscription`.
