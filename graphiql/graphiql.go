@@ -4,13 +4,16 @@ import (
 	"bytes"
 	"html/template"
 	"net/http"
-
-	"github.com/chirino/graphql/httpgql"
+	"net/url"
 )
 
-type Handler string
+type Handler struct {
+	url      *url.URL
+	ws       bool
+	template *template.Template
+}
 
-func New(url string, ws bool) Handler {
+func New(urlPath string, ws bool) *Handler {
 	html := `
 <!DOCTYPE html>
 <html lang="en">
@@ -152,33 +155,45 @@ func New(url string, ws bool) Handler {
 </body>
 </html>
 `
-	parse, err := template.New("index.html").Parse(html)
+	u, err := url.Parse(urlPath)
 	if err != nil {
 		panic(err)
 	}
-	buf := &bytes.Buffer{}
-	type Options struct {
-		WebSocket bool
-		URL       string
-	}
 
 	if ws {
-		url, err = httpgql.ToWsURL(url)
-		if err != nil {
-			panic(err)
+		switch u.Scheme {
+		case "http":
+			u.Scheme = "ws"
+		case "https":
+			u.Scheme = "wss"
 		}
 	}
-	err = parse.Execute(buf, Options{
-		WebSocket: ws,
-		URL:       url,
+
+	t, err := template.New("index.html").Parse(html)
+	if err != nil {
+		panic(err)
+	}
+	return &Handler{
+		url:      u,
+		ws:       ws,
+		template: t,
+	}
+}
+
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	u := *h.url
+	u.Host = r.Host
+	w.Header().Set("Content-Type", "text/html")
+	buf := &bytes.Buffer{}
+	err := h.template.Execute(buf, struct {
+		WebSocket bool
+		URL       string
+	}{
+		WebSocket: h.ws,
+		URL:       u.String(),
 	})
 	if err != nil {
 		panic(err)
 	}
-	return Handler(buf.String())
-}
-
-func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(h))
+	w.Write(buf.Bytes())
 }
