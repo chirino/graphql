@@ -159,16 +159,7 @@ func New(urlPath string, ws bool) *Handler {
 	if err != nil {
 		panic(err)
 	}
-
-	if ws {
-		switch u.Scheme {
-		case "http":
-			u.Scheme = "ws"
-		case "https":
-			u.Scheme = "wss"
-		}
-	}
-
+	
 	t, err := template.New("index.html").Parse(html)
 	if err != nil {
 		panic(err)
@@ -182,6 +173,26 @@ func New(urlPath string, ws bool) *Handler {
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	u := *h.url
+
+	scheme := r.Header.Get("X-Forwarded-Proto")
+	if scheme !="" {
+		u.Scheme = scheme
+	} else {
+		if r.TLS != nil {
+			u.Scheme =  "https"
+		} else {
+			u.Scheme =  "http"
+		}
+	}
+
+	if h.ws {
+		switch u.Scheme {
+		case "http":
+			u.Scheme = "ws"
+		case "https":
+			u.Scheme = "wss"
+		}
+	}
 	u.Host = r.Host
 	w.Header().Set("Content-Type", "text/html")
 	buf := &bytes.Buffer{}
