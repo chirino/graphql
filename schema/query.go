@@ -6,7 +6,7 @@ import (
 	"text/scanner"
 
 	"github.com/chirino/graphql/internal/lexer"
-	"github.com/chirino/graphql/qerrors"
+	uperrors "github.com/graph-gophers/graphql-go/errors"
 )
 
 type QueryDocument struct {
@@ -45,7 +45,7 @@ type Operation struct {
 	Vars       InputValueList
 	Selections SelectionList
 	Directives DirectiveList
-	Loc        qerrors.Location
+	Loc        uperrors.Location
 }
 
 type Fragment struct {
@@ -58,14 +58,14 @@ type FragmentDecl struct {
 	Name       string
 	NameLoc    Location
 	Directives DirectiveList
-	Loc        qerrors.Location
+	Loc        uperrors.Location
 }
 
 type Selection interface {
 	Formatter
 	GetSelections(doc *QueryDocument) SelectionList
 	SetSelections(doc *QueryDocument, v SelectionList)
-	Location() qerrors.Location
+	Location() uperrors.Location
 }
 
 type FieldSelection struct {
@@ -76,7 +76,7 @@ type FieldSelection struct {
 	Arguments       ArgumentList
 	Directives      DirectiveList
 	Selections      SelectionList
-	SelectionSetLoc qerrors.Location
+	SelectionSetLoc uperrors.Location
 	Schema          *FieldSchema
 	Extension       interface{}
 }
@@ -89,14 +89,14 @@ type FieldSchema struct {
 type InlineFragment struct {
 	Fragment
 	Directives DirectiveList
-	Loc        qerrors.Location
+	Loc        uperrors.Location
 }
 
 type FragmentSpread struct {
 	Name       string
 	NameLoc    Location
 	Directives DirectiveList
-	Loc        qerrors.Location
+	Loc        uperrors.Location
 }
 
 func (t *Operation) SetSelections(doc *QueryDocument, v SelectionList)      { t.Selections = v }
@@ -121,10 +121,10 @@ func (t FragmentSpread) GetSelections(doc *QueryDocument) SelectionList {
 	return frag.Selections
 }
 
-func (t Operation) Location() qerrors.Location      { return t.Loc }
-func (t FieldSelection) Location() qerrors.Location { return t.NameLoc }
-func (t InlineFragment) Location() qerrors.Location { return t.Loc }
-func (t FragmentSpread) Location() qerrors.Location { return t.Loc }
+func (t Operation) Location() uperrors.Location      { return t.Loc }
+func (t FieldSelection) Location() uperrors.Location { return t.NameLoc }
+func (t InlineFragment) Location() uperrors.Location { return t.Loc }
+func (t FragmentSpread) Location() uperrors.Location { return t.Loc }
 
 func (doc *QueryDocument) ParseWithDescriptions(queryString string) error {
 	l := lexer.Get(queryString)

@@ -215,7 +215,7 @@ type structPackerField struct {
 
 func (p *StructPacker) Pack(value interface{}) (reflect.Value, error) {
 	if value == nil {
-		return reflect.Value{}, qerrors.Errorf("got null for non-null")
+		return reflect.Value{}, qerrors.New("got null for non-null")
 	}
 
 	values := value.(map[string]interface{})
@@ -289,7 +289,7 @@ type ValuePacker struct {
 
 func (p *ValuePacker) Pack(value interface{}) (reflect.Value, error) {
 	if value == nil {
-		return reflect.Value{}, qerrors.Errorf("got null for non-null")
+		return reflect.Value{}, qerrors.New("got null for non-null")
 	}
 
 	coerced, err := unmarshalInput(p.ValueType, value)
@@ -305,7 +305,7 @@ type unmarshalerPacker struct {
 
 func (p *unmarshalerPacker) Pack(value interface{}) (reflect.Value, error) {
 	if value == nil {
-		return reflect.Value{}, qerrors.Errorf("got null for non-null")
+		return reflect.Value{}, qerrors.New("got null for non-null")
 	}
 
 	v := reflect.New(p.ValueType)

@@ -12,5 +12,5 @@ func NewError(message string) *Error {
 }
 
 func Errorf(format string, a ...interface{}) *Error {
-	return qerrors.Errorf(format, a...)
+	return qerrors.New(format, a...)
 }

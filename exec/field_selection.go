@@ -52,7 +52,7 @@ func (c FieldSelectionContext) Apply(selections []schema.Selection) (result []Fi
 
 			field := fields.Get(selection.Name)
 			if field == nil {
-				errs = append(errs, qerrors2.Errorf("field '%s' not found on '%s': ", selection.Name, c.OnType.String()))
+				errs = append(errs, qerrors2.New("field '%s' not found on '%s': ", selection.Name, c.OnType.String()))
 			} else {
 				selection.Schema = &schema.FieldSchema{
 					Field:  field,

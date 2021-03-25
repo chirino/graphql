@@ -16,6 +16,7 @@ import (
 	"github.com/chirino/graphql/resolvers"
 	"github.com/chirino/graphql/schema"
 	"github.com/chirino/graphql/trace"
+	uperrors "github.com/graph-gophers/graphql-go/errors"
 )
 
 type Execution struct {
@@ -78,14 +79,14 @@ func (this *Execution) HandlePanic(path []string) error {
 	if value := recover(); value != nil {
 		this.Logger.LogPanic(this.Context, value)
 		err := makePanicError(value)
-		err.Path = path
+		err.PathStr = path
 		return err
 	}
 	return nil
 }
 
 func makePanicError(value interface{}) *qerrors.Error {
-	return qerrors.Errorf("graphql: panic occurred: %v", value)
+	return qerrors.New("graphql: panic occurred: %v", value)
 }
 
 type ExecutionResult struct {
@@ -155,8 +156,10 @@ func (this *Execution) resolveFields(ctx context.Context, parentSelectionResolve
 
 				if resolution == nil {
 					this.AddError((&qerrors.Error{
-						Message: "No resolver found",
-						Path:    append(parentSelectionResolver.Path(), field.Alias),
+						QueryError: &uperrors.QueryError {
+							Message: "No resolver found",
+						},
+						PathStr:    append(parentSelectionResolver.Path(), field.Alias),
 					}).WithStack())
 				} else {
 					sr.Resolution = resolution
@@ -213,7 +216,7 @@ func (this *Execution) Execute() error {
 		// subs are kinda special... we need to setup a subscription to an event,
 		// and execute it every time the event is triggered...
 		if len(this.Operation.Selections) != 1 {
-			return qerrors.Errorf("you can only select 1 field in a subscription")
+			return qerrors.New("you can only select 1 field in a subscription")
 		}
 
 		if len(rootFields.ValuesByKey) != 1 {
@@ -321,7 +324,7 @@ func (this *Execution) executeSelected(ctx context.Context, parentSelection *Sel
 		if value := recover(); value != nil {
 			this.Logger.LogPanic(this.Context, value)
 			err := makePanicError(value)
-			err.Path = selected.Path()
+			err.PathStr = selected.Path()
 			result = err
 		}
 	}()
@@ -362,8 +365,10 @@ func (this *Execution) executeSelected(ctx context.Context, parentSelection *Sel
 	if !valid || ((childValue.Kind() == reflect.Ptr || childValue.Kind() == reflect.Interface) && childValue.IsNil()) {
 		if nonNullType {
 			return (&qerrors.Error{
-				Message: "ResolverFactory produced a nil value for a Non Null type",
-				Path:    selected.Path(),
+				QueryError: &uperrors.QueryError {
+					Message: "ResolverFactory produced a nil value for a Non Null type",
+				},
+				PathStr:    selected.Path(),
 			}).WithStack()
 		} else {
 			this.data.WriteString("null")
@@ -439,7 +444,7 @@ func (this *Execution) writeLeaf(childValue reflect.Value, selectionResolver *Se
 	switch childType := childType.(type) {
 	case *schema.NonNull:
 		if childValue.Kind() == reflect.Ptr && childValue.Elem().IsNil() {
-			panic(qerrors.Errorf("got nil for non-null %q", childType))
+			panic(qerrors.New("got nil for non-null %q", childType))
 		} else {
 			this.writeLeaf(childValue, selectionResolver, childType.OfType)
 		}
@@ -447,7 +452,7 @@ func (this *Execution) writeLeaf(childValue reflect.Value, selectionResolver *Se
 	case *schema.Scalar:
 		data, err := json.Marshal(childValue.Interface())
 		if err != nil {
-			panic(qerrors.Errorf("could not marshal %v: %s", childValue, err))
+			panic(qerrors.New("could not marshal %v: %s", childValue, err))
 		}
 		this.data.Write(data)
 
@@ -480,7 +485,9 @@ func (r *Execution) AddError(err error) {
 			qe = err
 		default:
 			qe = &qerrors.Error{
-				Message: err.Error(),
+					QueryError: &uperrors.QueryError {
+					Message: err.Error(),
+				},
 			}
 		}
 		r.Mu.Lock()

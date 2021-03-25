@@ -456,7 +456,7 @@ func (s *Schema) ResolveTypes() error {
 		t, ok := s.Types[name]
 		if !ok {
 			if !ok {
-				return qerrors.Errorf("type %q not found", name)
+				return qerrors.New("type %q not found", name)
 			}
 		}
 		s.EntryPoints[key] = t
@@ -470,11 +470,11 @@ func (s *Schema) ResolveTypes() error {
 		for i, intfName := range obj.InterfaceNames {
 			t, ok := s.Types[intfName]
 			if !ok {
-				return qerrors.Errorf("interface %q not found", intfName)
+				return qerrors.New("interface %q not found", intfName)
 			}
 			intf, ok := t.(*Interface)
 			if !ok {
-				return qerrors.Errorf("type %q is not an interface", intfName)
+				return qerrors.New("type %q is not an interface", intfName)
 			}
 			obj.Interfaces[i] = intf
 			intf.PossibleTypes = append(intf.PossibleTypes, obj)
@@ -485,11 +485,11 @@ func (s *Schema) ResolveTypes() error {
 		for i, name := range union.TypeNames {
 			t, ok := s.Types[name]
 			if !ok {
-				return qerrors.Errorf("object type %q not found", name)
+				return qerrors.New("object type %q not found", name)
 			}
 			obj, ok := t.(*Object)
 			if !ok {
-				return qerrors.Errorf("type %q is not an object", name)
+				return qerrors.New("type %q is not an object", name)
 			}
 			union.PossibleTypes[i] = obj
 		}
@@ -741,11 +741,11 @@ func resolveDirectives(s *Schema, directives DirectiveList) error {
 		dirName := d.Name
 		dd, ok := s.DeclaredDirectives[dirName]
 		if !ok {
-			return qerrors.Errorf("directive %q not found", dirName)
+			return qerrors.New("directive %q not found", dirName)
 		}
 		for _, arg := range d.Args {
 			if dd.Args.Get(arg.Name) == nil {
-				return qerrors.Errorf("invalid argument %q for directive %q", arg.Name, dirName)
+				return qerrors.New("invalid argument %q for directive %q", arg.Name, dirName)
 			}
 		}
 		for _, arg := range dd.Args {

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/chirino/graphql/text"
+	uperrors "github.com/graph-gophers/graphql-go/errors"
 	"github.com/pkg/errors"
 )
 
@@ -16,41 +17,36 @@ import (
 /////////////////////////////////////////////////////////////////////////////
 
 type Error struct {
-	Message   string     `json:"message"`
-	Locations []Location `json:"locations,omitempty"`
-	Path      []string   `json:"path,omitempty"`
-	Rule      string     `json:"-"`
-	cause     error
+	*uperrors.QueryError
+	PathStr      []string   `json:"path,omitempty"`
 	stack     errors.StackTrace
 }
 
 // asserts that *Error implements the error interface.
 var _ error = &Error{}
 
-func Errorf(format string, a ...interface{}) *Error {
-	return New(fmt.Sprintf(format, a...)).WithStack()
-}
-
-func New(message string) *Error {
+func New(message string, a ...interface{}) *Error {
 	return (&Error{
-		Message: message,
+		QueryError: uperrors.Errorf(message, a),
 	}).WithStack()
 }
 
 func WrapError(err error, message string) *Error {
 	return &Error{
-		Message: message,
-		cause:   err,
+		QueryError: &uperrors.QueryError {
+			Message: message,
+			ResolverError:   err,
+		},
 	}
 }
 
 func (e *Error) WithPath(path ...string) *Error {
-	e.Path = path
+	e.PathStr = path
 	return e
 }
 
 func (e *Error) WithCause(err error) *Error {
-	e.cause = err
+	e.ResolverError = err
 	return e
 }
 
@@ -59,7 +55,7 @@ func (e *Error) WithRule(rule string) *Error {
 	return e
 }
 
-func (e *Error) WithLocations(locations ...Location) *Error {
+func (e *Error) WithLocations(locations ...uperrors.Location) *Error {
 	e.Locations = locations
 	return e
 }
@@ -83,16 +79,9 @@ func (err *Error) ClearStack() *Error {
 }
 
 func (err *Error) Error() string {
-	if err == nil {
-		return "<nil>"
-	}
-	str := fmt.Sprintf("graphql: %s", err.Message)
-	for _, loc := range err.Locations {
-		str += fmt.Sprintf(" %s", loc)
-	}
-
-	if len(err.Path) > 0 {
-		str += fmt.Sprintf(" (path %s)", strings.Join(err.Path, "/"))
+	str := err.QueryError.Error()
+	if len(err.PathStr) > 0 {
+		str += fmt.Sprintf(" (path %s)", strings.Join(err.PathStr, "/"))
 	}
 	return str
 }
@@ -140,24 +129,17 @@ func (w *Error) Format(s fmt.State, verb rune) {
 }
 
 func (err *Error) Cause() error {
-	return err.cause
+	return err.ResolverError
 }
 
 /////////////////////////////////////////////////////////////////////////////
 // Section: Location
 /////////////////////////////////////////////////////////////////////////////
 
-type Location struct {
-	Line   int `json:"line"`
-	Column int `json:"column"`
-}
+type location uperrors.Location
 
-func (l Location) String() string {
+func (l location) String() string {
 	return fmt.Sprintf("(line %d, column %d)", l.Line, l.Column)
-}
-
-func (a Location) Before(b Location) bool {
-	return a.Line < b.Line || (a.Line == b.Line && a.Column < b.Column)
 }
 
 /////////////////////////////////////////////////////////////////////////////

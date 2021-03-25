@@ -69,5 +69,5 @@ func (client *Client) ServeGraphQL(request *graphql.Request) *graphql.Response {
 	}
 
 	preview, _ := ioutil.ReadAll(io.LimitReader(resp.Body, 1024))
-	return response.AddError(qerrors.Errorf("invalid content type: %s", contentType).WithCause(errors.New(string(preview))))
+	return response.AddError(qerrors.New("invalid content type: %s", contentType).WithCause(errors.New(string(preview))))
 }

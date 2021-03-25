@@ -4,16 +4,16 @@ import (
 	"encoding/json"
 
 	"github.com/chirino/graphql/internal/lexer"
-	"github.com/chirino/graphql/qerrors"
+	uperrors "github.com/graph-gophers/graphql-go/errors"
 )
 
 // http://facebook.github.io/graphql/draft/#InputValueDefinition
 type InputValue struct {
-	Loc        qerrors.Location
+	Loc        uperrors.Location
 	Name       string
 	NameLoc    Location
 	Type       Type
-	TypeLoc    qerrors.Location
+	TypeLoc    uperrors.Location
 	Default    Literal
 	Desc       Description
 	Directives DirectiveList

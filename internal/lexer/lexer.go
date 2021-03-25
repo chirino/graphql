@@ -6,13 +6,14 @@ import (
 
 	"github.com/chirino/graphql/internal/scanner"
 	"github.com/chirino/graphql/qerrors"
+	uperrors "github.com/graph-gophers/graphql-go/errors"
 
 	"strconv"
 	"strings"
 )
 
 type syntaxError string
-type Location = qerrors.Location
+type Location = uperrors.Location
 
 type Lexer struct {
 	sc               scanner.Scanner
@@ -40,7 +41,7 @@ func (l *Lexer) CatchSyntaxError(f func()) (errRes error) {
 	defer func() {
 		if err := recover(); err != nil {
 			if err, ok := err.(syntaxError); ok {
-				errRes = qerrors.Errorf("syntax error: %s", err).WithLocations(l.Location())
+				errRes = qerrors.New("syntax error: %s", err).WithLocations(l.Location())
 				return
 			}
 			panic(err)

@@ -3,6 +3,7 @@ package schema
 import (
 	"github.com/chirino/graphql/internal/lexer"
 	"github.com/chirino/graphql/qerrors"
+	uperrors "github.com/graph-gophers/graphql-go/errors"
 )
 
 func DeepestType(t Type) Type {
@@ -66,9 +67,9 @@ func ResolveType(t Type, resolver Resolver) (Type, *qerrors.Error) {
 	case *TypeName:
 		refT := resolver(t.Name)
 		if refT == nil {
-			err := qerrors.Errorf("Unknown type %q.", t.Name)
+			err := qerrors.New("Unknown type %q.", t.Name)
 			err.Rule = "KnownTypeNames"
-			err.Locations = []qerrors.Location{t.NameLoc}
+			err.Locations = []uperrors.Location{t.NameLoc}
 			return nil, err
 		}
 		return refT, nil

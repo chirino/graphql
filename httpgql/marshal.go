@@ -37,7 +37,7 @@ func UnmarshalSpec(id customtypes.ID, v interface{}) error {
 	}
 	i := strings.IndexByte(string(s), ':')
 	if i == -1 {
-		return qerrors.Errorf("invalid graphql.ID")
+		return qerrors.New("invalid graphql.ID")
 	}
 	return json.Unmarshal([]byte(s[i+1:]), v)
 }
