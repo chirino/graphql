@@ -1,22 +1,13 @@
 package customtypes
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
+
+	graphql "github.com/graph-gophers/graphql-go"
 )
 
-// Time is a custom GraphQL type to represent an instant in time. It has to be added to a schema
-// via "scalar Time" since it is not a predeclared GraphQL type like "ID".
-type Time struct {
-	time.Time
-}
-
-// ImplementsGraphQLType maps this custom Go type
-// to the graphql scalar type in the schema.
-func (Time) ImplementsGraphQLType(name string) bool {
-	return name == "Time"
-}
+type Time graphql.Time
 
 // UnmarshalGraphQL is a custom unmarshaler for Time
 //
@@ -40,12 +31,4 @@ func (t *Time) UnmarshalGraphQL(input interface{}) error {
 	default:
 		return fmt.Errorf("wrong type")
 	}
-}
-
-// MarshalJSON is a custom marshaler for Time
-//
-// This function will be called whenever you
-// query for fields that use the Time type
-func (t Time) MarshalJSON() ([]byte, error) {
-	return json.Marshal(t.Time)
 }

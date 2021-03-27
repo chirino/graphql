@@ -3,14 +3,12 @@ package customtypes
 import (
 	"errors"
 	"strconv"
+
+	graphql "github.com/graph-gophers/graphql-go"
 )
 
 // ID represents GraphQL's "ID" scalar type. A custom type may be used instead.
-type ID string
-
-func (ID) ImplementsGraphQLType(name string) bool {
-	return name == "ID"
-}
+type ID graphql.ID
 
 func (id *ID) UnmarshalGraphQL(input interface{}) error {
 	var err error
@@ -23,8 +21,4 @@ func (id *ID) UnmarshalGraphQL(input interface{}) error {
 		err = errors.New("wrong type")
 	}
 	return err
-}
-
-func (id ID) MarshalJSON() ([]byte, error) {
-	return strconv.AppendQuote(nil, string(id)), nil
 }
