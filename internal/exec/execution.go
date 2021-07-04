@@ -328,6 +328,9 @@ func (this *Execution) executeSelected(ctx context.Context, parentSelection *Sel
 
 	childValue, err := selected.Resolution()
 	if err != nil {
+		if err, ok := err.(*qerrors.Error); ok {
+			return err.WithPath(selected.Path()...)
+		}
 		return qerrors.WrapError(err, err.Error()).WithPath(selected.Path()...).WithStack()
 	}
 
