@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 type Handler struct {
@@ -159,7 +160,7 @@ func New(urlPath string, ws bool) *Handler {
 	if err != nil {
 		panic(err)
 	}
-	
+
 	t, err := template.New("index.html").Parse(html)
 	if err != nil {
 		panic(err)
@@ -174,15 +175,12 @@ func New(urlPath string, ws bool) *Handler {
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	u := *h.url
 
-	scheme := r.Header.Get("X-Forwarded-Proto")
-	if scheme !="" {
+	scheme, host, _ := originalSchemeHostClient(r)
+	if u.Scheme == "" {
 		u.Scheme = scheme
-	} else {
-		if r.TLS != nil {
-			u.Scheme =  "https"
-		} else {
-			u.Scheme =  "http"
-		}
+	}
+	if u.Host == "" {
+		u.Host = host
 	}
 
 	if h.ws {
@@ -193,7 +191,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			u.Scheme = "wss"
 		}
 	}
-	u.Host = r.Host
+
 	w.Header().Set("Content-Type", "text/html")
 	buf := &bytes.Buffer{}
 	err := h.template.Execute(buf, struct {
@@ -207,4 +205,48 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	w.Write(buf.Bytes())
+}
+
+func originalSchemeHostClient(r *http.Request) (scheme string, host string, client string) {
+
+	h := r.Header.Get("Forwarded")
+	if h != "" {
+		for _, kv := range strings.Split(h, ";") {
+			if pair := strings.SplitN(kv, "=", 2); len(pair) == 2 {
+				switch strings.ToLower(pair[0]) {
+				case "for":
+					client = pair[1]
+				case "host":
+					host = pair[1]
+				case "proto":
+					scheme = pair[1]
+				}
+			}
+		}
+	}
+
+	if scheme == "" {
+		scheme = r.Header.Get("X-Forwarded-Proto")
+	}
+	if host == "" {
+		host = r.Header.Get("X-Forwarded-Host")
+	}
+	if client == "" {
+		client = r.Header.Get("X-Forwarded-For")
+	}
+
+	if scheme == "" {
+		if r.TLS != nil {
+			scheme = "https"
+		} else {
+			scheme = "http"
+		}
+	}
+	if host == "" {
+		host = r.Host
+	}
+	if client == "" {
+		client = r.RemoteAddr
+	}
+	return
 }
