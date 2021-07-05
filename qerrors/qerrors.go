@@ -16,13 +16,13 @@ import (
 /////////////////////////////////////////////////////////////////////////////
 
 type Error struct {
-	Message   string                 `json:"message"`
-	Locations []Location             `json:"locations,omitempty"`
-	Path      []string               `json:"path,omitempty"`
-	Details   map[string]interface{} `json:"details,omitempty"`
-	Rule      string                 `json:"-"`
-	cause     error
-	stack     errors.StackTrace
+	Message    string                 `json:"message"`
+	Locations  []Location             `json:"locations,omitempty"`
+	Path       []string               `json:"path,omitempty"`
+	Extensions map[string]interface{} `json:"extensions,omitempty"`
+	Rule       string                 `json:"-"`
+	cause      error
+	stack      errors.StackTrace
 }
 
 // asserts that *Error implements the error interface.
@@ -59,11 +59,10 @@ func (e *Error) WithRule(rule string) *Error {
 	e.Rule = rule
 	return e
 }
-func (e *Error) WithDetails(details map[string]interface{}) *Error {
-	e.Details = details
+func (e *Error) WithExtensions(details map[string]interface{}) *Error {
+	e.Extensions = details
 	return e
 }
-
 
 func (e *Error) WithLocations(locations ...Location) *Error {
 	e.Locations = locations
