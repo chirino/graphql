@@ -219,30 +219,45 @@ func (t *Argument) WriteTo(out io.StringWriter) {
 }
 
 func (t InputValueList) WriteTo(out io.StringWriter) {
-	if len(t) > 0 {
-		indented := false
-		out.WriteString("(")
-		for i, v := range t {
-			if i != 0 {
-				out.WriteString(", ")
-			}
+	size := len(t)
+	if size > 0 {
+		var indentBlock *indent
 
-			b := bytes.Buffer{}
+		out.WriteString("(")
+
+		b := bytes.Buffer{}
+		for _, v := range t {
+			b.Reset()
 			v.WriteTo(&b)
 			arg := b.String()
-
 			if strings.Contains(arg, "\n") {
-				i := &indent{}
-				i.WriteString("\n")
-				i.WriteString(arg)
-				i.Done(out)
-				indented = true
-			} else {
-				out.WriteString(arg)
+				out.WriteString("\n")
+				indentBlock = &indent{}
+				break
 			}
 		}
-		if indented {
-			out.WriteString("\n")
+
+		for i, v := range t {
+
+			b.Reset()
+			v.WriteTo(&b)
+			arg := b.String()
+			if indentBlock!=nil {
+				indentBlock.WriteString(arg)
+				if i != size-1 {
+					indentBlock.WriteString(",")
+				}
+				indentBlock.WriteString("\n")
+			} else {
+				if i != 0 {
+					out.WriteString(", ")
+				}
+				out.WriteString(arg)
+			}
+
+		}
+		if indentBlock !=nil {
+			indentBlock.Done(out)
 		}
 		out.WriteString(")")
 	}

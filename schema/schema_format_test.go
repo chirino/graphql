@@ -164,7 +164,11 @@ schema {
 
 type Query @db_table(name:"Hello") {
     hi: Revision
-    args(a:String=null, b:Int=5, c:String="Hi", d:[String]=["a", "b"]): String
+    args(
+		a:String=null, 
+		"test"
+		b:Int=5, 
+		c:String="Hi", d:[String]=["a", "b"]): String
 }
 
 `)
@@ -176,7 +180,13 @@ Line Description
 """
 directive @db_table(name:String) on OBJECT
 type Query @db_table(name:"Hello") {
-  args(a:String=null, b:Int=5, c:String="Hi", d:[String]=["a", "b"]):String
+  args(
+    a:String=null,
+    "test"
+    b:Int=5,
+    c:String="Hi",
+    d:[String]=["a", "b"]
+  ):String
   hi:Revision
 }
 scalar Revision
