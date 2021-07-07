@@ -720,6 +720,14 @@ func (s *Scanner) TokenText() string {
 	return s.TokBuf.String()
 }
 
+func (s *Scanner) TextAt(offset int, len int) string {
+	offset = offset - s.srcBufOffset
+	if offset < 0 {
+		return ""
+	}
+	return string(s.srcBuf[offset : offset+len])
+}
+
 // TokenText returns the interned string corresponding to the most recently scanned token.
 // Valid after calling Scan and in calls of Scanner.Error.
 func (s *Scanner) TokenTextIntern() string {

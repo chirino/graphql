@@ -163,6 +163,10 @@ schema {
 }
 
 type Query @db_table(name:"Hello") {
+	"""
+	a long 
+	message
+	"""
     hi: Revision
     args(
 		a:String=null, 
@@ -187,6 +191,10 @@ type Query @db_table(name:"Hello") {
     c:String="Hi",
     d:[String]=["a", "b"]
   ):String
+  """
+  a long 
+  message
+  """
   hi:Revision
 }
 scalar Revision

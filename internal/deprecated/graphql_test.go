@@ -1362,7 +1362,7 @@ func TestIntrospection(t *testing.T) {
                       {
                         "args": [
                           {
-                            "description": "\n    Explains why this element was deprecated, usually also including a suggestion\n    for how to access supported similar data. Formatted in\n    [Markdown](https://daringfireball.net/projects/markdown/).\n    ",
+                            "description": "\nExplains why this element was deprecated, usually also including a suggestion\nfor how to access supported similar data. Formatted in\n[Markdown](https://daringfireball.net/projects/markdown/).\n",
                             "name": "reason",
                             "type": {
                               "kind": "SCALAR",

@@ -164,6 +164,11 @@ func (l *Lexer) ConsumeDescription() (d Description) {
 			d.ShowType = ShowBlockDescription
 			text := l.sc.TokenText()
 			text = text[3 : len(text)-3]
+
+			col := l.sc.Column - 1
+			prefix := l.sc.TextAt(l.sc.Offset-col, col)
+			text = trimLinePrefixes(text, prefix)
+
 			l.ConsumeToken(scanner.BlockString)
 			d.Text = text
 		}
@@ -171,6 +176,18 @@ func (l *Lexer) ConsumeDescription() (d Description) {
 		d.ShowType = NoDescription
 	}
 	return
+}
+
+func trimLinePrefixes(text string, prefix string) string {
+	if prefix == "" {
+		return text
+	}
+
+	lines := strings.Split(text, "\n")
+	for i := range lines {
+		lines[i] = strings.TrimPrefix(lines[i], prefix)
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (l *Lexer) ConsumeString() string {
