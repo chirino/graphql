@@ -21,7 +21,7 @@ interface Character {
   "The friends of the character, or an empty list if they have none"
   friends:[Character]
   "The friends of the character exposed as a connection with edges"
-  friendsConnection(first:Int, after:ID):FriendsConnection!
+  friendsConnection(after:ID, first:Int):FriendsConnection!
   "The ID of the character"
   id:ID!
   "The name of the character"
@@ -34,7 +34,7 @@ type Droid implements Character  {
   "This droid's friends, or an empty list if they have none"
   friends:[Character]
   "The friends of the droid exposed as a connection with edges"
-  friendsConnection(first:Int, after:ID):FriendsConnection!
+  friendsConnection(after:ID, first:Int):FriendsConnection!
   "The ID of the droid"
   id:ID!
   "What others call this droid"
@@ -76,7 +76,7 @@ type Human implements Character  {
   "This human's friends, or an empty list if they have none"
   friends:[Character]
   "The friends of the human exposed as a connection with edges"
-  friendsConnection(first:Int, after:ID):FriendsConnection!
+  friendsConnection(after:ID, first:Int):FriendsConnection!
   "Height in the preferred unit, default is meters"
   height(unit:LengthUnit=METER):Float!
   "The ID of the human"

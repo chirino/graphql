@@ -1252,16 +1252,16 @@ func TestIntrospection(t *testing.T) {
 								"name": "friendsConnection",
 								"args": [
 									{
-										"name": "first",
+										"name": "after",
 										"type": {
-											"name": "Int"
+											"name": "ID"
 										},
 										"defaultValue": null
 									},
 									{
-										"name": "after",
+										"name": "first",
 										"type": {
-											"name": "ID"
+											"name": "Int"
 										},
 										"defaultValue": null
 									}

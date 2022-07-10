@@ -65,6 +65,10 @@ type HasDirectives interface {
 	GetDirectives() DirectiveList
 }
 
+type Sortable interface {
+	Sort()
+}
+
 type Formatter interface {
 	WriteTo(out io.StringWriter)
 }
@@ -216,10 +220,12 @@ type Union struct {
 // http://facebook.github.io/graphql/draft/#sec-Enums
 type Enum struct {
 	Name       string
-	Values     []*EnumValue // NOTE: the spec refers to this as `EnumValuesDefinition`.
+	Values     EnumValueList // NOTE: the spec refers to this as `EnumValuesDefinition`.
 	Desc       Description
 	Directives DirectiveList
 }
+
+type EnumValueList []*EnumValue
 
 // EnumValue types are unique values that may be serialized as a string: the name of the
 // represented value.
@@ -334,8 +340,9 @@ func (t *Union) Description() string       { return t.Desc.String() }
 func (t *Enum) Description() string        { return t.Desc.String() }
 func (t *InputObject) Description() string { return t.Desc.String() }
 
-func (t *Schema) GetDirectives() DirectiveList    { return t.Directives }
-func (t *Object) GetDirectives() DirectiveList    { return t.Directives }
+func (t *Schema) GetDirectives() DirectiveList { return t.Directives }
+func (t *Object) GetDirectives() DirectiveList { return t.Directives }
+
 func (t *Field) GetDirectives() DirectiveList     { return t.Directives }
 func (t *EnumValue) GetDirectives() DirectiveList { return t.Directives }
 
@@ -345,6 +352,99 @@ func (t *Interface) GetDirectives() DirectiveList   { return t.Directives }
 func (t *Union) GetDirectives() DirectiveList       { return t.Directives }
 func (t *Enum) GetDirectives() DirectiveList        { return t.Directives }
 func (t *InputObject) GetDirectives() DirectiveList { return t.Directives }
+
+// Sortable implementations
+func (t *Object) Sort() {
+	t.Fields.Sort()
+	t.Directives.Sort()
+	sort.Slice(t.InterfaceNames, func(i, j int) bool {
+		return t.InterfaceNames[i] < t.InterfaceNames[j]
+	})
+}
+func (t *Interface) Sort() {
+	t.Fields.Sort()
+	t.Directives.Sort()
+}
+func (t *InputObject) Sort() {
+	t.Fields.Sort()
+	t.Directives.Sort()
+}
+func (t *Union) Sort() {
+	t.Directives.Sort()
+	sort.Slice(t.TypeNames, func(i, j int) bool {
+		return t.TypeNames[i] < t.TypeNames[j]
+	})
+}
+func (t *Enum) Sort() {
+	t.Directives.Sort()
+	t.Values.Sort()
+}
+
+func (t FieldList) Sort() {
+	for _, item := range t {
+		item.Sort()
+	}
+	sort.Slice(t, func(i, j int) bool {
+		return t[i].Name < t[j].Name
+	})
+}
+func (t DirectiveList) Sort() {
+	for _, item := range t {
+		item.Sort()
+	}
+	sort.Slice(t, func(i, j int) bool {
+		return (t)[i].Name < (t)[j].Name
+	})
+}
+func (t InputValueList) Sort() {
+	for _, item := range t {
+		item.Sort()
+	}
+	sort.Slice(t, func(i, j int) bool {
+		return t[i].Name < t[j].Name
+	})
+}
+func (t EnumValueList) Sort() {
+	for _, item := range t {
+		item.Sort()
+	}
+	sort.Slice(t, func(i, j int) bool {
+		return t[i].Name < t[j].Name
+	})
+}
+
+func (t *Field) Sort() {
+	sort.Slice(t.Args, func(i, j int) bool {
+		return t.Args[i].Name < t.Args[j].Name
+	})
+	for _, item := range t.Directives {
+		item.Sort()
+	}
+	sort.Slice(t.Directives, func(i, j int) bool {
+		return t.Directives[i].Name < t.Directives[j].Name
+	})
+}
+func (t *Directive) Sort() {
+	sort.Slice(t.Args, func(i, j int) bool {
+		return t.Args[i].Name < t.Args[j].Name
+	})
+}
+func (t *InputValue) Sort() {
+	for _, item := range t.Directives {
+		item.Sort()
+	}
+	sort.Slice(t.Directives, func(i, j int) bool {
+		return t.Directives[i].Name < t.Directives[j].Name
+	})
+}
+func (t *EnumValue) Sort() {
+	for _, item := range t.Directives {
+		item.Sort()
+	}
+	sort.Slice(t.Directives, func(i, j int) bool {
+		return t.Directives[i].Name < t.Directives[j].Name
+	})
+}
 
 // Field is a conceptual function which yields values.
 // http://facebook.github.io/graphql/draft/#FieldDefinition
@@ -397,52 +497,22 @@ func (s *Schema) ResolveTypes() error {
 		}
 		switch t := t.(type) {
 		case *Object:
-			sort.Slice(t.Fields, func(i, j int) bool {
-				return t.Fields[i].Name < t.Fields[j].Name
-			})
-			sort.Slice(t.Directives, func(i, j int) bool {
-				return t.Directives[i].Name < t.Directives[j].Name
-			})
-			sort.Slice(t.InterfaceNames, func(i, j int) bool {
-				return t.InterfaceNames[i] < t.InterfaceNames[j]
-			})
+			t.Sort()
 			objects = append(objects, t)
-
 		case *Interface:
-			sort.Slice(t.Directives, func(i, j int) bool {
-				return t.Directives[i].Name < t.Directives[j].Name
-			})
-			sort.Slice(t.Fields, func(i, j int) bool {
-				return t.Fields[i].Name < t.Fields[j].Name
-			})
-
+			t.Sort()
 		case *InputObject:
-			sort.Slice(t.Directives, func(i, j int) bool {
-				return t.Directives[i].Name < t.Directives[j].Name
-			})
-			sort.Slice(t.Fields, func(i, j int) bool {
-				return t.Fields[i].Name < t.Fields[j].Name
-			})
-
+			t.Sort()
 		case *Union:
-			sort.Slice(t.Directives, func(i, j int) bool {
-				return t.Directives[i].Name < t.Directives[j].Name
-			})
-			sort.Slice(t.TypeNames, func(i, j int) bool {
-				return t.TypeNames[i] < t.TypeNames[j]
-			})
+			t.Sort()
 			unions = append(unions, t)
 		case *Enum:
-			sort.Slice(t.Directives, func(i, j int) bool {
-				return t.Directives[i].Name < t.Directives[j].Name
-			})
-			sort.Slice(t.Values, func(i, j int) bool {
-				return t.Values[i].Name < t.Values[j].Name
-			})
+			t.Sort()
 			enums = append(enums, t)
 		}
 	}
 	for _, d := range s.DeclaredDirectives {
+		d.Args.Sort()
 		for _, arg := range d.Args {
 			t, err := ResolveType(arg.Type, s.Resolve)
 			if err != nil {
